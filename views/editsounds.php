@@ -351,7 +351,7 @@ function dropHandler(ev) {
 <input type="hidden" id="varinventario" />
 <input type="hidden" id="varpeso" />
 
-<div class="modal modal-blur fade" id="modal-criarsom" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-criarsom" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -375,7 +375,7 @@ function dropHandler(ev) {
   </div>
 </div>
 
-<div class="modal modal-blur fade" id="modal-tecla" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-tecla" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -403,7 +403,7 @@ function dropHandler(ev) {
   </div>
 </div>
 
-<div class="modal modal-blur fade" id="modal-renomeardim" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-renomeardim" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -424,7 +424,7 @@ function dropHandler(ev) {
   </div>
 </div>
 
-<div class="modal modal-blur fade" id="modal-nometabela" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-nometabela" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">

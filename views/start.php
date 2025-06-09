@@ -51,6 +51,7 @@
                       <div class="mb-3 col-4">
                         <div class="datagrid-title"><?=_t('Palavra aleatória')?></div>
                         <?php 
+                        if ($la['id']){
                           $las = mysqli_query($GLOBALS['dblink'],
                             "SELECT *,
                             (SELECT id_fonte FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as fonte,
@@ -70,6 +71,7 @@
                               break;
                             }
                           };
+                        }
                           
                         ?>
 
@@ -78,6 +80,7 @@
                         <div class="datagrid-title"><?=_t('Texto aleatório')?></div>
 
                         <?php 
+                        if($la['id']){
                           $las = mysqli_query($GLOBALS['dblink'],
                             "SELECT *, 
                             (SELECT id_fonte FROM escritas WHERE id_idioma = t.id_idioma AND padrao = 1 LIMIT 1) as fonte,
@@ -87,6 +90,7 @@
                           ) or die(mysqli_error($GLOBALS['dblink']));
                           $la = mysqli_fetch_assoc($las);
                           echo '<a href="?page=text&id='.$la['id'].'">'.$la['titulo'].'<br>'.getSpanPalavraNativa(mb_substr($la['texto'],0,60),$la['eid'],$la['fonte'],$la['tamanho']).'...</a>';
+                      }
                         ?>
 
                       </div>

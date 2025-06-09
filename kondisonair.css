@@ -272,3 +272,135 @@
 .option-number {
     font-size: 12px;
 }
+
+
+
+.CodeMirror {
+    background: transparent !important; /* Fundo transparente */
+    height: 560px;
+    font-family: monospace;
+    font-size: 14px;
+}
+.CodeMirror-gutters {
+    background: transparent !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.CodeMirror {
+    height: 560px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+
+.row_extrasx, .row_palavras, .row_extras {
+    transition: all 0.3s ease; /* Suaviza as mudanças de tamanho */
+}
+.card {
+    margin-bottom: 0; /* Remove margens extras entre cards */
+}
+.card-body .ksc, .CodeMirror {
+    height: 560px !important; /* Altura fixa para todas as textareas */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cm-rule-sound {
+    color: var(--tblr-body-color);
+}
+.cm-rule-reserved {
+    color: #0080FF;
+}
+.cm-rule-class {
+    color: #BB0099;
+}
+.cm-rule-operator {
+    color: #ddb12d;
+}
+.cm-rule-digit {
+    color: #00aa00;
+}
+.cm-rule-block-name {
+    color: #ce93d8;
+}
+.cm-comment {
+    color: #808080;font-style: italic;
+}
+.cm-rule-class-dynamic { color: #ce93d8; }
+.cm-rule-category { color: #00cccc; }
+
+textarea {
+  text-wrap: nowrap;
+}
+
+.intermediate-container {
+    transition: all 0.3s ease;
+}
+.intermediate-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    line-height: normal !important;
+    font-family: monospace;
+    height: 35rem !important;
+}
+.accordion-body {
+    padding: 1rem;
+}
+.accordion-item .accordion-button {
+    font-size: 0.9rem; /* Reduzir tamanho do título para economizar espaço */
+}
+.accordion-item .accordion-collapse {
+    max-height: 35rem; /* Limitar altura total do acordeão */
+    overflow-y: auto; /* Permitir rolagem vertical se necessário */
+}
+.intermediate-container {
+    transition: all 0.3s ease;
+}
+.intermediate-scroll {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 8px 0;
+}
+.intermediate-card {
+    display: inline-flex;
+    flex-direction: column;
+    margin-right: 2px;
+    width: 200px; /* Largura fixa para cada textarea */
+    min-width: 150px;
+}
+.intermediate-card:last-child {
+    margin-right: 8px;
+ /* Espaço final */
+}
+.intermediate-label {
+    font-size: 0.875rem;
+    font-weight: bold;
+    color: var(--tblr-body-color);
+    padding: 8px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+    background: var(--tblr-bg-surface-secondary);
+    border-bottom: 1px solid var(--tblr-border-color);
+    text-wrap: nowrap;
+}
+.intermediate-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    line-height: normal !important;
+    font-family: monospace;
+    font-size: 14px;
+    height: 35rem !important;
+    border: none;
+    resize: none;
+    padding: 8px;
+    margin: 0;
+}
+#entrada, #saida {
+    line-height: normal !important;
+    font-family: monospace !important;
+    font-size: 14px;
+}
+

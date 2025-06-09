@@ -37,7 +37,7 @@
         $btnNovoTexto = '<a class="btn btn-sm btn-info btn-rounded pull-right" title="Nova palavra" data-toggle="tooltip" onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
 
 
-        $modalNovoTexto = '<div class="modal modal-blur fade" id="modalAddText" tabindex="-1" role="dialog" aria-hidden="true">
+        $modalNovoTexto = '<div class="modal modal-blur" id="modalAddText" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-lg" role="document">
                 <div class="modal-content"  >
                 <div class="modal-header">

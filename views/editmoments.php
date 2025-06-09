@@ -132,7 +132,7 @@ if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['Kondis
 </div>
 
 <!-- Modal de Seleção de Data -->
-<div class="modal modal-blur fade" id="dateModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="dateModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -149,7 +149,7 @@ if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['Kondis
 
 
 <!-- Modal de Filtros -->
-<div class="modal modal-blur fade" id="filterModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="filterModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

@@ -33,6 +33,24 @@ function findLongestClass($option, $classes, $delimiters = ['{', '(', ')', '}', 
 }
 
 function applySoundChanges($lines, $rules, $substitutions = [], $classes = [], $rulesPerLines = null) { 
+    // Validação de tipos
+    if (!is_string($lines) && !is_array($lines)) {
+        throw new InvalidArgumentException("lines deve ser uma string ou array.");
+    }
+    if (!is_array($rules) && !(is_array($rules) && !isset($rules[0]))) {
+        throw new InvalidArgumentException("rules deve ser um array ou array associativo.");
+    }
+    if (!is_array($substitutions) || !is_array($classes)) {
+        throw new InvalidArgumentException("substitutions e classes devem ser arrays.");
+    }
+    if ($rulesPerLines !== null && (!is_int($rulesPerLines) || $rulesPerLines < 1)) {
+        throw new InvalidArgumentException("rulesPerLines deve ser um inteiro positivo ou null.");
+    }
+    // Limitar tamanhos para evitar DoS
+    if (count($lines) > 1000 || count($rules) > 1000 || count($substitutions) > 1000 || count($classes) > 1000) {
+        throw new InvalidArgumentException("Número excessivo de linhas, regras, substituições ou classes.");
+    }
+
     if (is_string($lines)) {
         $inputLines = [$lines];
         $wasString = true;
@@ -1211,7 +1229,10 @@ function checkContexts($context, $classes, $capturedValues, $word, $i, $srcLen, 
 
 }
 
-function expandNestedClasses($classes) {
+function expandNestedClasses($classes, $depth = 0) {
+    if ($depth > 5) { // Limite arbitrário
+        throw new RuntimeException("Profundidade máxima de recursão atingida em expandNestedClasses.");
+    }
     $expanded = [];
     $processed = []; // Evitar recursão infinita
 
@@ -1224,7 +1245,7 @@ function expandNestedClasses($classes) {
         foreach ($chars as $char) {
             if (isset($classes[$char])) {
                 // Classe aninhada: expandir recursivamente
-                $nestedClasses = expandNestedClasses([$char => $classes[$char]] + array_diff_key($classes, [$className => true]));
+                $nestedClasses = expandNestedClasses([$char => $classes[$char]] + array_diff_key($classes, [$className => true]), $depth + 1);
                 $newChars = array_merge($newChars, $nestedClasses[$char]);
             } else {
                 $newChars[] = $char;

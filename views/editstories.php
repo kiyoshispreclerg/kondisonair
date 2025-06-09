@@ -442,7 +442,7 @@ function setDateClicked(timeValue, message){
 
 
 <!-- Modal de Seleção de Data -->
-<div class="modal modal-blur fade" id="dateNovoModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="dateNovoModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

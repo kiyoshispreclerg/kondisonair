@@ -4,6 +4,17 @@ mb_internal_encoding('UTF-8');
 
 // Função principal
 function generateWords($classes, $syllableFormats, $substitutions, $restrictions, $minSyllables, $maxSyllables, $wordCount) {
+    
+    if (!is_array($classes) || !is_array($syllableFormats) || !is_array($substitutions) || !is_array($restrictions)) {
+        throw new InvalidArgumentException("Parâmetros devem ser arrays.");
+    }
+    if (!is_int($minSyllables) || !is_int($maxSyllables) || !is_int($wordCount)) {
+        throw new InvalidArgumentException("minSyllables, maxSyllables e wordCount devem ser inteiros.");
+    }
+    if ($minSyllables < 1 || $maxSyllables < $minSyllables || $wordCount < 1) {
+        throw new InvalidArgumentException("Valores inválidos para número de sílabas ou palavras.");
+    }
+
     $result = [];
     $generatedWords = []; // Array para rastrear palavras geradas
 

@@ -417,7 +417,7 @@ function redistribuirSobras(sid, uid, quantidade) {
         if (data > 0) {
             carregarTabelaUnidades(sid);
             $('#modal-ajuste-ciclos').modal('hide');
-            $.alert('Sobras redistribuídas!');
+            alert('Sobras redistribuídas!');
         } else {
             alert(data);
         }
@@ -452,7 +452,7 @@ function apagarUnidade(uid, sid) {
 </script>
 
 <!-- Modal para Novo Sistema -->
-<div class="modal modal-blur fade" id="modal-novo" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-novo" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -473,7 +473,7 @@ function apagarUnidade(uid, sid) {
 </div>
 
 <!-- Modal para Adicionar/Editar Unidade de Tempo -->
-<div class="modal modal-blur fade" id="modal-add-unidade" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-add-unidade" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -546,7 +546,7 @@ function apagarUnidade(uid, sid) {
 </div>
 
 <!-- Modal para Ajuste de Ciclos -->
-<div class="modal modal-blur fade" id="modal-ajuste-ciclos" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-ajuste-ciclos" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

@@ -64,7 +64,7 @@
 			WHERE i.id_usuario = ".$_SESSION['KondisonairUzatorIDX']." AND i.id_texto = ".$id_texto.";") or die(mysqli_error($GLOBALS['dblink']));
 		if (mysqli_num_rows($tos)<1){
 			mysqli_query($GLOBALS['dblink'],"INSERT INTO tests_importasons SET
-			id_texto = ".$id_texto.", 
+			id_texto = ".$id_texto.", id = ".generateId().", 
 			id_usuario = ".$_SESSION['KondisonairUzatorIDX']) or die(mysqli_error($GLOBALS['dblink']));
 		}
 	}

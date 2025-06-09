@@ -23,6 +23,7 @@
 - **Bibliotecas JS**: Incluídas diretamente (ex.: jQuery v3.1.1, [jQuery](https://jquery.com)).
 
 **Nota**: Este é um projeto simples, sem Composer ou npm. Dependências estão incluídas nos arquivos.
+**Nota 2**: Partes do código foram feitas com ajuda de IA.
 
 ## Pré-requisitos
 - PHP
@@ -40,4 +41,4 @@ Este projeto é licenciado sob a [GNU GPLv3](LICENSE).
 
 ---
 
-**Kondisonair** está em desenvolvimento! Fique à vontade para testar e compartilhar suas conlangs!
+**Kondisonair** está em desenvolvimento! Fique à vontade para testar!

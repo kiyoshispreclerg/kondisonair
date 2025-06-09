@@ -704,7 +704,7 @@ $(document).ready(function(){
   
 </script>
 
-<div class="modal modal-blur fade" id="modal-novo" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-novo" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -738,7 +738,7 @@ $(document).ready(function(){
 </div>
 
 
-<div class="modal modal-blur fade" id="modal-add-caractere" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-add-caractere" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -772,7 +772,7 @@ $(document).ready(function(){
 <input type="hidden"id="eid"/>
 <input type="hidden"id="cid"/>
 
-<div class="modal modal-blur fade" id="modal-autosubstituicao" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-autosubstituicao" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -797,7 +797,7 @@ $(document).ready(function(){
   </div>
 </div>
 
-<div class="modal modal-blur fade" id="modal-autosubstituicaodraw" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-autosubstituicaodraw" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -823,7 +823,7 @@ $(document).ready(function(){
   </div>
 </div>
 
-<div class="modal modal-blur fade" tabindex="-1" id="modal-draw-caractere" style="display: none;" aria-hidden="true">
+<div class="modal modal-blur" tabindex="-1" id="modal-draw-caractere" style="display: none;" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">

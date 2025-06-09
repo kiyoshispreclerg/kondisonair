@@ -25,6 +25,7 @@
                   <ol class="breadcrumb breadcrumb-arrows">
                       <li class="breadcrumb-item"><a href="index.php"><?=_t('Início')?></a></li>
                       <li class="breadcrumb-item"><a href="index.php?page=language&iid=<?=$iid?>"><?=$idioma?></a></li>
+                      <li class="breadcrumb-item"><a href="index.php?page=myarticles&iid=<?=$iid?>"><?=_t('Artigos')?></a></li>
                       <li class="breadcrumb-item active"><a><?=_t('Artigo')?></a></li>
                     </ol>
                 </h2>

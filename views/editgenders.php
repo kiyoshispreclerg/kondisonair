@@ -5,33 +5,6 @@ $id_idioma = $_GET['iid'];
 $id_classe = $_GET['k'];
 $id_depende = 0;
 
-/*
-if ($id_subclasse=='x') {
-
-    //se id_depende já existe, não dar insert
-    //$dep1 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM concordancias WHERE depende = ".$id_depende." AND padrao = 2;") or die(mysqli_error($GLOBALS['dblink']));
-
-
-    $dep1 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias WHERE id = ".$id_depende." AND padrao = 2;") or die(mysqli_error($GLOBALS['dblink']));
-    $d1 = mysqli_fetch_assoc($dep1);
-
-    mysqli_query($GLOBALS['dblink'],"INSERT INTO concordancias SET 
-        id_gloss='".$d1['id_gloss']."',
-        nome='".$d1['nome']."',
-        descricao='',
-        id_idioma=".$id_idioma.",
-        id_classe=".$id_classe.",
-        depende=".$_GET['d'].";") or die(mysqli_error($GLOBALS['dblink']));
-    // set id_subclasse pelo insertid
-    $id_subclasse = mysqli_insert_id($GLOBALS['dblink']);
-
-    //header('Location: api.php?action=klazmdason&iid='.$id_idioma.'&k='.$id_classe.'&c='.$id_subclasse);
-    echo '<script>window.location.replace("api.php?action=klazmdason&iid='.$id_idioma.'&k='.$id_classe.'&c='.$id_subclasse.'&d='.$_GET['d'].'");</script>';
-    die();
-
-}
-*/
-
 $idioma = array();   
 $sql = "SELECT i.*, c.nome AS nomeClasse,
     (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab
@@ -44,27 +17,6 @@ while($r = mysqli_fetch_assoc($result)) {
 };
 
 $title = '';
-/*
-$id_subclasse = $id_depende;
-if (!$id_subclasse>0) { 
-    $id_subclasse = $id_classe;
-}else{ 
-
-    $idk = $id_subclasse;
-    $i = 0;
-    while($i<10){ // max nesting levels of deps
-        $dep1 = mysqli_query($GLOBALS['dblink'],"SELECT c2.id_classe, ic.id_concordancia, c.nome, c2.depende  FROM concordancias c 
-            LEFT JOIN itensConcordancias ic ON ic.id = c.depende 
-            LEFT JOIN concordancias c2 ON c2.id = ic.id_concordancia 
-            WHERE c.id = ".$idk.";") or die(mysqli_error($GLOBALS['dblink']));
-        $d1 = mysqli_fetch_assoc($dep1);
-        if ($d1['depende']==0) break; $i++;
-        $idk = $d1['id_classe'];
-        $title = ' > <a>'.$d1['nome'].'</a>'.$title;
-
-    };
-}
-*/
 
 if ($idioma['nome_legivel']=='' || ( $idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'] && !$idioma['collab'] > 0 ) ) {
     echo '<script>window.location = "index.php";</script>';

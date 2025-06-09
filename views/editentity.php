@@ -416,7 +416,7 @@ function apagarStat(sid) {
 </script>
 
 <!-- Modal para Adicionar/Editar Relação -->
-<div class="modal modal-blur fade" id="modal-add-relacao" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-add-relacao" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -480,7 +480,7 @@ function apagarStat(sid) {
 </div>
 
 <!-- Modal para Adicionar/Editar Stat -->
-<div class="modal modal-blur fade" id="modal-add-stat" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modal-add-stat" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -674,7 +674,7 @@ function entradaSigIdioma(){
 
 
 
-<div class="modal modal-blur fade" id="modalAdSigIid" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="modalAdSigIid" tabindex="-1" role="dialog" aria-hidden="true">
 	<div class="modal-dialog modal-sm modal-dialog-centered" role="document" >
 		<div class="modal-content"  >
 			<div class="modal-header">

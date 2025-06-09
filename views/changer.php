@@ -25,140 +25,6 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.7/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.7/theme/monokai.min.css">
-<!-- Estilos personalizados -->
-<style>
- 
- 
-.CodeMirror {
-    background: transparent !important; /* Fundo transparente */
-    height: 560px;
-    font-family: monospace;
-    font-size: 14px;
-}
-.CodeMirror-gutters {
-    background: transparent !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.CodeMirror {
-    height: 560px;
-    font-family: monospace;
-    font-size: 14px;
-}
-
-
-.row_extrasx, .row_palavras, .row_extras {
-    transition: all 0.3s ease; /* Suaviza as mudanças de tamanho */
-}
-.card {
-    margin-bottom: 0; /* Remove margens extras entre cards */
-}
-.card-body textarea, .CodeMirror {
-    height: 560px !important; /* Altura fixa para todas as textareas */
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.cm-rule-sound {
-    color: var(--tblr-body-color);
-}
-.cm-rule-reserved {
-    color: #0080FF;
-}
-.cm-rule-class {
-    color: #BB0099;
-}
-.cm-rule-operator {
-    color: #ddb12d;
-}
-.cm-rule-digit {
-    color: #00aa00;
-}
-.cm-rule-block-name {
-    color: #ce93d8;
-}
-.cm-comment {
-    color: #808080;font-style: italic;
-}
-.cm-rule-class-dynamic { color: #ce93d8; }
-.cm-rule-category { color: #00cccc; }
-
-textarea {
-  text-wrap: nowrap;
-}
-
-.intermediate-container {
-    transition: all 0.3s ease;
-}
-.intermediate-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    line-height: normal !important;
-    font-family: monospace;
-    height: 35rem !important;
-}
-.accordion-body {
-    padding: 1rem;
-}
-.accordion-item .accordion-button {
-    font-size: 0.9rem; /* Reduzir tamanho do título para economizar espaço */
-}
-.accordion-item .accordion-collapse {
-    max-height: 35rem; /* Limitar altura total do acordeão */
-    overflow-y: auto; /* Permitir rolagem vertical se necessário */
-}
-.intermediate-container {
-    transition: all 0.3s ease;
-}
-.intermediate-scroll {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: 8px 0;
-}
-.intermediate-card {
-    display: inline-flex;
-    flex-direction: column;
-    margin-right: 2px;
-    width: 200px; /* Largura fixa para cada textarea */
-    min-width: 150px;
-}
-.intermediate-card:last-child {
-    margin-right: 8px;
- /* Espaço final */
-}
-.intermediate-label {
-    font-size: 0.875rem;
-    font-weight: bold;
-    color: var(--tblr-body-color);
-    padding: 8px;
-    text-align: center;
-    white-space: normal;
-    line-height: 1.2;
-    background: var(--tblr-bg-surface-secondary);
-    border-bottom: 1px solid var(--tblr-border-color);
-    text-wrap: nowrap;
-}
-.intermediate-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    line-height: normal !important;
-    font-family: monospace;
-    font-size: 14px;
-    height: 35rem !important;
-    border: none;
-    resize: none;
-    padding: 8px;
-    margin: 0;
-}
-#entrada, #saida {
-    line-height: normal !important;
-    font-family: monospace !important;
-    font-size: 14px;
-}
-</style>
-
 
 <style>textarea{font-family:monospace;line-height: normal !important;/*font-size: 12px !important;*/}</style>
 <input type="hidden" id="codigo" value="<?=$id_idioma?>" />
@@ -214,12 +80,6 @@ textarea {
                             <input class="form-check-input" type="checkbox">
                             <span class="form-check-label"><?=_t('Mostrar intermediários')?></span>
                         </label>
-                        <?php if ($localhost){ ?>
-                        <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" id="ksc2">
-                          <span class="form-check-label"><?=_t('Usar alterador beta')?></span>
-                        </label>
-                        <?php } ?>
                       </div>
 
                       
@@ -240,9 +100,6 @@ textarea {
                         <?php if ($id_idioma > 0){?><div class="text_rewrites"></div><?php } ?>
                         <textarea class="form-control text_rewrites" id="text_rewrites" spellcheck="false" style="height: 8rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"></textarea>
                       </div>
-
-                      <div><a class="btn btn-primary" href="?page=changer_full&iid=<?=$id_idioma?>"><?=_t('Outros alteradores')?></a></div>
-
                     </div>
                   </div>
               </div>
@@ -306,9 +163,7 @@ textarea {
                         </div>
                         <div class="card-body row_extras">
                           <div>
-                              <textarea class="form-control" id="schanges" spellcheck="false" style="height: 35rem" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"><?php
-                              if($localhost) echo "//SCA2\nV=aeiou\nL=āēīōū\nC=ptcqbdgmnlrhs\nF=ie \nB=ou \nS=ptc\nZ=bdg\n\n{s,m}=>/_#\ni=>j/_V\nL=>V/_\ne=>/Vr_#\nv=>/V_V\nu=>o/_#\ngn=>nh/_\nS=>Z/V_V\nc=>i/F_t\nc=>u/B_t\np=>/V_t\nii=>i/_\ne=>/C_rV\n\n\n//trisca\nV=aeiouə\nS=fsʃx\nZ=vzʒɣ\n\nS/Z/V_V\n{k,g}~/{g,k}ʷ/_u\nai/ei/_#\nau/ou/_#";
-                              ?></textarea>
+                              <textarea class="form-control ksc" id="schanges" spellcheck="false" style="height: 35rem" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"></textarea>
                           </div>
                         </div>
                       </div>
@@ -320,7 +175,7 @@ textarea {
                         </div>
                         <div class="card-body row_extras">
                           <div>
-                              <textarea class="form-control" id="instrucoes" style="height: 35rem" spellcheck="false" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"></textarea>
+                              <textarea class="form-control ksc" id="instrucoes" style="height: 35rem" spellcheck="false" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"></textarea>
                           </div>
                         </div>
                       </div>
@@ -363,10 +218,8 @@ textarea {
                           </div>
                           <div class="card-body">
                             <div>
-                              <textarea class="form-control" id="entrada" onkeyup="setInputPersonalizado()" spellcheck="false" style="height: 35rem"
-                              onscroll="saida.scrollTop=scrollTop"><?php
-                          if($localhost) echo "lector\ndoctor\nfocus\njocus\ndistrictus\ncīvitatem\nadoptare\nopera\nsecundus\nfīliam\npōntem\n\naifau\nkusni\naunəxai";
-                          ?></textarea>
+                              <textarea class="form-control ksc" id="entrada" onkeyup="setInputPersonalizado()" spellcheck="false" style="height: 35rem"
+                              onscroll="saida.scrollTop=scrollTop"></textarea>
                             </div>
                           </div>
                         </div>
@@ -404,7 +257,7 @@ textarea {
                           </div>
                           <div class="card-body">
                             <div>
-                              <textarea class="form-control" id="saida" readonly="readonly" style="height: 35rem"
+                              <textarea class="form-control ksc" id="saida" readonly="readonly" style="height: 35rem"
                                   cols="1" spellcheck="false" onscroll="entrada.scrollTop=scrollTop"></textarea>
                             </div>
                           </div>
@@ -792,10 +645,6 @@ function aplicarMudancasPHP(){
     const formData = new FormData();
     formData.append('palavras', document.getElementById('entrada').value);
     formData.append('regras', editor.getValue());
-    //formData.append('categorias', defCats);
-    <?php if ($localhost){ ?>
-    formData.append('v', document.getElementById('ksc2').checked ? 1 : 0);
-    <?php } ?>
     formData.append('classes', document.getElementById('check_classes').checked ? document.getElementById('text_classes').value : 0);
     formData.append('substituicoes', document.getElementById('check_rewrites').checked ? document.getElementById('text_rewrites').value : 0);
 
@@ -830,7 +679,7 @@ function aplicarMudancasPHP(){
                 intermediateSteps.innerHTML += `
                     <div class="intermediate-card">
                         <div class="intermediate-label">${ruleText}</div>
-                        <textarea class="form-control intermediate-textarea" readonly>${data.intermediate[key].join('\n')}</textarea>
+                        <textarea class="form-control ksc intermediate-textarea" readonly>${data.intermediate[key].join('\n')}</textarea>
                     </div>
                 `;
             //}
@@ -941,7 +790,7 @@ function aplicarMudancasJS() {
             intermediateSteps.innerHTML += `
                 <div class="intermediate-card">
                     <div class="intermediate-label">${ruleText}</div>
-                    <textarea class="form-control intermediate-textarea" readonly>${intermediate[key].join('\n')}</textarea>
+                    <textarea class="form-control ksc intermediate-textarea" readonly>${intermediate[key].join('\n')}</textarea>
                 </div>
             `;
         });

@@ -361,5 +361,5 @@ function dropHandler(ev) {
         checarPronuncia(ref,<?=$id_idioma?>); editarPalavra(ref);
     }
 }
-
+formatarTablerSelect('idsig',null);
 </script>

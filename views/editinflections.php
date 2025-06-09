@@ -16,15 +16,17 @@ if ($id_subclasse=='x') {
     $dep1 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias WHERE id = ".$id_depende." AND padrao = 2;") or die(mysqli_error($GLOBALS['dblink']));
     $d1 = mysqli_fetch_assoc($dep1);
     // id_gloss = $d1['id_gloss']
+    $novoId = generateId();
     mysqli_query($GLOBALS['dblink'],"INSERT INTO concordancias SET 
         id_gloss='0', 
+        id = ".$novoId.",
         nome='".$d1['nome']."',
         descricao='',
         id_idioma=".$id_idioma.",
         id_classe=".$id_classe.",
         depende=".$_GET['d'].";") or die(mysqli_error($GLOBALS['dblink']));
     // set id_subclasse pelo insertid
-    $id_subclasse = mysqli_insert_id($GLOBALS['dblink']);
+    $id_subclasse = $novoId;
 
     //header('Location: api.php?action=klazmdason&iid='.$id_idioma.'&k='.$id_classe.'&c='.$id_subclasse);  editinflections&iid=23&k=66&c=82&d=300
     echo '<script>window.location.replace("index.php?page=editinflections&iid='.$id_idioma.'&k='.$id_classe.'&c='.$id_subclasse.'&d='.$_GET['d'].'");</script>';
@@ -438,7 +440,7 @@ $(document).ready(function(){
 
 <input type="hidden" id="lastInflection" value="0">
 
-<div class="modal modal-blur fade" id="opcaoEdit" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="opcaoEdit" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

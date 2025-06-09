@@ -1,6 +1,9 @@
 <?php
-
-require "lang/".$_SESSION['KondisonairUzatorDiom'].".php";
+$allowedLanguages = [1,4,5,6];
+$lang = isset($_SESSION['KondisonairUzatorDiom']) && in_array($_SESSION['KondisonairUzatorDiom'], $allowedLanguages)
+    ? $_SESSION['KondisonairUzatorDiom']
+    : 1; 
+require "lang/{$lang}.php";
 
 function _t($str, $v = null) {
     global $langpack;

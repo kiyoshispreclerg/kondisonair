@@ -7,12 +7,6 @@
           <div class="card-body markdown">
             <h1>Roadmap do Kondisonair</h1>
             <div class="mb-3">
-              <h3 class="mb-3">Para logo</h3>
-              <ul>
-                <li>KSC (Kondisonair Sound Changer): correções finais da primeira versão</li>
-              </ul>
-            </div>
-            <div class="mb-3">
               <h3 class="mb-3">Para o futuro</h3>
               <ul>
                 <li>Adicionar fones alternativos a um fonema (alofonia)</li>
@@ -37,7 +31,6 @@
                 <li>Ao criar um novo idioma, dar uma base mínima para começar a trabalhar</li>
                 <li>Separar código dinâmico do estático para permitir uso offline via Service Worker</li>
                 <li>Usar termos linguísticos mais corretos</li>
-                <li>KSC: permitir classes com nomes longos (mais de um caractere)</li>
                 <li>KSC: ignorar linhas terminadas com dois pontos</li>
               </ul>
             </div>
@@ -46,7 +39,7 @@
               <ul>
                 <li>Criação de fonte a partir dos caracteres desenhados</li>
                 <li>Adicionar áudio em textos</li>
-                <li>Exportar todos os dados de um idioma</li>
+                <li>Exportar/importar todos os dados de um idioma</li>
                 <li>Edição rápida e múltipla ou em massa de palavras direto na tela do léxico</li>
                 <li>Geração aleatória de tudo (inventários, classes, palavras, descendentes etc)</li>
                 <li>Sincronização entre instâncias/servidores diferentes</li>

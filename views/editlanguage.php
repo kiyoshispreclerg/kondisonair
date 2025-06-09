@@ -503,7 +503,7 @@ document.addEventListener("DOMContentLoaded", function () {
 })
 </script>
 
-<div class="modal modal-blur fade" id="modal-configs" tabindex="-1" style="display: none;" aria-hidden="true">
+<div class="modal modal-blur" id="modal-configs" tabindex="-1" style="display: none;" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
