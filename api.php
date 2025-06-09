@@ -1,5 +1,6 @@
 <?php
-header('Access-Control-Allow-Origin: *'); 
+header('Access-Control-Allow-Methods: GET, POST');
+header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
 
 define('CONFIG_PATH', 'db.php');
 
@@ -17,14 +18,7 @@ $versaoK3 = 2;
 $defLang = 1; // default: 1=ptbr 5=eng 6= esper
 $maxSilabas = 10;
 
-/* 
-
-  - ao mudar/apagar palavra/nativa, textos de estudo com ela tbm deve avisar q tem  
-
-
-*/
 error_reporting(E_ERROR);
-
 
 if (!isset($_SESSION)) session_start(); 
 //header('Content-Type: text/html; charset=ISO-8859-1');
@@ -35,6 +29,7 @@ if ($_COOKIE["KondisonairUzatorIDX"]>0) {
   $_SESSION['KondisonairUzatorNome'] = $_COOKIE["KondisonairUzatorNome"];
   $_SESSION['KondisonairUzatorID'] = $_COOKIE["KondisonairUzatorID"];
   $_SESSION['KondisonairUzatorDiom'] = $_COOKIE["KondisonairUzatorDiom"];
+  $_SESSION['KondisonairUzatorNivle'] = $_COOKIE["KondisonairUzatorNivle"];
 }
 //if ($_SESSION['KondisonairUzatorIDX']==1) error_reporting(E_ALL);
 
@@ -66,18 +61,14 @@ if($_GET['action']=='logout'){
 };
 
 function userLoginAPI($usuario, $senha){
-	if ($senha==''){
-		 return false;
-	};
-	if ($usuario==''){
-    return false;
-	};
+	  if (empty($senha) || empty($usuario) || strlen($usuario) > 80 || strlen($senha) > 255) {
+        return false;
+    }
 
-    $s = mysqli_query($GLOBALS['dblink'],"SELECT nome_completo,id,id_idioma_nativo,username FROM usuarios WHERE username = '".$usuario."' OR email = '".$usuario."';");
-	if( mysqli_num_rows($s) == 0 ){
-
-    return false;
-	}
+    $s = mysqli_query($GLOBALS['dblink'],"SELECT nome_completo, id, id_idioma_nativo, username, acesso FROM usuarios WHERE username = '".$usuario."' OR email = '".$usuario."';");
+    if( mysqli_num_rows($s) == 0 ){
+      return false;
+    }
     $b = mysqli_fetch_row($s);
 
     $r = mysqli_query($GLOBALS['dblink'],"SELECT senha, confirmacao FROM usuarios WHERE username = '".$b[3]."';");
@@ -85,22 +76,20 @@ function userLoginAPI($usuario, $senha){
     
     if( password_verify($senha, $a[0]) && $a[1] == '1' ) {
 		if (!isset($_SESSION)) session_start();
+    session_regenerate_id(true);
 		$_SESSION['KondisonairUzatorID']            = trim($usuario);
 		$_SESSION['KondisonairUzatorNome']          = trim($b[0]);
 		$_SESSION['KondisonairUzatorIDX'] 			 = trim($b[1]);
 		$_SESSION['KondisonairUzatorDiom'] 			 = trim($b[2]);
-		$_SESSION['KondisonairUzatorREFX'] 		 = trim($b[2]);
-		$_SESSION['KondisonairUzatorCav']         = sha1(trim($usuario.$senha));
-		$_SESSION['KondisonairUzatorNivle']         = 1;
-		$auth = [ 'auth' =>'true' , 'name' =>trim($b[0])   ] ;
+		$_SESSION['KondisonairUzatorNivle']         = trim($b[4]);
+		$auth = [ 'auth' =>'true' ] ;
 		echo json_encode($auth);
 
 		setcookie("KondisonairUzatorIDX",$_SESSION['KondisonairUzatorIDX'],time()+60*60*24*30/*,"/","kondisonair"*/);
 		setcookie("KondisonairUzatorNome",$_SESSION['KondisonairUzatorNome'],time()+60*60*24*30/*,"/","kondisonair"*/);
 		setcookie("KondisonairUzatorID",$_SESSION['KondisonairUzatorID'],time()+60*60*24*30/*,"/","kondisonair"*/);
     setcookie("KondisonairUzatorDiom",$_SESSION['KondisonairUzatorDiom'],time()+60*60*24*30/*,"/","kondisonair"*/);
-
-    session_regenerate_id(true);
+    setcookie("KondisonairUzatorNivle",$_SESSION['KondisonairUzatorNivle'],time()+60*60*24*30/*,"/","kondisonair"*/);
 			
 		return true;
 	}else{
@@ -182,6 +171,7 @@ if($_GET['action']=='signup'){
       descricao = '',
       id_idioma_nativo = 1,
       data_cadastro = now(),
+      acesso = 1,
       email = '".$_POST['email']."',
       confirmacao = '".$rkey."'
             ;");
@@ -190,14 +180,14 @@ if($_GET['action']=='signup'){
   $r = mysqli_query($GLOBALS['dblink'],"SELECT username, id FROM usuarios WHERE email = '".$usuario."';");
   $b = mysqli_fetch_row($r);
 
-  $url = $_SERVER['SERVER_NAME']; //"https://kondisonair.000webhostapp.com";
-  
+  $url = $_SERVER['SERVER_NAME']; //"https://kondisonair.000webhostapp.com";  
   $from = "kondisonair@kiyoshispreclerg.pip";
+
   $to = $usuario;
   $subject = "Cadastro Kondisonair";
   $message = "Olá, pessoa dessa realidade! Use o link a seguir para validar este e-mail e acessar o Kondisonair: ".$url."/login/api.php?validar=".$rkey."&email=".$usuario;
   $headers = "From: Kondisonair <" . $from . ">";
-  //mail($to,$subject,$message, $headers);
+  mail($to,$subject,$message, $headers);
 
   // autologin enquanto email nao funciona
   if (!isset($_SESSION)) session_start();
@@ -205,14 +195,13 @@ if($_GET['action']=='signup'){
   $_SESSION['KondisonairUzatorNome']          = trim($b[0]);
   $_SESSION['KondisonairUzatorIDX'] 			 = trim($b[1]);
   $_SESSION['KondisonairUzatorDiom'] 			 = trim($b[2]);
-  $_SESSION['KondisonairUzatorREFX'] 		 = trim($b[2]);
-  $_SESSION['KondisonairUzatorCav']         = sha1(trim($usuario.$senha));
   $_SESSION['KondisonairUzatorNivle']         = 1;
   
   setcookie("KondisonairUzatorIDX",$_SESSION['KondisonairUzatorIDX'],time()+60*60*24*30/*,"/","kondisonair"*/);
   setcookie("KondisonairUzatorNome",$_SESSION['KondisonairUzatorNome'],time()+60*60*24*30/*,"/","kondisonair"*/);
   setcookie("KondisonairUzatorID",$_SESSION['KondisonairUzatorID'],time()+60*60*24*30/*,"/","kondisonair"*/);
   setcookie("KondisonairUzatorDiom",$_SESSION['KondisonairUzatorDiom'],time()+60*60*24*30/*,"/","kondisonair"*/);
+  setcookie("KondisonairUzatorNivle",$_SESSION['KondisonairUzatorNivle'],time()+60*60*24*30/*,"/","kondisonair"*/);
 
   header('Location: index.php?page=confirmation');
   die();
@@ -299,14 +288,7 @@ switch($page){
     case 'editstories': $tituloPagina .= ' - '._t('Histórias'); break;
     case 'editstory': $tituloPagina .= ' - '._t('História'); break;
 
-    default: $tituloPagina .= ' - '._t('Início');
-}
-
-function checarPalavrasNoTexto($idTexto = 0, $checarNovaPalavra = 0, $limparIdiomaId = 0){
-
-  // if limparIdiomaId > 0, remover status dos textos, pra verificação manual = sempre que add/muda palavra, muda escrita padrao
-
-  return;
+    default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
 
 function multiexplode ($delimiters,$string) {
@@ -4256,7 +4238,7 @@ function getSpanPalavraNativa($palavra,$eid,$fonte,$tamanho){
   AÇÕES KONDISONAIR - DE EDIÇÃO (PARA APENAS LOGADO)
 */
 
-if($_SESSION['KondisonairUzatorIDX']==1){ // admin por nível, não pelo id 1
+if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 1
 
   if ($_GET['action']=='ajaxGravarOpsons') { // otimizar sql
 
@@ -5276,7 +5258,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die('');
   };
 
-if ($_GET['action'] == 'getAutoSubstituicao') {
+  if ($_GET['action'] == 'getAutoSubstituicao') {
     $palavra = "";
     $eid = $_GET['eid'];
     $input = $_POST['p'];
@@ -5347,7 +5329,7 @@ if ($_GET['action'] == 'getAutoSubstituicao') {
         }
     }
     die();
-}
+  }
 
   if ($_GET['action']=='ajaxGravarSintazBazic') {
 
@@ -13695,260 +13677,12 @@ if ($_GET['action'] == 'ajaxAddStat') {
   die();
 }
 
-// Deletar Stat
 if ($_GET['action'] == 'ajaxDeleteStat') {
   $sid = (int)$_GET['sid'];
   mysqli_query($GLOBALS['dblink'], "DELETE FROM stats_entidades WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
   echo 'ok';
   die();
 }
-
-
-
-
-
-
-// Obter Detalhes do Tipo de Stat
-if ($_GET['action'] == 'ajaxGetDetalhesStat') {
-    $sid = (int)$_GET['sid'];
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, titulo as nome, tipo as tipo_dado, descricao, tipo_entidade FROM stats WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-    if ($row = mysqli_fetch_assoc($result)) {
-        echo json_encode($row);
-    } else {
-        echo '{}';
-    }
-    die();
-}
-
-// Listar Tipos de Stats
-if ($_GET['action'] == 'ajaxListarStats') {
-    $rid = (int)$_GET['rid'];
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, titulo as nome, tipo as tipo_dado, descricao 
-        FROM stats 
-        WHERE id_realidade = $rid 
-        ORDER BY nome;") or die(mysqli_error($GLOBALS['dblink']));
-    $html = '';
-    while ($s = mysqli_fetch_assoc($result)) {
-        $tipo_dado = $s['tipo'] == 'integer' ? _t('Inteiro') : ($s['tipo_dado'] == 'decimal' ? _t('Decimal') : _t('Texto'));
-        $html .= '<div class="list-group-item"><div class="row">
-            <div class="col">
-                <a href="?page=editstats&rid='.$rid.'&sid='.$s['id'].'">'.htmlspecialchars($s['nome']).'</a>
-                <a class="text-body text-secondary"><br><small>'._t('Tipo').': '.$tipo_dado.'</small></a>
-            </div>
-            <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarStat('.$s['id'].')">X</a></div>
-        </div></div>';
-    }
-    echo $html ?: '<div class="list-group-item">'._t('Nenhum tipo de estatística cadastrado.').'</div>';
-    die();
-}
-
-// Deletar Tipo de Stat
-if ($_GET['action'] == 'ajaxDeleteStatType') {
-    $sid = (int)$_GET['sid'];
-    // Verificar se há valores associados
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT COUNT(*) as count FROM stats_entidades WHERE id_stat = $sid;") or die(mysqli_error($GLOBALS['dblink']));
-    $row = mysqli_fetch_assoc($result);
-    if ($row['count'] > 0) {
-        echo _t('Não é possível apagar este tipo de estatística, pois há valores associados.');
-        die();
-    }
-    mysqli_query($GLOBALS['dblink'], "DELETE FROM stats WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-    echo 'ok';
-    die();
-}
-
-
-
-
-
-
-
-
-function traduzirFrase($frase, $idioma_origem, $idioma_destino, $mysqli) {
-  // Tokenizar a frase
-  $palavras = explode(" ", trim($frase));
-  $resultado = [];
-
-  foreach ($palavras as $index => $palavra) {
-      $traduzida = [
-          'palavra_origem' => $palavra,
-          'palavra_traduzida' => null,
-          'referente' => null,
-          'glosses' => [],
-          'alternativas' => [],
-          'erro' => null
-      ];
-
-      // Buscar a palavra no idioma de origem
-      $query = "SELECT p.id, pn.palavra FROM palavrasNativas pn LEFT JOIN palavras p ON p.id = pn.id_palavra  WHERE pn.palavra = ? AND p.id_idioma = ?";
-      $stmt = $mysqli->prepare($query);
-      $stmt->bind_param("ss", $palavra, $idioma_origem);
-      $stmt->execute();
-      $result = $stmt->get_result();
-      $palavra_origem = $result->fetch_assoc();
-      $stmt->close();
-
-      if (!$palavra_origem) {
-          $traduzida['erro'] = "Palavra '$palavra' não encontrada em $idioma_origem.";
-          $resultado[] = $traduzida;
-          continue;
-      }
-
-      // Buscar referentes associados à palavra
-      $query = "
-          SELECT pr.id_referente, r.descricao as referente, r.detalhes as contexto, '1' as rank_contexto
-          FROM palavras_referentes pr
-          JOIN referentes r ON pr.id_referente = r.id
-          WHERE pr.id_palavra = ?
-      ";
-      $stmt = $mysqli->prepare($query);
-      $stmt->bind_param("i", $palavra_origem['id']);
-      $stmt->execute();
-      $referentes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-      $stmt->close();
-
-      if (empty($referentes)) {
-          $traduzida['erro'] = "Nenhum referente encontrado para '$palavra'.";
-          $resultado[] = $traduzida;
-          continue;
-      }
-
-      // Resolver ambiguidades (ranqueamento por contexto)
-      $melhor_referente = null;
-      $max_rank = -1;
-      $alternativas = [];
-
-      foreach ($referentes as $ref) {
-          // Somar ranks de contexto (pode ser ajustado com lógica mais complexa)
-          if ($ref['rank_contexto'] > $max_rank) {
-              $max_rank = $ref['rank_contexto'];
-              $melhor_referente = $ref;
-          }
-          $alternativas[] = $ref; // Armazenar para possíveis alternativas
-      }
-
-      // Buscar glosses do referente
-      $query = "SELECT g.gloss FROM gloss_referentes gr LEFT JOIN glosses g ON g.id = gr.id_gloss WHERE id_referente = ?";
-      $stmt = $mysqli->prepare($query);
-      $stmt->bind_param("i", $melhor_referente['id_referente']);
-      $stmt->execute();
-      $glosses_referente = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-      $stmt->close();
-
-      $traduzida['referente'] = $melhor_referente['referente'];
-      $traduzida['glosses'] = array_column($glosses_referente, 'gloss');
-
-      // Buscar palavra correspondente no idioma destino
-      $query = "
-          SELECT p.pronuncia as palavra, p.id
-          FROM palavras p
-          JOIN palavras_referentes pr ON p.id = pr.id_palavra
-          WHERE pr.id_referente = ? AND p.id_forma_dicionario = 0 AND p.id_idioma = ?
-      ";
-      $stmt = $mysqli->prepare($query);
-      $stmt->bind_param("is", $melhor_referente['id_referente'], $idioma_destino);
-      $stmt->execute();
-      $palavra_destino = $stmt->get_result()->fetch_assoc();
-      $stmt->close();
-
-      if ($palavra_destino) {
-          $traduzida['palavra_traduzida'] = $palavra_destino['palavra'];
-
-          // Buscar flexões/conjugações (itensConcordancias)
-          $query = "
-              SELECT ic.id as item, c.nome as tipo, gi.id_gloss
-              FROM itens_palavras ip
-              JOIN itensConcordancias ic ON ip.id_item = ic.id
-              JOIN concordancias c ON ic.id_concordancia = c.id
-              LEFT JOIN gloss_itens gi ON ic.id = gi.id_item
-              WHERE ip.id_palavra = ?
-          ";
-          $stmt = $mysqli->prepare($query);
-          $stmt->bind_param("i", $palavra_destino['id']);
-          $stmt->execute();
-          $flexoes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-          $stmt->close();
-
-          // Adicionar glosses de flexões
-          foreach ($flexoes as $flexao) {
-              if ($flexao['gloss'] && !in_array($flexao['gloss'], $traduzida['glosses'])) {
-                  $traduzida['glosses'][] = $flexao['gloss'];
-              }
-          }
-      } else {
-          $traduzida['erro'] = "Nenhuma palavra encontrada em $idioma_destino para o referente '{$melhor_referente['referente']}'.";
-      }
-
-      // Adicionar alternativas (outros referentes com menor rank)
-      foreach ($alternativas as $alt) {
-          if ($alt['id_referente'] !== $melhor_referente['id_referente']) {
-              // Buscar palavra alternativa no idioma destino
-              $query = "
-                  SELECT p.palavra
-                  FROM palavras p
-                  JOIN palavras_referentes pr ON p.id = pr.id_palavra
-                  WHERE pr.id_referente = ? AND p.conlang = ?
-              ";
-              $stmt = $mysqli->prepare($query);
-              $stmt->bind_param("is", $alt['id_referente'], $idioma_destino);
-              $stmt->execute();
-              $alt_palavra = $stmt->get_result()->fetch_assoc();
-              $stmt->close();
-
-              if ($alt_palavra) {
-                  $traduzida['alternativas'][] = [
-                      'referente' => $alt['referente'],
-                      'palavra' => $alt_palavra['palavra'],
-                      'rank_contexto' => $alt['rank_contexto']
-                  ];
-              }
-          }
-      }
-
-      $resultado[] = $traduzida;
-  }
-
-  return $resultado;
-}
-
-
-
-if (isset($_GET['action']) && $_GET['action'] === 'traduzirFrase') {
-  header('Content-Type: application/json');
-
-  $frase = $_POST['frase'] ?? '';
-  $idioma_origem = (int)($_POST['idioma_origem'] ?? 0);
-  $idioma_destino = (int)($_POST['idioma_destino'] ?? 0);
-
-  if (!$frase || $idioma_origem <= 0 || $idioma_destino <= 0) {
-      echo json_encode(['error' => _t('Dados inválidos fornecidos.')]);
-      exit;
-  }
-
-  // Verificar permissões (se necessário)
-  if (!isset($_SESSION['KondisonairUzatorIDX']) || $_SESSION['KondisonairUzatorIDX'] <= 0) {
-      echo json_encode(['error' => _t('Usuário não autenticado.')]);
-      exit;
-  }
-
-  // Chamar a função de tradução
-  $resultado = traduzirFrase($frase, $idioma_origem, $idioma_destino, $GLOBALS['dblink']);
-  echo json_encode($resultado);
-  exit;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 if ($_GET['action'] == 'getDadosCalendario') {
     $id_time_system = (int)$_GET['id'];
@@ -14149,205 +13883,6 @@ if ($_GET['action'] == 'getDadosCalendario') {
     
     die();
 }
-/*
-if ($_GET['action'] == 'getDadosCalendario?') {
-    $id_time_system = (int)$_GET['id'];
-    
-    // Buscar dados do sistema de tempo
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, descricao, data_padrao, padrao 
-        FROM time_systems 
-        WHERE id = $id_time_system LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-    
-    if ($time_system = mysqli_fetch_assoc($result)) {
-        // Preparar resposta
-        $response = [
-            'time_system' => [
-                'id' => $time_system['id'],
-                'nome' => $time_system['nome'],
-                'data_padrao' => $time_system['data_padrao'] ? gmdate('c', strtotime($time_system['data_padrao'])) : null,
-                'padrao' => (int)$time_system['padrao']
-            ],
-            'units' => [],
-            'cycles' => [],
-            'days' => [],
-            'months' => [],
-            'leap_rules' => [],
-            'warnings' => []
-        ];
-        
-        // Buscar unidades de tempo
-        $result_units = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, duracao, equivalente 
-            FROM time_units 
-            WHERE id_time_system = $id_time_system;") or die(mysqli_error($GLOBALS['dblink']));
-        
-        while ($unit = mysqli_fetch_assoc($result_units)) {
-            $response['units'][] = [
-                'id' => (int)$unit['id'],
-                'nome' => $unit['nome'],
-                'duracao' => (int)$unit['duracao'],
-                'equivalente' => $unit['equivalente']
-            ];
-        }
-        
-        // Buscar ciclos
-        $result_cycles = mysqli_query($GLOBALS['dblink'], "SELECT id_unidade, id_unidade_ref, quantidade 
-            FROM time_cycles 
-            WHERE id_time_system = $id_time_system;") or die(mysqli_error($GLOBALS['dblink']));
-        
-        while ($cycle = mysqli_fetch_assoc($result_cycles)) {
-            $response['cycles'][] = [
-                'id_unidade' => (int)$cycle['id_unidade'],
-                'id_unidade_ref' => (int)$cycle['id_unidade_ref'],
-                'quantidade' => (int)$cycle['quantidade']
-            ];
-        }
-        
-        // Determinar dias da semana (unidade com equivalente = 'semana')
-        $week_id_result = mysqli_query($GLOBALS['dblink'], "SELECT id 
-            FROM time_units 
-            WHERE id_time_system = $id_time_system AND equivalente = 'semana' LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-        
-        if ($week = mysqli_fetch_assoc($week_id_result)) {
-            $week_id = (int)$week['id'];
-            $result_days = mysqli_query($GLOBALS['dblink'], "SELECT tn.nome 
-                FROM time_names tn 
-                WHERE tn.id_time_system = $id_time_system AND tn.id_unidade = $week_id 
-                ORDER BY tn.posicao;") or die(mysqli_error($GLOBALS['dblink']));
-            
-            while ($day = mysqli_fetch_assoc($result_days)) {
-                $response['days'][] = $day['nome'];
-            }
-        }
-        
-        // Determinar meses (unidade com equivalente = 'mes')
-        $month_id_result = mysqli_query($GLOBALS['dblink'], "SELECT id 
-            FROM time_units 
-            WHERE id_time_system = $id_time_system AND equivalente = 'mes' LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-        
-        if ($month = mysqli_fetch_assoc($month_id_result)) {
-            $month_id = (int)$month['id'];
-            $result_months = mysqli_query($GLOBALS['dblink'], "SELECT tn.nome, tc.quantidade 
-                FROM time_names tn 
-                LEFT JOIN time_cycles tc ON tn.id_unidade = tc.id_unidade AND tc.id_unidade_ref = (SELECT id FROM time_units WHERE id_time_system = $id_time_system AND equivalente = 'dia' LIMIT 1)
-                WHERE tn.id_time_system = $id_time_system AND tn.id_unidade = $month_id 
-                ORDER BY tn.posicao;") or die(mysqli_error($GLOBALS['dblink']));
-            
-            while ($month = mysqli_fetch_assoc($result_months)) {
-                $response['months'][] = [
-                    'nome' => $month['nome'],
-                    'days' => $month['quantidade'] ? (int)$month['quantidade'] : 30
-                ];
-            }
-        }
-        
-        // Buscar regras de leaps
-        $result_leaps = mysqli_query($GLOBALS['dblink'], "SELECT id_unidade, condition, add_units, target_unidade 
-            FROM time_leap_rules 
-            WHERE id_time_system = $id_time_system;") or die(mysqli_error($GLOBALS['dblink']));
-        
-        while ($leap = mysqli_fetch_assoc($result_leaps)) {
-            $response['leap_rules'][] = [
-                'id_unidade' => (int)$leap['id_unidade'],
-                'condition' => $leap['condition'],
-                'add_units' => (int)$leap['add_units'],
-                'target_unidade' => (int)$leap['target_unidade']
-            ];
-        }
-        
-        // Verificar inconsistências nos ciclos
-        foreach ($response['cycles'] as $cycle) {
-            $id_unidade = $cycle['id_unidade'];
-            $id_unidade_ref = $cycle['id_unidade_ref'];
-            $quantidade = $cycle['quantidade'];
-            
-            $ref_result = mysqli_query($GLOBALS['dblink'], "SELECT duracao 
-                FROM time_units 
-                WHERE id = $id_unidade_ref LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-            $ref_duracao = mysqli_fetch_assoc($ref_result)['duracao'];
-            
-            $sub_result = mysqli_query($GLOBALS['dblink'], "SELECT SUM(u.duracao * c.quantidade) as total 
-                FROM time_cycles c 
-                JOIN time_units u ON u.id = c.id_unidade 
-                WHERE c.id_unidade_ref = $id_unidade_ref AND c.id_time_system = $id_time_system;") or die(mysqli_error($GLOBALS['dblink']));
-            $total_sub = mysqli_fetch_assoc($sub_result)['total'] ? mysqli_fetch_assoc($sub_result)['total'] : 0;
-            
-            $esperado = $ref_duracao;
-            if (abs($total_sub - $esperado) > 0.01) {
-                $diff = $total_sub - $esperado;
-                $mensagem = $diff > 0 ? 
-                    "Sobra de " . abs($diff) . " segundos em relação à unidade $id_unidade_ref" :
-                    "Falta de " . abs($diff) . " segundos para completar a unidade $id_unidade_ref";
-                $response['warnings'][] = [
-                    'mensagem' => $mensagem,
-                    'unidade' => $id_unidade_ref,
-                    'diferenca' => abs($diff)
-                ];
-            }
-        }
-        
-        echo json_encode($response);
-    } else {
-        echo json_encode(['error' => 'Sistema de tempo não encontrado']);
-    }
-    
-    die();
-}
-*/
-
-if ($_GET['action'] == 'ajaxAddUnidadeTempo') { die('1');
-    $rid = (int)$_GET['rid'];
-    $sid = (int)$_GET['sid'];
-    $uid = (int)$_GET['uid'];
-    $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
-    $duracao = (float)$_POST['duracao'];
-    $equivalente = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['equivalente']);
-    $ref = (int)$_POST['ref'];
-    $quantidade = (float)$_POST['quantidade'];
-    $subNames = json_decode($_POST['subNames'], true);
-
-    if ($uid > 0) {
-        // Atualizar unidade existente
-        $query = "UPDATE time_units SET nome='$nome', duracao=$duracao, equivalente='$equivalente' 
-                  WHERE id=$uid AND id_time_system=$sid AND id_realidade=$rid";
-        mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    } else {
-        // Inserir nova unidade
-        $uid = generateId();
-        $query = "INSERT INTO time_units (id, id_time_system, id_realidade, nome, duracao, equivalente) 
-                  VALUES ($uid, $sid, $rid, '$nome', $duracao, '$equivalente')";
-        mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    // Atualizar ou inserir ciclo
-    if ($ref > 0 && $quantidade > 0) {
-        $cycle_query = "SELECT id FROM time_cycles WHERE id_unidade=$uid AND id_unidade_ref=$ref AND id_time_system=$sid";
-        $cycle_result = mysqli_query($GLOBALS['dblink'], $cycle_query);
-        if (mysqli_num_rows($cycle_result) > 0) {
-            $query = "UPDATE time_cycles SET quantidade=$quantidade WHERE id_unidade=$uid AND id_unidade_ref=$ref AND id_time_system=$sid";
-        } else {
-            $query = "INSERT INTO time_cycles (id, id_time_system, id_unidade, id_unidade_ref, quantidade) 
-                      VALUES (".generateId().", $sid, $uid, $ref, $quantidade)";
-        }
-        mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    // Salvar nomes das subunidades
-    if (!empty($subNames)) {
-        // Deletar nomes existentes para a unidade
-        mysqli_query($GLOBALS['dblink'], "DELETE FROM time_names WHERE id_time_system=$sid AND id_unidade=$uid") or die(mysqli_error($GLOBALS['dblink']));
-        // Inserir novos nomes
-        foreach ($subNames as $subName) {
-            $nome = mysqli_real_escape_string($GLOBALS['dblink'], $subName['nome']);
-            $posicao = (int)$subName['posicao'];
-            $query = "INSERT INTO time_names (id, id_time_system, id_unidade, nome, posicao) 
-                      VALUES (".generateId().", $sid, $uid, '$nome', $posicao)";
-            mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-        }
-    }
-
-    echo $uid;
-    die();
-}
 
 if ($_GET['action'] == 'ajaxGetJsonStats') {
     $eid = (int)$_GET['eid'];
@@ -14502,181 +14037,6 @@ if ($_GET['action'] == 'deleteStatsByEntityAndStat') {
     ") or die(mysqli_error($GLOBALS['dblink']));
     
     echo json_encode(['success' => true]);
-    die();
-}
-
-if ($_GET['action'] == 'getArvoreHistorias') {
-
-    // Função para construir a árvore recursivamente
-    function construirArvore($mysqli, $id_superior = 0) {
-        $query = "SELECT id, id_superior, titulo, descricao FROM historias WHERE id_realidade = ".$_GET['rid']." AND id_superior = ?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('i', $id_superior);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $arvore = [];
-        while ($row = $result->fetch_assoc()) {
-            $row['filhos'] = construirArvore($mysqli, $row['id']);
-            $arvore[] = $row;
-        }
-        
-        $stmt->close();
-        return $arvore;
-    }
-
-    // Obtém a árvore a partir do nível mais alto (id_superior = 0)
-    $arvore = construirArvore($GLOBALS['dblink']);
-
-    // Retorna o resultado em JSON
-    echo json_encode($arvore);
-
-    die();
-}
-
-
-if ($_GET['action'] == 'getGridStorias') {
-
-
-    // Recebe filtro de entidades (opcional, enviado via GET)
-    $entidades_filtro = isset($_GET['entidades']) ? explode(',', $_GET['entidades']) : [];
-    $entidades_filtro = array_map('intval', $entidades_filtro); // Sanitiza IDs
-    $where_entidades = !empty($entidades_filtro) ? "WHERE e.id IN (" . implode(',', $entidades_filtro) . ")" : "";
-
-    // Query principal
-    $query = "
-        SELECT 
-            e.id AS entidade_id, e.nome_legivel AS entidade_nome,
-            m.id AS momento_id, m.time_value AS momento_tempo, m.nome AS momento_nome,
-            h.titulo AS historia_nome, h.descricao AS historia_resumo,
-            s.id AS stat_id, s.titulo AS stat_nome,
-            se.valor AS stat_valor
-        FROM entidades e
-        CROSS JOIN momentos m
-        LEFT JOIN historias h ON h.id_momento = m.id
-        LEFT JOIN stats_entidades se ON se.id_entidade = e.id AND se.id_momento = m.id
-        LEFT JOIN stats s ON s.id = se.id_stat
-        $where_entidades
-        ORDER BY e.id, m.time_value, m.ordem
-    ";
-
-    $result = mysqli_query($GLOBALS['dblink'], $query);
-
-    if (!$result) {
-        die(json_encode(['error' => 'Erro na query: ' . mysqli_error($GLOBALS['dblink'])]));
-    }
-
-    // Query para relações entre entidades
-    $query_relacoes = "
-        SELECT 
-            er.id_entidade1, er.tipo_relacao, er.id_entidade2, e2.nome_legivel AS entidade2_nome,
-            er.id_momento_inicio, er.id_momento_fim
-        FROM entidades_relacoes er
-        JOIN entidades e2 ON er.id_entidade2 = e2.id
-        $where_entidades
-        ORDER BY er.id_entidade1, er.id_momento_inicio
-    ";
-
-    $result_relacoes = mysqli_query($GLOBALS['dblink'], $query_relacoes);
-
-    if (!$result_relacoes) {
-        die(json_encode(['error' => 'Erro na query de relações: ' . mysqli_error($GLOBALS['dblink'])]));
-    }
-
-    // Estruturação dos dados
-    $dados = [
-        'entidades' => [],
-        'momentos' => [],
-        'cards' => []
-    ];
-
-    $current_entidade = null;
-    $current_momento = null;
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        // Adiciona entidade se não estiver na lista
-        if (!isset($dados['entidades'][$row['entidade_id']])) {
-            $dados['entidades'][$row['entidade_id']] = $row['entidade_nome'];
-        }
-        
-        // Adiciona momento se não estiver na lista
-        if (!isset($dados['momentos'][$row['momento_id']])) {
-            $dados['momentos'][$row['momento_id']] = [
-                'time_value' => $row['momento_tempo'],
-                'nome' => $row['momento_nome']
-            ];
-        }
-        
-        // Adiciona card com história e stats (se existirem)
-        if ($row['historia_nome'] || $row['historia_resumo'] || $row['stat_id']) {
-            $card_key = $row['entidade_id'] . '-' . $row['momento_id'];
-            if (!isset($dados['cards'][$card_key])) {
-                $dados['cards'][$card_key] = [
-                    'entidade_id' => $row['entidade_id'],
-                    'momento_id' => $row['momento_id'],
-                    'historia_nome' => $row['historia_nome'] ?? '',
-                    'historia_resumo' => $row['historia_resumo'] ?? '',
-                    'stats' => [],
-                    'relacoes' => []
-                ];
-            }
-            
-            if ($row['stat_id']) {
-                $dados['cards'][$card_key]['stats'][] = [
-                    'nome' => $row['stat_nome'],
-                    'valor' => $row['stat_valor']
-                ];
-            }
-        }
-    }
-
-    // Processa relações
-    while ($row = mysqli_fetch_assoc($result_relacoes)) {
-        // Adiciona relação no momento de início
-        $card_key_inicio = $row['id_entidade'] . '-' . $row['id_momento_inicio'];
-        if (!isset($dados['cards'][$card_key_inicio])) {
-            $dados['cards'][$card_key_inicio] = [
-                'entidade_id' => $row['id_entidade'],
-                'momento_id' => $row['id_momento_inicio'],
-                'historia_nome' => '',
-                'historia_resumo' => '',
-                'stats' => [],
-                'relacoes' => []
-            ];
-        }
-        $dados['cards'][$card_key_inicio]['relacoes'][] = [
-            'relacao' => $row['relacao'],
-            'entidade2_nome' => $row['entidade2_nome'],
-            'tipo' => 'inicio'
-        ];
-        
-        // Adiciona relação no momento de fim (se existir)
-        if ($row['id_momento_fim']) {
-            $card_key_fim = $row['id_entidade'] . '-' . $row['id_momento_fim'];
-            if (!isset($dados['cards'][$card_key_fim])) {
-                $dados['cards'][$card_key_fim] = [
-                    'entidade_id' => $row['id_entidade'],
-                    'momento_id' => $row['id_momento_fim'],
-                    'historia_nome' => '',
-                    'historia_resumo' => '',
-                    'stats' => [],
-                    'relacoes' => []
-                ];
-            }
-            $dados['cards'][$card_key_fim]['relacoes'][] = [
-                'relacao' => $row['relacao'],
-                'entidade2_nome' => $row['entidade2_nome'],
-                'tipo' => 'fim'
-            ];
-        }
-    }
-
-    // Ordena momentos por time_value
-    uasort($dados['momentos'], function($a, $b) {
-        return $a['time_value'] - $b['time_value'];
-    });
-
-    echo json_encode($dados);
     die();
 }
 
@@ -15429,8 +14789,5 @@ if ($_GET['action'] == 'importarIdioma') {
     }
     die();
 }
-// exportar realidade ?
-
-
 
 ?>

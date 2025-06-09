@@ -16,7 +16,7 @@ $error = '';
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    session_start();
+    //session_start();
     if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
         $error = "Token CSRF inválido.";
     } else {
@@ -70,16 +70,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $schema = file_get_contents(__DIR__ . '/schema.sql');
                 $pdo->exec($schema);
 
-                // Carregar dados base (glosses, referentes, português, inglês)
-                //$data = file_get_contents(__DIR__ . '/basicdata.sql');
-                //$pdo->exec($data);
+                $data = file_get_contents(__DIR__ . '/data.sql');
+                $pdo->exec($data);
 
                 $id_usuario = generateId();
                 $language_id = 1; // id idioma usuário
 
                 $hashed_pass = password_hash($admin_pass, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO usuarios (id, username, senha, nome_completo, descricao, id_idioma_nativo, data_cadastro, email, confirmacao) 
-                    VALUES (?, ?, ?, ?, '', ?, NOW(), '', '1')");
+                $stmt = $pdo->prepare("INSERT INTO usuarios (id, username, senha, nome_completo, descricao, id_idioma_nativo, data_cadastro, email, confirmacao, acesso) 
+                    VALUES (?, ?, ?, ?, '', ?, NOW(), '', '1', 100)");
                 $stmt->execute([$id_usuario, $admin_name, $hashed_pass, $admin_name, $language_id]);
 
                 $config = "<?php\n";

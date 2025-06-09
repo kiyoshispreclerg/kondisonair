@@ -21,10 +21,8 @@
                   <div class="card-body">
 
                     <div class="mb-1">
-                      <span style="font-size:x-large"><?=_t('Bem vindo')?></span>
-                    </div>
-                    <div class="mb-4">
-                      <span style="font-size:large"><?=_t('Organize suas conlangs')?></span>
+                      <span style="font-size:x-large"><?=_t('Bem vindo!')?> </span> 
+                      <span style="font-size:large"> <?=_t('Organize suas conlangs')?></span>
                     </div>
                     <div class="mb-3"><?=_t('Algumas coisas compartilhadas por aqui')?>
                       
@@ -170,6 +168,13 @@
                               </div>'; 
                               */
                         };
+                        echo '<div class="col-md-6 col-lg-4">
+                              <div class="card">
+                                <div class="card-body">
+                                  <a href="?page=editlanguage&iid=0"><h3 class="card-title">'._t('Novo idioma').'</h3></a>
+                                </div>
+                              </div>
+                            </div>'; 
                       ?>
 
 
@@ -214,7 +219,7 @@
                                 ORDER BY a.data_acao DESC
                                 LIMIT ".$feedLimit.";";
                             $res2 = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //WHERE destinos in id usuarios q segue
-
+                            if (mysqli_num_rows($res2)>0){
                             while($r = mysqli_fetch_assoc($res2)) { 
 
                               $linkData = linkData( $r['userid'], $r['username'], $r['tipo'], $r['id_destino'], 
@@ -246,6 +251,9 @@
                               </div>';
                               */
                             };
+                          }else{
+                            echo _t('Nenhuma atividade para mostrar.');
+                          }
                           ?> 
 
                         </div>
@@ -253,7 +261,7 @@
                     </div>
                   </div>
 
-                  <?php if($_SESSION['KondisonairUzatorIDX']==1){ // admin
+                  <?php if($_SESSION['KondisonairUzatorNivle']==100){ 
                         $resop = mysqli_query($GLOBALS['dblink'],"SELECT * FROM opcoes_sistema;") or die(mysqli_error($GLOBALS['dblink']));
                         while($ro = mysqli_fetch_assoc($resop)) { 
                           $op[$ro['opcao']]  = $ro['valor'];
@@ -301,9 +309,10 @@
                               </select>
                         </div>
 
-                        <a href="index.php?page=ipa" class="btn btn-primary">IPA</a>
-                        <a href="index.php?page=glosses" class="btn btn-primary">Glosses</a>
-                        <a href="index.php?page=referents" class="btn btn-primary">Referentes</a>
+                        <a href="index.php?page=ipa" class="btn btn-primary"><?=_t('IPA')?></a>
+                        <a href="index.php?page=glosses" class="btn btn-primary"><?=_t('Glosses')?></a>
+                        <a href="index.php?page=referents" class="btn btn-primary"><?=_t('Referentes')?></a>
+                        <a href="index.php?page=userlist" class="btn btn-primary"><?=_t('Usuários')?></a>
 
                       </div>
                     </div>
