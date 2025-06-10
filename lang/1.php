@@ -119,6 +119,7 @@ $langpack = [
 "Meus projetos" => "Meus projetos",
 "Minha conta" => "Minha conta",
 "Minhas conlangs" => "Minhas conlangs",
+"Meus idiomas" => "Meus idiomas",
 "Minhas listas" => "Minhas listas",
 "Minhas realidades" => "Minhas realidades",
 "Monossílabas" => "Monossílabas",

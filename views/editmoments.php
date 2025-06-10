@@ -368,8 +368,8 @@ let currentFilterType = 'current';
 function carregarLinhaDoTempo() {
     const params = {
         action: 'listMoments',
-        rid: <?=$id_realidade?>,
-        superior: <?=$superior?>,
+        rid: '<?=$id_realidade?>',
+        superior: '<?=$superior?>',
         filterType: currentFilterType
     };
     if (currentFilterType === 'stories') {
@@ -421,7 +421,7 @@ function carregarLinhaDoTempo() {
                 contexto = `<small class="text-muted"><?=_t('Momento Pai')?>: ${momento.momento_pai_nome}</small>`;
             }*/
             html += `
-                <div class="timeline-item ${side}" onclick="editarMomento(${momento.id}, '${momento.nome}', \`${momento.descricao}\`, '${momento.data_calendario}', ${momento.ordem}, ${momento.time_value})">
+                <div class="timeline-item ${side}" onclick="editarMomento('${momento.id}', '${momento.nome}', \`${momento.descricao}\`, '${momento.data_calendario}', ${momento.ordem}, ${momento.time_value})">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content" id="moment-${momento.id}">
                         <h4>${momento.nome}</h4>
@@ -504,28 +504,10 @@ function novoMomento(posicao = 'fim') {
     $('#ordem').removeClass('is-invalid');
     $('#btnExcluir').hide();
 
-    /*
-    $.getJSON("?action=listMoments&rid=<?=$id_realidade?>&superior=<?=$superior?>", function(data) {
-        let ordem = 0;
-        if (data.length === 0) {
-            ordem = 0;
-        } else if (typeof posicao === 'number') {
-            ordem = posicao;
-        } else if (posicao === 'inicio') {
-            const menorOrdem = Math.min(...data.map(m => parseInt(m.ordem)));
-            ordem = menorOrdem - 1;
-        } else {
-            const maiorOrdem = Math.max(...data.map(m => parseInt(m.ordem)));
-            ordem = maiorOrdem + 1;
-        }
-        $('#ordem').val(ordem);
-    });
-    */
-
     carregarEstatisticas(0);
 }
 
-function editarMomento(mid = 0, nome = '', descricao = '', data_calendario = '', ordem = 0, time_value = 0) {
+function editarMomento(mid = '0', nome = '', descricao = '', data_calendario = '', ordem = 0, time_value = 0) {
 
     $('.timeline-selected').removeClass('timeline-selected');
     $('#moment-'+mid).addClass('timeline-selected');
@@ -561,7 +543,7 @@ function gravarMomento() {
     $.post("?action=ajaxGravarMomento&mid=" + $('#mid').val() + "&rid=<?=$id_realidade?>", {
         nome: $('#nome').val(),
         descricao: $('#descricao').val(),
-        superior: <?=$superior?>,
+        superior: '<?=$superior?>',
         data_calendario: $('#data_calendario').val(),
         time_system: $('#id_time_system').val(),
         time_value: $('#time_value').val(),
@@ -643,7 +625,7 @@ function carregarCalendario(sid) {
         null,
         sid, 0, 0,
         'time-value',
-        'data-calendario', <?=$id_realidade?>
+        'data-calendario', '<?=$id_realidade?>'
     );
 }
 

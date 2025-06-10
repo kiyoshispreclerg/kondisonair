@@ -14,14 +14,11 @@ require('api.php');
     <link href="dist/css/tabler-flags.min.css?1692870487" rel="stylesheet"/>
     <link href="dist/css/tabler-payments.min.css?1692870487" rel="stylesheet"/>
     <link href="dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
-    <link href="dist/css/Xdemo.min.css?1692870487" rel="stylesheet"/>    
     <link href="kondisonair.css" rel="stylesheet"/>    
     
     <link href="dist/css/tabler-themes.css" rel="stylesheet"/>
     
     <script src="jquery.min.js"></script>
-    <script src="toastr.min.js"></script>
-    <link href="toastr.min.css" rel="stylesheet"/>
     <script src="dist/js/demo-theme2.min.js?1692870487"></script>
     
 
@@ -115,15 +112,15 @@ require('api.php');
                       <div class="dropdown-menu-column">
                         <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
                         <a class="dropdown-item" href="?page=mylanguages">
-                          <?=_t('Minhas conlangs')?>
+                          <?=_t('Meus idiomas')?>
                         </a>
                         <a class="dropdown-item" href="?page=myarticles">
                           <?=_t('Meus artigos')?>
                         </a>
-                        <?php } ?>
                         <a class="dropdown-item" href="?page=myworlds">
                           <?=_t('Minhas realidades')?>
                         </a>
+                        <?php } ?>
                       </div>
                     </div>
                   </div>
@@ -157,9 +154,6 @@ require('api.php');
                         <a class="dropdown-item" href="?page=changer">
                         <?=_t('Alterador sonoro')?>
                         </a>
-                        <!--a class="dropdown-item" href="?page=wordgen">
-                        <?=_t('Gerador de palavras')?>
-                        </a-->
                       </div>
                     </div>
                   </div>
@@ -175,48 +169,30 @@ require('api.php');
       <script type="text/javascript" src="kondisonair.js"></script>
 
       <div class="page-wrapper">
-
-        
         <?php
-              
         if($page==''){
-          //if($_SESSION['KondisonairUzatorIDX']>0) 
           require("views/start.php");
-          //else require("views/public.php");
         }else{
           require("views/".$page.".php");
         };
-
         ?>
-
-
         <footer class="footer footer-transparent d-print-none">
           <div class="container-xl">
             <div class="row text-center align-items-center flex-row-reverse">
               <div class="col-lg-auto ms-lg-auto">
                 <ul class="list-inline list-inline-dots mb-0">
                   <?php
-                  if ($_SESSION['KondisonairUzatorDiom']!=5) echo '<li class="list-inline-item"><a onclick="setLang(5)" class="link-secondary">English</a></li>'; // str_replace('&theme=dark','',$_SERVER['REQUEST_URI'])&theme=light
+                  if ($_SESSION['KondisonairUzatorDiom']!=5) echo '<li class="list-inline-item"><a onclick="setLang(5)" class="link-secondary">English</a></li>';
                   if ($_SESSION['KondisonairUzatorDiom']!=1) echo '<li class="list-inline-item"><a onclick="setLang(1)" class="link-secondary">Português brasileiro</a></li>';
                   if ($_SESSION['KondisonairUzatorDiom']!=6) echo '<li class="list-inline-item"><a onclick="setLang(6)" class="link-secondary">Esperanto</a></li>';
                   if ($_SESSION['KondisonairUzatorDiom']!=4) echo '<li class="list-inline-item"><a onclick="setLang(4)" class="link-secondary">日本語</a></li>';
                   ?>
-                  <li class="list-inline-item"><a href="https://github.com/kiyoshispreclerg/kondisonair" target="_blank" class="link-secondary" rel="noopener"><?=_t('Código fonte')?></a></li>
-                  
-                  <!--li class="list-inline-item"><a href="?page=docs" target="_blank" class="link-secondary" rel="noopener"><?=_t('Documentação')?></a></li>
-                  <li class="list-inline-item"><a href="?page=license" class="link-secondary"><?=_t('Licença')?></a></li>
-                  <li class="list-inline-item"><a href="?page=source" target="_blank" class="link-secondary" rel="noopener"><?=_t('Código fonte')?></a></li>
-                  <li class="list-inline-item">
-                    <a href="?page=sponsor" target="_blank" class="link-secondary" rel="noopener">
-                      <?=_t('Apoie')?>
-                    </a>
-                  </li-->
                 </ul>
               </div>
               <div class="col-12 col-lg-auto mt-3 mt-lg-0">
                 <ul class="list-inline list-inline-dots mb-0">
                   <li class="list-inline-item">
-                    <a href="?page=changelog" class="link-secondary" rel="noopener">
+                    <a href="https://github.com/kiyoshispreclerg/kondisonair" class="link-secondary" rel="noopener">
                     <?=_t('Versão')?> <?=$versaoK1.'.'.$versaoK2.'.'.$versaoK3?> &copy; <?=date('Y')?>
                     </a>
                   </li>
@@ -481,6 +457,9 @@ require('api.php');
               </svg>
               <?=_t('Salvar')?>
             </a>
+            <button type="button" class="btn w-100" onclick="limparCacheLocal()">
+              <?=_t('Limpar cache local')?>
+            </button>
           </div>
         </div>
       </form>

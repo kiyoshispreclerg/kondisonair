@@ -391,7 +391,7 @@ function carregarCalendario(sid) {
         null,
         sid, 0, 0,
         'time-value',
-        'data-calendario', <?=$id_realidade?>
+        'data-calendario', '<?=$id_realidade?>'
     );
 }
 

@@ -16,7 +16,7 @@ CREATE TABLE `artygs` (
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
   `publico` tinyint(4) NOT NULL DEFAULT 0,
   `id_pap` bigint(20) UNSIGNED NOT NULL,
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
   `id_idioma` bigint(20) UNSIGNED NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
@@ -43,7 +43,7 @@ CREATE TABLE `autosubstituicoes` (
   `ipa` varchar(25) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `id_escrita` bigint(20) UNSIGNED NOT NULL,
   `glifos` varchar(15) NOT NULL,
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 CREATE TABLE `blocos` (
@@ -59,7 +59,7 @@ CREATE TABLE `blocos` (
   `nome` varchar(150) NOT NULL,
   `id_gloss` bigint(20) UNSIGNED NOT NULL,
   `ordem` int(11) NOT NULL DEFAULT 0,
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `classes` (
@@ -71,7 +71,7 @@ CREATE TABLE `classes` (
   `proto_tipo` tinyint(4) NOT NULL DEFAULT 0,
   `superior` bigint(20) UNSIGNED NOT NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `classesGeneros` (
@@ -87,7 +87,7 @@ CREATE TABLE `classesSom` (
   `nome` varchar(50) NOT NULL,
   `id_idioma` bigint(20) UNSIGNED NOT NULL,
   `id_tipoClasse` bigint(20) UNSIGNED NOT NULL,
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `collabs` (
@@ -111,9 +111,9 @@ CREATE TABLE `concordancias` (
   `id_classe` bigint(20) UNSIGNED NOT NULL,
   `depende` bigint(20) UNSIGNED NOT NULL,
   `obrigatorio` tinyint(4) NOT NULL DEFAULT 0,
-  `genero` int(11) NOT NULL DEFAULT 0,
+  `genero` bigint(20) UNSIGNED NOT NULL DEFAULT 0,
   `ordem` int(11) NOT NULL DEFAULT 1,
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `drawChars` (
@@ -125,39 +125,39 @@ CREATE TABLE `drawChars` (
   `input` varchar(8) NOT NULL DEFAULT '',
   `id_principal` bigint(20) UNSIGNED NOT NULL,
   `vetor` mediumtext NOT NULL,
-  `data_modificado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificado` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `entidades` (
-  `id` int(11) NOT NULL,
+  `id` bigint(20) UNSIGNED NOT NULL,
   `nome_legivel` varchar(150) NOT NULL DEFAULT '',
   `descricao` mediumtext DEFAULT NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `id_criador` int(11) NOT NULL,
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `id_criador` bigint(20) UNSIGNED NOT NULL,
   `publico` tinyint(4) NOT NULL DEFAULT 0,
-  `id_pai` int(11) NOT NULL DEFAULT 0,
-  `id_realidade` int(11) NOT NULL,
-  `id_tipo` int(11) NOT NULL,
+  `id_pai` bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+  `id_realidade` bigint(20) UNSIGNED NOT NULL,
+  `id_tipo` bigint(20) UNSIGNED NOT NULL,
   `descricao_curta` varchar(250) NOT NULL,
   `privado` text DEFAULT NULL,
   `rule` enum('character','place','item','other') NOT NULL DEFAULT 'other'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `entidades_nomes` (
-  `id` int(11) NOT NULL,
-  `id_entidade` int(11) NOT NULL,
-  `id_idioma` int(11) NOT NULL,
+  `id` bigint(20) NOT NULL,
+  `id_entidade` bigint(20) NOT NULL,
+  `id_idioma` bigint(20) NOT NULL,
   `nome` varchar(250) NOT NULL,
   `info` varchar(250) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `entidades_relacoes` (
-  `id` int(11) NOT NULL,
-  `id_entidade1` int(11) NOT NULL,
-  `id_entidade2` int(11) NOT NULL,
-  `id_momento_inicio` int(11) DEFAULT NULL,
-  `id_momento_fim` int(11) DEFAULT NULL,
+  `id` bigint(20) NOT NULL,
+  `id_entidade1` bigint(20) NOT NULL,
+  `id_entidade2` bigint(20) NOT NULL,
+  `id_momento_inicio` bigint(20) DEFAULT NULL,
+  `id_momento_fim` bigint(20) DEFAULT NULL,
   `tipo_relacao` varchar(50) NOT NULL,
   `descricao` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -170,7 +170,7 @@ CREATE TABLE `entidades_tipos` (
   `id_superior` bigint(20) UNSIGNED NOT NULL,
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
   `rule` enum('character','place','item','other') NOT NULL DEFAULT 'other'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -186,7 +186,7 @@ CREATE TABLE `escritas` (
   `id_tipo` int(11) NOT NULL,
   `publico` tinyint(4) NOT NULL,
   `descricao` text NOT NULL,
-  `id_fonte` int(11) NOT NULL DEFAULT 0,
+  `id_fonte` bigint(20) UNSIGNED NOT NULL DEFAULT 0,
   `tamanho` varchar(15) NOT NULL DEFAULT 'unset',
   `id_nativo` bigint(20) UNSIGNED NOT NULL,
   `id_idioma` bigint(20) UNSIGNED NOT NULL,
@@ -199,7 +199,7 @@ CREATE TABLE `escritas` (
   `inic_sentencas` varchar(250) DEFAULT '',
   `binario` tinyint(4) NOT NULL DEFAULT 0,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `flexoes` (
@@ -208,8 +208,8 @@ CREATE TABLE `flexoes` (
   `ordem` int(11) NOT NULL,
   `regra_pronuncia` text NOT NULL,
   `regra_romanizacao` text NOT NULL,
-  `motor` varchar(15) NOT NULL DEFAULT 'ksc',
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `motor` varchar(15) NOT NULL DEFAULT 'sca2',
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `fontes` (
@@ -234,7 +234,7 @@ CREATE TABLE `formasSilaba` (
   `id_idioma` bigint(20) UNSIGNED NOT NULL,
   `tipo` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0=geral/medial, 1=inicial, 2=final, 3=monosilabas',
   `peso` int(11) NOT NULL DEFAULT 1,
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `generos` (
@@ -246,7 +246,7 @@ CREATE TABLE `generos` (
   `id_classe` bigint(20) UNSIGNED NOT NULL,
   `depende` bigint(20) UNSIGNED NOT NULL,
   `obrigatorio` tinyint(4) NOT NULL DEFAULT 0,
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `glifos` (
@@ -257,14 +257,17 @@ CREATE TABLE `glifos` (
   `ordem` int(11) NOT NULL,
   `input` varchar(8) NOT NULL COMMENT 'Simbolo inserido no teclado para converter para este glifo',
   `id_principal` bigint(20) UNSIGNED NOT NULL,
-  `data_modificado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificado` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `glosses` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `gloss` varchar(15) NOT NULL,
   `descricao` varchar(250) NOT NULL,
-  `tipo` char(1) NOT NULL
+  `tipo` char(1) NOT NULL DEFAULT 'i',
+  `descricaoPt` varchar(250) NOT NULL,
+  `descricaoEo` varchar(250) NOT NULL,
+  `descricaoJp` varchar(250) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `gloss_itens` (
@@ -297,8 +300,8 @@ CREATE TABLE `historias` (
   `id_tipo` bigint(20) UNSIGNED NOT NULL,
   `texto` mediumtext NOT NULL DEFAULT '',
   `id_momento` bigint(20) UNSIGNED NOT NULL,
-  `data_criacao` datetime DEFAULT current_timestamp(),
-  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `historias_entidades` (
@@ -341,7 +344,7 @@ CREATE TABLE `idiomas` (
   `id_idioma_descricao` bigint(20) UNSIGNED NOT NULL,
   `checar_sons` tinyint(4) NOT NULL DEFAULT 0,
   `id_familia` bigint(20) UNSIGNED NOT NULL,
-  `data_modificacao` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_modificacao` timestamp NOT NULL DEFAULT current_timestamp(),
   `motor` varchar(15) NOT NULL DEFAULT '',
   `silabas` tinyint(4) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -351,7 +354,7 @@ CREATE TABLE `inventarios` (
   `id_idioma` bigint(20) UNSIGNED NOT NULL,
   `id_som` bigint(20) UNSIGNED NOT NULL,
   `id_tipoSom` bigint(20) UNSIGNED NOT NULL,
-  `data_modificado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_modificado` datetime NOT NULL DEFAULT current_timestamp(),
   `peso` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -395,12 +398,6 @@ CREATE TABLE `itens_palavras` (
   `usar` tinyint(4) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `listasReferentes` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `nome` varchar(25) NOT NULL,
-  `descricao` varchar(200) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 CREATE TABLE `listas_referentes` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `id_referente` bigint(20) UNSIGNED NOT NULL,
@@ -439,18 +436,18 @@ CREATE TABLE `opcoes_sistema` (
 CREATE TABLE `palavras` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `irregular` tinyint(4) DEFAULT 0,
-  `id_classe` int(11) DEFAULT 0,
+  `id_classe` bigint(20) DEFAULT 0,
   `id_idioma` bigint(20) UNSIGNED NOT NULL,
   `detalhes` text DEFAULT NULL,
   `pronuncia` varchar(255) DEFAULT NULL,
   `romanizacao` varchar(255) DEFAULT NULL,
   `significado` text DEFAULT NULL,
-  `id_forma_dicionario` int(11) DEFAULT 0,
+  `id_forma_dicionario` bigint(20) UNSIGNED DEFAULT 0,
   `id_uso` bigint(20) UNSIGNED NOT NULL,
   `privado` text DEFAULT NULL,
   `publico` tinyint(4) NOT NULL DEFAULT 1,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
   `id_derivadora` bigint(20) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -460,7 +457,7 @@ CREATE TABLE `palavrasNativas` (
   `id_palavra` bigint(20) UNSIGNED NOT NULL,
   `id_escrita` bigint(20) UNSIGNED NOT NULL,
   `palavra` varchar(150) NOT NULL,
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `palavras_origens` (
@@ -479,9 +476,9 @@ CREATE TABLE `palavras_referentes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `palavras_usos` (
-  `id` int(11) NOT NULL,
-  `id_palavra` int(11) NOT NULL,
-  `id_nivel` int(11) NOT NULL
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_palavra` bigint(20) UNSIGNED NOT NULL,
+  `id_nivel` bigint(20) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `pal_sig_comunidade` (
@@ -497,8 +494,8 @@ CREATE TABLE `realidades` (
   `titulo` varchar(250) NOT NULL,
   `descricao` text NOT NULL,
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
-  `data_criacao` datetime DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
   `publico` tinyint(4) NOT NULL DEFAULT 0,
   `id_idioma_descricao` bigint(20) UNSIGNED NOT NULL,
   `status` tinyint(4) NOT NULL DEFAULT 0
@@ -508,7 +505,9 @@ CREATE TABLE `referentes` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `descricao` varchar(512) NOT NULL,
   `detalhes` text DEFAULT NULL,
-  `descricaoPort` text NOT NULL
+  `descricaoPort` text NOT NULL,
+  `descricaoEo` varchar(250) NOT NULL,
+  `descricaoJp` varchar(250) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `regrasOrdens` (
@@ -594,7 +593,7 @@ CREATE TABLE `soundChanges` (
   `motor` varchar(15) NOT NULL DEFAULT 'sca2',
   `publico` tinyint(4) NOT NULL DEFAULT 0,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `stats` (
@@ -605,7 +604,7 @@ CREATE TABLE `stats` (
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
   `id_realidade` bigint(20) UNSIGNED NOT NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
   `tipo_entidade` bigint(20) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -635,7 +634,7 @@ CREATE TABLE `studason_tests` (
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
   `num_palavras` int(11) NOT NULL DEFAULT 0,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `tags` (
@@ -726,22 +725,6 @@ CREATE TABLE `tiposSom` (
   `dimz` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `tradson_tests` (
-  `id_texto` bigint(20) UNSIGNED NOT NULL,
-  `id_idioma` bigint(20) UNSIGNED NOT NULL,
-  `traducao` text NOT NULL,
-  `explicacao` text NOT NULL,
-  `link_audio` varchar(250) NOT NULL,
-  `id` bigint(20) UNSIGNED NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `traducoes` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `id_idioma` bigint(20) UNSIGNED NOT NULL,
-  `base` varchar(50) NOT NULL,
-  `traducao` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 CREATE TABLE `usuarios` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `username` varchar(255) NOT NULL,
@@ -749,7 +732,7 @@ CREATE TABLE `usuarios` (
   `nome_completo` varchar(255) NOT NULL,
   `descricao` text NOT NULL,
   `id_idioma_nativo` bigint(20) UNSIGNED NOT NULL,
-  `data_cadastro` datetime NOT NULL DEFAULT current_timestamp(),
+  `data_cadastro` datetime NOT NULL,
   `email` varchar(250) NOT NULL,
   `confirmacao` varchar(250) NOT NULL,
   `acesso` tinyint(4) NOT NULL DEFAULT 0,
@@ -760,8 +743,8 @@ CREATE TABLE `wordbanks` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `titulo` varchar(50) NOT NULL,
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
-  `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `data_criacao` datetime NOT NULL,
+  `data_modificacao` datetime NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 
@@ -1018,34 +1001,11 @@ ALTER TABLE `time_units`
 ALTER TABLE `tiposSom`
   ADD PRIMARY KEY (`id`);
 
-ALTER TABLE `tradson_tests`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `traducoes`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `trad` (`id_idioma`,`base`);
-
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `wordbanks`
   ADD PRIMARY KEY (`id`);
-
-
-ALTER TABLE `entidades`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `entidades_nomes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `entidades_relacoes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `opcoes_sistema`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `palavras_usos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 COMMIT;
 

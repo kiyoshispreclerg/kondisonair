@@ -70,15 +70,10 @@ while($r = mysqli_fetch_assoc($result)) {
                       <div class="col-md">
                         <div class="form-label"><?=_t('Idioma nativo')?></div>
                         <select id="nativo" class="chosen-select form-control " onchange="gravarOpsons()">
-                            <?php 
-                            $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas WHERE status > 7 AND buscavel = 1;") or die(mysqli_error($GLOBALS['dblink'])); //xxxxx AND buscavel = 1?
-                            
-                            while ($l = mysqli_fetch_assoc($langs)){
-                                echo '<option value="'.$l['id'].'"';
-                                if ($usuario['id_idioma_nativo'] == $l['id']) echo ' selected'; //$_SESSION['KondisonairUzatorDiom']
-                                echo '>'.$l['nome_legivel'].'</option>';
-                            }
-                        ?>
+                          <option value="1" <?php if ($usuario['id_idioma_nativo'] == '1') echo 'selected'; ?> ><?=_t('Português brasileiro')?></option>
+                          <option value="5" <?php if ($usuario['id_idioma_nativo'] == '5') echo 'selected'; ?> ><?=_t('Inglês')?></option>
+                          <option value="4" <?php if ($usuario['id_idioma_nativo'] == '4') echo 'selected'; ?> ><?=_t('Japonês')?></option>
+                          <option value="6" <?php if ($usuario['id_idioma_nativo'] == '6') echo 'selected'; ?> ><?=_t('Esperanto')?></option>
                         </select>
                       </div>
                     </div>

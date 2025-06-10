@@ -119,7 +119,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                                       if ($_SESSION['KondisonairUzatorIDX']>0){
 
                                           if ($idioma['nome_legivel']!=''){
-                                            $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." AND motor = 'ksc' ".
+                                            $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].
                                             ( $id_idioma > 0 ? " AND id_idioma = ".$id_idioma : "" ).";") or die(mysqli_error($GLOBALS['dblink']));
                                             if (mysqli_num_rows($langs)>0) echo '<option disabled>'._t('Listas de %1',[$idioma['nome_legivel']]).'</option>';
                                             while ($lang = mysqli_fetch_assoc($langs)){
@@ -127,13 +127,13 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                                             }
                                           }
 
-                                          $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']."  AND motor = 'ksc';") or die(mysqli_error($GLOBALS['dblink']));
+                                          $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;") or die(mysqli_error($GLOBALS['dblink']));
                                           if (mysqli_num_rows($langs)>0) echo '<option disabled>'._t('Minhas listas').'</option>';
                                           while ($lang = mysqli_fetch_assoc($langs)){
                                               echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'">'.$lang['titulo'].'</option>';
                                           }
 
-                                          $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE publico = 1 AND motor = 'ksc';") or die(mysqli_error($GLOBALS['dblink']));
+                                          $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE publico = 1 ;") or die(mysqli_error($GLOBALS['dblink']));
                                           if (mysqli_num_rows($langs)>0) echo '<option disabled>'._t('Listas públicas').'</option>';
                                           while ($lang = mysqli_fetch_assoc($langs)){
                                               echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'">'.$lang['titulo'].'</option>';

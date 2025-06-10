@@ -300,7 +300,7 @@ $.post("?action=ajaxBuscaGeral&t="+ $('#inputBusca').val(), function (data){
 });
 }
 
-function globalFonts(force = false){
+function globalFonts(force = false){ 
     var style = document.createElement('style');
     style.type = 'text/css';
     $.get("api.php?action=getLastChange&data=fonts", function (data){
@@ -1186,3 +1186,11 @@ $(document).on('click', function(e) {
         hideSubstitutionOptions();
     }
 });
+
+function limparCacheLocal() {
+    if (confirm("Tem certeza?")) {
+        localStorage.clear();
+        alert('Cache do site limpo com sucesso!');
+        window.location.reload();
+    }
+}

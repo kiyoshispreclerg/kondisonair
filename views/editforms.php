@@ -126,7 +126,7 @@ while($e = mysqli_fetch_assoc($langs)){
         $inputsNativos .= '<div class="mb-3">
                     <label class="form-label">'.$e['nome'].'</label>
                     <input type="text" class="form-control escrita_nativa custom-font-'.$e['id'].'" id="escrita_nativa_'.$e['id'].'" ';
-        if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,'.$e['id'].')"';
+        if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,\''.$e['id'].'\')"';
         // else $inputsNativos .= ' onchange="editarPalavra()"';           // onchange="checarNativo(this,'.$e['id'].')" placeholder=""></div>';
         $inputsNativos .= ' placeholder=""></div>';
         if($e['padr']==1) {
@@ -280,14 +280,14 @@ if (mysqli_num_rows($result)>2) {
                         <div class="mb-3">
                                 <label class="form-label"><?=_t('Pronúncia')?>* <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasPronBtns" role="button" aria-controls="offcanvasEnd" onclick="loadPronDiv()"> (inserir sons) </a></label>
                                 <input type="text" class="form-control" id="pronuncia" 
-                                onchange="checarPronuncia(this,<?=$id_idioma?>)"
+                                onchange="checarPronuncia(this,'<?=$id_idioma?>')"
                                 placeholder="Palavra no próprio idioma">
                         </div>
                         <?php if ($romanizacao){ ?>
                         <div class="mb-3">
                                 <label class="form-label"><?=_t('Romanização')?></label>
                                 <input type="text" class="form-control" id="romanizacao" 
-                                onchange="checarRomanizacao(this,<?=$id_idioma?>)"  placeholder="Palavra no alfabeto latino">
+                                onchange="checarRomanizacao(this,'<?=$id_idioma?>')"  placeholder="Palavra no alfabeto latino">
                         </div>
                         <?php } 
                             echo $inputsNativos;
@@ -841,7 +841,7 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
             }); 
             $("#detalhesPalavra").show();
             showGravarPalavra();
-            checarPronuncia("#pronuncia", <?=$id_idioma?>, 0);
+            checarPronuncia("#pronuncia", '<?=$id_idioma?>', 0);
         });
 
         /*

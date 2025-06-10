@@ -8,27 +8,10 @@
                 <h2 class="page-title">
 					          <ol class="breadcrumb breadcrumb-arrows">
                       <li class="breadcrumb-item"><a href="index.php"><?=_t('Início')?></a></li>
-                      <li class="breadcrumb-item active"><a><?=_t('Minhas conlangs')?></a></li>
+                      <li class="breadcrumb-item active"><a><?=_t('Meus idiomas')?></a></li>
                     </ol>
                 </h2>
               </div>
-              <!-- Page title actions -->
-              <!--div class="col-auto ms-auto d-print-none">
-                <div class="btn-list">
-                  <span class="d-none d-sm-inline">
-                    <a href="#" class="btn">
-                      Novo idioma
-                    </a>
-                  </span>
-                  <a href="#" class="btn btn-primary d-none d-sm-inline-block" data-bs-toggle="modal" data-bs-target="#modal-report">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-                    Novo idioma
-                  </a>
-                  <a href="#" class="btn btn-primary d-sm-none btn-icon" data-bs-toggle="modal" data-bs-target="#modal-report" aria-label="Create new report">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-                  </a>
-                </div>
-              </div-->
             </div>
           </div>
         </div>
@@ -40,7 +23,7 @@
               <div class="col-12">
                 <div class="card">
                   <div class="card-header">
-                    <h3 class="card-title"><?=_t('Minhas conlangs')?></h3>
+                    <h3 class="card-title"><?=_t('Meus idiomas')?></h3>
                     <div class="card-actions">
                       <a href="?page=editlanguage&iid=0" class="btn btn-primary">
                         <!-- Download SVG icon from http://tabler-icons.io/i/plus -->

@@ -343,11 +343,11 @@ function cpk(pids = '', st = 9, aid, pal = '', ps = '0',este){
 		 <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
 
 		$("#painelStud").append(`<div class="mb-3"><div class="form-group">
-			<span class="badge bg-red`+( st == 0 ? ' text-red-fg' : '-lt' )+`" onClick="updateStAprend(`+$("#curAid").val()+`,0,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Nova')?></span>
-			<span class="badge bg-orange`+( st == 1 ? ' text-orange-fg' : '-lt' )+`" onClick="updateStAprend(`+$("#curAid").val()+`,1,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Vista')?></span>
-			<span class="badge bg-yellow`+( st == 2 ? ' text-yellow-fg' : '-lt' )+`" onClick="updateStAprend(`+$("#curAid").val()+`,2,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Aprendendo')?></span>
-			<span class="badge bg-indigo`+( st == 3 ? ' text-indigo-fg' : '-lt' )+` " onClick="updateStAprend(`+$("#curAid").val()+`,3,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Conhecida')?></span>
-			<span class="badge bg-blue`+( st == 5 ? ' text-blue-fg' : '-lt' )+`" onClick="updateStAprend(`+$("#curAid").val()+`,5,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Aprendida')?></span>
+			<span class="badge bg-red`+( st == 0 ? ' text-red-fg' : '-lt' )+`" onClick="updateStAprend('`+$("#curAid").val()+`',0,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Nova')?></span>
+			<span class="badge bg-orange`+( st == 1 ? ' text-orange-fg' : '-lt' )+`" onClick="updateStAprend('`+$("#curAid").val()+`',1,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Vista')?></span>
+			<span class="badge bg-yellow`+( st == 2 ? ' text-yellow-fg' : '-lt' )+`" onClick="updateStAprend('`+$("#curAid").val()+`',2,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Aprendendo')?></span>
+			<span class="badge bg-indigo`+( st == 3 ? ' text-indigo-fg' : '-lt' )+` " onClick="updateStAprend('`+$("#curAid").val()+`',3,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Conhecida')?></span>
+			<span class="badge bg-blue`+( st == 5 ? ' text-blue-fg' : '-lt' )+`" onClick="updateStAprend('`+$("#curAid").val()+`',5,'`+pids+`',\'`+pal+`\',\'`+ps+`\')"><?=_t('Aprendida')?></span>
 			</div></div>`);
 			<?php } ?>
 

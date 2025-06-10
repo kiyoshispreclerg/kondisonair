@@ -188,15 +188,6 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title"><?=_t('Textos')?></h3>
-                        <?php if($mdason == 'mdason'){ ?>
-                        <div class="card-actions">
-                            <a href="#" onclick="novoTexto()" class="btn btn-primary d-none d-sm-inline-block" data-bs-toggle="modal" data-bs-target="#modalAddText">
-                            <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-                            <?=_t('Novo')?>
-                            </a>
-                        </div>
-                        <?php } ?>
                     </div>
                     <div class="card-bodyx">
                     <div class="list-group list-group-flush overflow-auto" style="max-height: 35rem">
@@ -310,10 +301,10 @@
                                     $btnConferir = '/'._t('Conferir');
                                 }else {
                                     $descs .= $imports=='' ? '' : ' - '._t('Importado por').' '.$r['imports'].' '._t('usuários').'<br>';
-                                    if (!$r['num_palavras']>0) $btnPublicar = " <a onclick='publicaTexto(".$r['id'].")' class='btn btn-primary'>"._t('Publicar')."</a> ";
+                                    if (!$r['num_palavras']>0) $btnPublicar = " <a onclick='publicaTexto(\"".$r['id']."\")' class='btn btn-primary'>"._t('Publicar')."</a> ";
                                 }
 
-                                $btnPublicar .= "<a onclick='apagarTexto(".$r['id'].",".$r['imports'].")' class='btn btn-danger'>"._t('Apagar')."</a>";
+                                $btnPublicar .= "<a onclick='apagarTexto(\"".$r['id']."\",".$r['imports'].")' class='btn btn-danger'>"._t('Apagar')."</a>";
                                 $langName = ''; // nome idioma, caso nao tenha iid
                                 
 
@@ -323,7 +314,7 @@
                                             <div class="text-secondary mt-n1">'.count($listaPalavrasUnicas)." "._t('palavras')." - ".$novasUnicas." "._t('novas')." (".round($novasUnicas/ (count($listaPalavrasUnicas) > 0 ? count($listaPalavrasUnicas) : 1)*100).'%)</div>
                                         </div>
                                         <div class="col">
-                                            <a href="#" onClick="editTexto('.$r['id'].',\''.$r['titulo'].'\')" class="btn btn-primary">'._t('Editar').'</a>
+                                            <a href="#" onClick="editTexto(\''.$r['id'].'\',\''.$r['titulo'].'\')" class="btn btn-primary">'._t('Editar').'</a>
                                             <div class="text-secondary mt-n1">'.
                                                 ($r['imports']>0?_t('Edição do texto indisponível'):'').
                                             '</div>

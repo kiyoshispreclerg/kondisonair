@@ -164,42 +164,6 @@ function delWord(pid,dic){
 	
 };
 
-function selecionarListaPalavras(){ alert('to do'); return;
-	$.confirm({
-        title: 'Importar lista de palavras',
-        type: 'default', 
-        typeAnimated: true,
-        content: `<div class="form-group"><select id="id_lista_pal">
-					<option value="0" selected>Selecione...</option>
-					<?php 
-						$refs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM listasReferentes;");
-						while($r = mysqli_fetch_assoc($refs)) {
-							echo '<option value="'.$r['id'].'" title="'.$r['descricao'].'">'.$r['nome'].'</option>';
-					  	}	
-					?>
-				</select></div>`  ,
-        containerFluid: true, 
-        buttons: {
-            Importar: function () {
-                var idl = this.$content.find('#id_lista_pal').val();
-                if(idl==0){
-                    $.alert('Selecione uma lista de palavras padrão!');
-                    return false;
-                };
-                //confirm: pede nome e ipa
-                $.get("api.php?action=ajaxImportarListaDicionario&id="+idl+"&iid=<?=$id_idioma?>", function (data){
-                    //carregaTabela();
-                    //editarCelula(x,y,z,'');//$("#ipaEdit").modal('hide');
-					loadPalavras();
-                });
-            },
-            Voltar: function () {
-                    
-            } 
-        }
-    });
-}
-
 function pularPara(index = ''){
 	$("#tabelaPalavras").DataTable().column(0).search(index).draw(); //row( 30 ).scrollTo(false);
 };
@@ -251,7 +215,7 @@ function listFormat(json){
                 <a href="?page=editword&iid=<?=$id_idioma?>&pid=`+val.id+`" class="text-body d-block">` + val.significado + `</a>
                 <div class="text-secondary text-truncate">` + val.classe + ( val.rels > 0 ? ' - <?=_t('Formas')?>: '+val.rels : '' ) + `</div>
               </div>
-              <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord(`+val.id+`,` + val.id_forma_dicionario + `)">Del</a></div>
+              <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord(\'`+val.id+`\',\'` + val.id_forma_dicionario + `\')">Del</a></div>
           </div></div>`;
     });
     return html;

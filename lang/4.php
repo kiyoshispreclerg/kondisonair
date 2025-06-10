@@ -119,6 +119,7 @@ $langpack = [
 "Meus projetos" => "私のプロジェクト",
 "Minha conta" => "私のアカウント",
 "Minhas conlangs" => "私の構築言語",
+"Meus idiomas" => "私の言語",
 "Minhas listas" => "私のリスト",
 "Minhas realidades" => "私の現実",
 "Monossílabas" => "単音節",

@@ -194,9 +194,10 @@ $tamanho = $idioma['tamanho'];
                                     foreach($exs as $ex){
                                         $x = explode("*",$ex);
 
-                                        if($x[3] && $escrita>-1) $jatem .= getSpanPalavraNativa($x[3],$escrita,$fonte,$tamanho);
+                                        if($x[3] && $escrita>-1) $jatem .= getSpanPalavraNativa($x[3],$escrita,$fonte,$tamanho).' ';
+
                                         if($x[2]) $jatem .= $x[2].' '; // $romanizacao .= $pal[2].', ';
-                                        else if($x[0]) $jatem .= $x[0].' '; //$pronuncia .= $pal[0].', ';
+                                        else if($x[0]) $jatem .= '/'.$x[0].'/ '; //$pronuncia .= $pal[0].', ';
                                         
                                         //$signficado .= $pal[1].', ';
                                     }
@@ -212,12 +213,12 @@ $tamanho = $idioma['tamanho'];
                                         <div class="col">
                                             <div class="input-group mb-2">
                                                 <span class="input-group-text">'._t('Pronuncia').'</span>
-                                                <input type="text" class="form-control" autocomplete="off" id="pron'.$r['id_referente'].'" onchange="checarPronuncia('.$r['id_referente'].','.$id_idioma.')" onkeyup="editarPalavra('.$r['id_referente'].')">
+                                                <input type="text" class="form-control" autocomplete="off" id="pron'.$r['id_referente'].'" onchange="checarPronuncia(\''.$r['id_referente'].'\',\''.$id_idioma.'\')" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
                                             </div>';
                                 if ($escrita>-1){
                                             echo '<div class="input-group mb-2">
                                                 <span class="input-group-text">'._t('Romanizacao').'</span>
-                                                <input type="text" class="form-control" autocomplete="off" id="rom'.$r['id_referente'].'" onkeyup="editarPalavra('.$r['id_referente'].')" onchange="checarRomanizacao('.$r['id_referente'].','.$id_idioma.')">
+                                                <input type="text" class="form-control" autocomplete="off" id="rom'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarRomanizacao(\''.$r['id_referente'].'\',\''.$id_idioma.'\')">
                                             </div>';
                                 }
 
@@ -227,14 +228,14 @@ $tamanho = $idioma['tamanho'];
                                     }else{
                                         echo '<div class="input-group mb-2">
                                                 <span class="input-group-text">'._t('Nativo').'</span>
-                                                <input type="text" class="form-control custom-font-'.$escrita.'" autocomplete="off" id="nat'.$r['id_referente'].'" onkeyup="editarPalavra('.$r['id_referente'].')" onchange="checarNativo('.$r['id_referente'].','.$escrita.')">
+                                                <input type="text" class="form-control custom-font-'.$escrita.'" autocomplete="off" id="nat'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarNativo(\''.$r['id_referente'].'\',\''.$escrita.'\')">
                                             </div>';
                                     }
                                 }
 
                                 echo '<div class="input-group mb-2">
                                                 <span class="input-group-text">'._t('Significado').'</span>
-                                                <input type="text" class="form-control" autocomplete="off" id="sig'.$r['id_referente'].'" onkeyup="editarPalavra('.$r['id_referente'].')">
+                                                <input type="text" class="form-control" autocomplete="off" id="sig'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
                                             </div>';
                                 
                                 if ($jatem!='') echo '<label class="form-label alert alert-warning">Já tem palavra(s) com este referente: '.$jatem.'</label>';
@@ -358,7 +359,7 @@ function dropHandler(ev) {
 
     if ( ref > 0 ) {
         $("#pron"+ref).val(data);
-        checarPronuncia(ref,<?=$id_idioma?>); editarPalavra(ref);
+        checarPronuncia(ref,'<?=$id_idioma?>'); editarPalavra(ref);
     }
 }
 formatarTablerSelect('idsig',null);

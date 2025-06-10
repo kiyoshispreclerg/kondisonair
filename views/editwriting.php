@@ -56,7 +56,7 @@
                         <div class="card-title" onclick="window.history.replaceState({}, \'\', \'index.php?page=editwriting&iid='.$id_idioma.'&eid='.$e['id'].'\');$(\'.cb_'.$e['id'].'\').toggle()">'.$e['nome'].($e['padrao']==1?' ('._t('Padrão').')':'').'</div>
                         <div class="card-actions btn-actions">
                           <a href="#" onclick="apagarEscrita('.$e['id'].','.$e['np'].')" class="btn btn-danger">'._t('Apagar').'</a>
-                          <a href="#" onclick="execSalvarEscrita('.$e['id'].')" id="btnSalvar'.$e['id'].'" class="btn btn-primary">'._t('Salvar').'</a>
+                          <a href="#" onclick="execSalvarEscrita(\''.$e['id'].'\')" id="btnSalvar'.$e['id'].'" class="btn btn-primary">'._t('Salvar').'</a>
                         </div>
                       </div>
                       <div class="card-body cb_'.$e['id'].'" '.($_GET['eid']==$e['id']?'':'style="display:none"').'>';
@@ -67,7 +67,7 @@
 
                             <div class="mb-3">
                               <label class="form-label">'._t('Nome').'</label>
-                              <input type="text" class="form-control" id="nome'.$e['id'].'" value="'.$e['nome'].'" onchange="salvarEscrita('.$e['id'].')">
+                              <input type="text" class="form-control" id="nome'.$e['id'].'" value="'.$e['nome'].'" onchange="salvarEscrita(\''.$e['id'].'\')">
                             </div>
 
                             <div class="mb-3">
@@ -75,7 +75,7 @@
                                 <div class="col-6">
 
                                     <div class="form-label">'._t('Tipo de Sistema').'</div>
-                                    <select class="form-select" id="id_tipo'.$e['id'].'" onchange="salvarEscrita('.$e['id'].')" >
+                                    <select class="form-select" id="id_tipo'.$e['id'].'" onchange="salvarEscrita(\''.$e['id'].'\')" >
                                       <option value="1" title="" '.($e['id']==1?'selected':'').'>'._t('Alfabeto').'</option>
                                       <option value="2" title="" '.($e['id']==2?'selected':'').'>'._t('Silabário').'</option>
                                       <option value="3" title="" '.($e['id']==3?'selected':'').'>'._t('Consonantal').'</option>
@@ -84,7 +84,7 @@
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label">'._t('Tamanho da fonte').'</label>
-                                    <select type="text" class="form-select" id="tamanho'.$e['id'].'" value="'.$e['tamanho'].'" onchange="salvarEscrita('.$e['id'].')">';
+                                    <select type="text" class="form-select" id="tamanho'.$e['id'].'" value="'.$e['tamanho'].'" onchange="salvarEscrita(\''.$e['id'].'\')">';
                     if ($e['id_fonte']<0){
                         $contents .= '<option value="unset" '.($e['tamanho']=='unset'?'selected':'').'>'._t('Padrão').'</option>
                                   <option value="sm" '.($e['tamanho']=='sm'?'selected':'').'>'._t('Pequena').'</option>
@@ -114,13 +114,13 @@
                               <div class="row">
                                 <div class="col-6">
                                   <label class="form-check form-switch">
-                                    <input class="form-check-input wdef-check" id="wdef-check'.$e['id'].'" type="checkbox"  '.($e['padrao']==1?"checked":'').' onchange="setPadrao('.$e['id'].')">
+                                    <input class="form-check-input wdef-check" id="wdef-check'.$e['id'].'" type="checkbox"  '.($e['padrao']==1?"checked":'').' onchange="setPadrao(\''.$e['id'].'\')">
                                     <span class="form-check-label">'._t('Sistema padrão').'</span>
                                   </label>
                                 </div>
                                 <div class="col-6">
                                   <label class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="publico'.$e['id'].'" '.($e['publico']==1?'checked':'').' onchange="salvarEscrita('.$e['id'].')">
+                                    <input class="form-check-input" type="checkbox" id="publico'.$e['id'].'" '.($e['publico']==1?'checked':'').' onchange="salvarEscrita(\''.$e['id'].'\')">
                                     <span class="form-check-label">'._t('Público').'</span>
                                   </label>
                                 </div>
@@ -131,7 +131,7 @@
 
                             <div class="mb-3">
                               <label class="form-label">'._t('Nome nativo').'</label>
-                              <select type="text" class="form-select" value="" id="id_nativo'.$e['id'].'" onchange="salvarEscrita('.$e['id'].')">
+                              <select type="text" class="form-select" value="" id="id_nativo'.$e['id'].'" onchange="salvarEscrita(\''.$e['id'].'\')">
                                 '; // <option value="0" data-nativa="" selected >-</option>
                           
                                 /*
@@ -160,7 +160,7 @@
                                 // é fonte desenhada
 
                             }else{
-                              $editChar = 'addCaractere(';
+                              $editChar = 'addCaractere(\'';
                               $editSubs = 'addSubstituicao';
                             $contents .= '<div class="mb-3">
                                 <div class="row">
@@ -238,11 +238,11 @@
 
                             <div class="mb-3 overflow-auto" style="max-height: 45rem">
                                 <div class="col-12">
-                                    <a class="btn btn-primary"  onclick="'.$editChar.$e['id'].')">+</a>
-                                    <!--a class="btn btn-primary"  onclick="editarMetadado('.$e['id'].')">'._t('Metadados').'</a-->
+                                    <a class="btn btn-primary"  onclick="'.$editChar.$e['id'].'\')">+</a>
+                                    <!--a class="btn btn-primary"  onclick="editarMetadado(\''.$e['id'].'\')">'._t('Metadados').'</a-->
                                 </div>
                                 <div id="alfabeto'.$e['id'].'" class="list-group list-group-flush list-group-hoverable">
-                                    <a class="btn btn-primary" onClick="carregarTabelaAlfabeto('.$e['id'].')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
+                                    <a class="btn btn-primary" onClick="carregarTabelaAlfabeto(\''.$e['id'].'\')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
                                 </div> 
 
                             </div>
@@ -259,10 +259,10 @@
                             <div class="mb-3 overflow-auto" style="max-height: 45rem">
 
                                 <div class="col-12">
-                                    <a class="btn btn-primary"  onclick="'.$editSubs.'('.$e['id'].',0)">+</a>
+                                    <a class="btn btn-primary"  onclick="'.$editSubs.'(\''.$e['id'].'\',0)">+</a>
                                 </div>
                                 <div id="autoSubstituicao'.$e['id'].'"  class="list-group list-group-flush list-group-hoverable">
-                                    <a class="btn btn-primary" onClick="carregarTabelaEscrita('.$e['id'].')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
+                                    <a class="btn btn-primary" onClick="carregarTabelaEscrita(\''.$e['id'].'\')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
                                 </div>
 
                             </div>
@@ -956,86 +956,7 @@ function drawCaractere(eid, detalhes = '', cid = 0, glifo = '', vars = '',vetor 
 
 };
 
-function OKdrawCaractere(eid, detalhes = '', cid = 0, glifo = '', vars = '',vetor = "[]"){ 
-
-    glifo = glifo.replaceAll("*","'");
-    vars = vars.replaceAll("*","'");
-
-    $("#va").val(vars);
-    $("#char").val(glifo);
-    $("#desc").val(detalhes);
-    $("#eid").val(eid);
-    $("#cid").val(cid);
-
-    //$("#va").attr("class","form-control custom-font-"+eid);
-    //$("#char").attr("class","form-control custom-font-"+eid);
-    
-    let undoData = [];
-    if (canvas) {
-      const signaturePad = new SignaturePad(canvas, {
-        backgroundColor: "transparent",
-        penColor: getComputedStyle(canvas).color, // --tblr-primary
-        minWidth: 1,
-        maxWidth: 3
-      });
-      document.querySelector("#drawchar-clear").addEventListener("click", function () {
-        signaturePad.clear();
-      });
-      function resizeCanvas() {
-        const ratio = Math.max( 1, 1);
-        console.log(canvas.offsetWidth, canvas.offsetHeight);
-        canvas.width = canvas.offsetWidth * ratio;
-        canvas.height = canvas.offsetWidth  * ratio;
-        canvas.getContext("2d").scale(ratio, ratio);
-        signaturePad.fromData(signaturePad.toData());
-      }
-      window.addEventListener("resize", resizeCanvas);
-
-      document.querySelector("#drawchar-clear").addEventListener("endStroke", () => {
-        // clear undoData when new data is added
-        undoData = [];
-      });
-      document.querySelector("#drawchar-undo").addEventListener("click", () => {
-        const data = signaturePad.toData();
-
-        if (data && data.length > 0) {
-          // remove the last dot or line
-          const removed = data.pop();
-          undoData.push(removed);
-          signaturePad.fromData(data);
-        }
-      });
-
-      document.querySelector("#drawchar-wplus").addEventListener("click", () => {
-        signaturePad.minWidth = 4; // inputs?
-        signaturePad.maxWidth = 6; // inputs?
-      });
-      document.querySelector("#saveDrawChar").addEventListener("click", () => {
-        var data = signaturePad.toData();
-        //console.log(data);
-        //alert(data);
-        execDrawCaractere(data);
-      });
-      setTimeout(() => {
-        resizeCanvas();
-			}, 300);
-      resizeCanvas();
-
-      if (vetor != '') signaturePad.fromData(JSON.parse(vetor));
-
-      document.querySelector("#drawchar-wminus").addEventListener("click", () => {
-        signaturePad.minWidth = 1; // inputs?
-        signaturePad.maxWidth = 3; // inputs?
-      });
-    }
-
-    $("#modal-draw-caractere").modal('show'); //$("#modal-draw-caractere").modal('show');
-
-};
-
 function execDrawCaractere(vetor,imagem, svg){ 
-
-    //console.log(imagem);
     
     var cid = $('#cid').val();
     var eid = $('#eid').val();

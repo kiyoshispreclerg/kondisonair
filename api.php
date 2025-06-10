@@ -14,8 +14,7 @@ require(CONFIG_PATH);
 $tituloPagina = 'Kondisonair';
 $versaoK1 = 0;
 $versaoK2 = 1;
-$versaoK3 = 2;
-$defLang = 1; // default: 1=ptbr 5=eng 6= esper
+$versaoK3 = 5;
 $maxSilabas = 10;
 
 error_reporting(E_ERROR);
@@ -31,7 +30,6 @@ if ($_COOKIE["KondisonairUzatorIDX"]>0) {
   $_SESSION['KondisonairUzatorDiom'] = $_COOKIE["KondisonairUzatorDiom"];
   $_SESSION['KondisonairUzatorNivle'] = $_COOKIE["KondisonairUzatorNivle"];
 }
-//if ($_SESSION['KondisonairUzatorIDX']==1) error_reporting(E_ALL);
 
 if (!isset($_SESSION['KondisonairUzatorIDX'])) session_destroy();
 
@@ -47,6 +45,12 @@ $feedLimit = 10; // posts exibidos na lista de atividades recentes
 $GLOBALS['dblink'] =  mysqli_connect($mysql_host, $mysql_user, $mysql_pass) or die('DATABASE: mysql_connect: ' . mysqli_error($GLOBALS['dblink']));
 mysqli_select_db( $GLOBALS['dblink'], $mysql_db) or die('DATABASE: mysql_select_db: ' . mysqli_error($GLOBALS['dblink']));
 mysqli_set_charset( $GLOBALS['dblink'],'utf8');
+
+$resop = mysqli_query($GLOBALS['dblink'],"SELECT * FROM opcoes_sistema;") or die(mysqli_error($GLOBALS['dblink']));
+while($ro = mysqli_fetch_assoc($resop)) { 
+    $opcoes[$ro['opcao']]  = $ro['valor'];
+};
+$defLang = $opcoes['def_lang'];
   
 if($_GET['action']=='logout'){
 	  //$token = base64_encode($_SESSION['KondisonairUsuarioDBS_SHORT']);
@@ -116,7 +120,7 @@ function generateId($tabela = null) { // se vier tabela, conferir q id não exis
     // Combina: 41 bits para timestamp, 23 bits para aleatoriedade
     $id = ($timestamp << 23) | $random;
     
-    return $id;
+    return $id > 10000 ? $id : generateId($tabela);
 }
 
 if($_GET['action']=='login'){
@@ -265,8 +269,9 @@ switch($page){
     case 'language': $tituloPagina .= ' - '._t('Idioma'); break;
     case 'text': $tituloPagina .= ' - '._t('Texto'); break;
     case 'texts': $tituloPagina .= ' - '._t('Textos'); break;
+    case 'article': $tituloPagina .= ' - '._t('Artigo'); break;
     case 'settings': $tituloPagina .= ' - '._t('Minha conta'); break;
-    case 'mylanguages': $tituloPagina .= ' - '._t('Minhas conlangs'); break;
+    case 'mylanguages': $tituloPagina .= ' - '._t('Meus idiomas'); break;
     case 'myarticles': $tituloPagina .= ' - '._t('Meus artigos'); break;
     case 'wordbanks': $tituloPagina .= ' - '._t('Bancos de palavras'); break;
     case 'changelog': $tituloPagina .= ' - '._t('Projeto'); break;
@@ -274,6 +279,7 @@ switch($page){
     case 'editsyllables': $tituloPagina .= ' - '._t('Silabas'); break;
     case 'editsounds': $tituloPagina .= ' - '._t('Sons'); break;
     case 'editparts': $tituloPagina .= ' - '._t('Tipos de palavras'); break;
+    case 'editarticle': $tituloPagina .= ' - '._t('Artigo'); break;
     case 'editinflections': $tituloPagina .= ' - '._t('Formas de palavras'); break;
     case 'editgenders': $tituloPagina .= ' - '._t('Gêneros'); break;
     case 'editforms': $tituloPagina .= ' - '._t('Formas'); break;
@@ -287,6 +293,11 @@ switch($page){
     case 'editmoments': $tituloPagina .= ' - '._t('Momentos'); break;
     case 'editstories': $tituloPagina .= ' - '._t('Histórias'); break;
     case 'editstory': $tituloPagina .= ' - '._t('História'); break;
+    case 'referents': $tituloPagina .= ' - '._t('Referentes'); break;
+    case 'glosses': $tituloPagina .= ' - '._t('Glosses'); break;
+    case 'users': $tituloPagina .= ' - '._t('Usuários'); break;
+    case 'ipa': $tituloPagina .= ' - '._t('Tabelas IPA'); break;
+    case 'editentity': $tituloPagina .= ' - '._t('Entidade'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -505,17 +516,6 @@ function getStatus($s){
     case 9: $r = _t('Usável');
   }
   return $r;
-};
-
-function tipoGloss($tipo){
-  $res = '?';
-  switch($tipo){
-    case 'b': $res = 'Bloco sintático'; break;
-    case 'k': $res = 'Classe gramatical'; break;
-    case 'c': $res = 'Tipo de concordâncias'; break;
-    case 'i': $res = 'Item de concordâncias'; break;
-  };
-  return $res;
 };
 
 function parseSoundChangeRules($text) {
@@ -3382,7 +3382,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.($p['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.($p['id_forma_dicionario']==0?'text-info':'').'" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$p['id_forma_dicionario'].'"  
-                  onclick="abrirPalavra('.(0+$p['id']).','.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$fdic.',`'.$autogen.'`)">
+                  onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`'.$autogen.'`)">
                   '.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).'<br>'.
                 $p['romanizacao'].' '.($p['pronuncia']!=''?'/'.$p['pronuncia'].'/':'&nbsp;').' '.$autogencol.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
             }
@@ -3535,7 +3535,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                   echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                     class="'.($pal['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.($pal['id_forma_dicionario']==0?'text-info':'').'" 
                     id="'.(0+$pal['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$pal['id_forma_dicionario'].'" 
-                    onclick="abrirPalavra('.(0+$pal['id']).','.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$fdic.',`'.$autogen.'`)">
+                    onclick="abrirPalavra(\''.(0+$pal['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`'.$autogen.'`)">
                     '.getSpanPalavraNativa($pal['nativa'],$escrita,$id_fonte,$tamanho).'<br>'.
                   $pal['romanizacao'].' '.($pal['pronuncia']!=''?'/'.$pal['pronuncia'].'/':'&nbsp;').$extraPal.' '.$autogencol.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
               }
@@ -3648,7 +3648,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.($pal['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.($pal['id_forma_dicionario']==0?'text-info':'').'" 
                   id="'.(0+$pal['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$pal['id_forma_dicionario'].'" 
-                  onclick="abrirPalavra('.(0+$pal['id']).','.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$fdic.',`'.$autogen.'`)">
+                  onclick="abrirPalavra(\''.(0+$pal['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`'.$autogen.'`)">
                   '.getSpanPalavraNativa($pal['nativa'],$escrita,$id_fonte,$tamanho).'<br>'.
                 $pal['romanizacao'].' '.($pal['pronuncia']!=''?'/'.$pal['pronuncia'].'/':'&nbsp;').' '.$autogencol.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
             }
@@ -3712,7 +3712,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.($p['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0 '.($p['id_forma_dicionario']==0?'text-info':'').'" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$p['id_forma_dicionario'].'" 
-                  onclick="abrirPalavra('.(0+$p['id']).','.$linhas.','.$colunas.','.$x['id'].',0,\''.$x['nome'].'\','.$fdic.',`'.$autogen.'`)">
+                  onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$fdic.'\',`'.$autogen.'`)">
                   '.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).'<br>'.
                 $p['romanizacao'].' '.($p['pronuncia']!=''?'/'.$p['pronuncia'].'/':'&nbsp;').' '.$autogencol.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
             }
@@ -3757,8 +3757,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
       // if ips < num concords q deveria ter
       
         echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="'.($p['ips']>0?'nao-vazio':'').'"
-                id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'" 
-                  onclick="/*abrirPalavra('.(0+$p['id']).',0,0,0,0,\''.$x['nome'].'\','.$fdic.',`'.$autogen.'`)*/">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
+                id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
                 $p['romanizacao'].' '.($p['pronuncia']!=''?'/'.$p['pronuncia'].'/':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
   }
 
@@ -3894,7 +3893,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
             if (mysqli_num_rows($defs)>0 && $d == 0){
               
               echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' text-info"  
-                onclick="carregaRegra(-1'.','.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$gen.')">('._t('padrão').')</td>';
+                onclick="carregaRegra(-1'.',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">('._t('padrão').')</td>';
 
             }else{
 
@@ -3958,7 +3957,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                 $p = mysqli_fetch_assoc($ps);
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$gen.'"  
-                  onclick="carregaRegra('.(0+$p['id']).','.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$gen.')">';
+                  onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">';
                 //echo '<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br><b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']).'</td>';
                 //echo ($p['regra_pronuncia']!=''?'<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br>':' ') ;
                 echo ($p['regra_pronuncia']!=''?nl2br($p['regra_pronuncia']).'<br>':' ') ;
@@ -3981,7 +3980,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
             if (mysqli_num_rows($defs)>0 && $d == 0){
               
               echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' text-info"  
-                onclick="carregaRegra(-1,'.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$gen.')">('._t('padrão').')</td>';
+                onclick="carregaRegra(-1,\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">('._t('padrão').')</td>';
 
             }else{
 
@@ -4116,7 +4115,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                 $p = mysqli_fetch_assoc($ps);
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$gen.'"  
-                  onclick="carregaRegra('.(0+$p['id']).','.$linhas.','.$colunas.','.$x['id'].','.$y2['id'].',\''.$x['nome'].' '.$y2['nome'].'\','.$gen.')">';
+                  onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">';
                 //echo '<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br><b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']).'</td>';
                 //echo ($p['regra_pronuncia']!=''?'<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br>':' ') ;
                 echo ($p['regra_pronuncia']!=''?nl2br($p['regra_pronuncia']).'<br>':' ') ;
@@ -4141,7 +4140,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
             if (mysqli_num_rows($defs)>0 && $d == 0){
               
               echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0 text-info"  
-                onclick="carregaRegra(-1,'.$linhas.','.$colunas.','.$x['id'].',0,\''.$x['nome'].'\','.$gen.')">('._t('padrão').')</td>';
+                onclick="carregaRegra(-1,\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$gen.'\')">('._t('padrão').')</td>';
 
             }else{
 
@@ -4205,7 +4204,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                 $p = mysqli_fetch_assoc($ps);
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$gen.'"  
-                  onclick="carregaRegra('.(0+$p['id']).','.$linhas.','.$colunas.','.$x['id'].',0,\''.$x['nome'].'\','.$gen.')">';
+                  onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$gen.'\')">';
                 //echo '<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br><b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']).'</td>';
                 //echo ($p['regra_pronuncia']!=''?'<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br>':' ') ;
                 echo ($p['regra_pronuncia']!=''?nl2br($p['regra_pronuncia']).'<br>':' ') ;
@@ -4240,6 +4239,18 @@ function getSpanPalavraNativa($palavra,$eid,$fonte,$tamanho){
 
 if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 1
 
+  if ($_GET['action']=='ajaxGravarOption') { // otimizar sql
+
+    $value = $_GET['value'];
+    $param = $_GET['param'];
+
+    $sqlQuerys = "UPDATE opcoes_sistema SET 
+      valor = '".$value."' WHERE opcao = '".$param."';";
+    mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die('err: '.mysqli_error($GLOBALS['dblink']));
+		
+    die('ok');
+  };
+
   if ($_GET['action']=='ajaxGravarOpsons') { // otimizar sql
 
     foreach ($_POST as $key => $value) { 
@@ -4254,40 +4265,124 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
 
   if ($_GET['action']=='ajaxGravarGloss') { // otimizar sql (final)
 
-    if($_GET['nid']>0){ 
-      $sqlQuerys = "UPDATE glosses SET 
-        gloss = '".$_POST['gloss']."',
-        tipo = '".$_POST['tipo']."',
-        descricao = '".$_POST['descricao']."'
-        WHERE id = ".$_GET['nid']." LIMIT 1;";
+    if($_GET['gid']>0){ 
+      $sql = "UPDATE glosses SET
+            gloss = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['gloss'])."',
+            descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."'
+            WHERE id = ".(int)$_GET['gid'].";";
       mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      $nid = $_GET['nid'];
+      $gid = $_GET['gid'];
 
     } else {  
-        $nid = generateId();
-        $sqlQuerys = "INSERT INTO glosses SET 
-        gloss = '".$_POST['gloss']."',
-        id = $nid,
-        tipo = '".$_POST['tipo']."',
-        descricao = '".$_POST['descricao']."';";
+        $gid = generateId();
+        $sql = "INSERT INTO glosses SET
+            id = ".$gid.",
+            gloss = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['gloss'])."',
+            descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
+            tipo = 'i';";
 
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
     }; 
 
-    if($nid>0){ // otimizar sql
-      mysqli_query($GLOBALS['dblink'],"DELETE FROM gloss_referentes WHERE id_gloss = ".$nid.";") or die(mysqli_error($GLOBALS['dblink']));
+    if($gid>0){ // otimizar sql
+      mysqli_query($GLOBALS['dblink'],"DELETE FROM gloss_referentes WHERE id_gloss = ".$gid.";") or die(mysqli_error($GLOBALS['dblink']));
 
       foreach($_POST['referentes'] as $ref){
           if ($ref>0)
           mysqli_query($GLOBALS['dblink'],"INSERT INTO gloss_referentes SET 
-              id_gloss = ".$nid.",
+              id_gloss = ".$gid.",
               id_referente = ".$ref.";") or die(mysqli_error($GLOBALS['dblink']));
       }
     }
 
-    echo $nid;
+    echo $gid;
     die();
   };
+
+  if ($_GET['action'] == 'getDetalhesGloss') {
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM glosses WHERE id = ".(int)$_GET['gid'].";") or die(mysqli_error($GLOBALS['dblink']));
+    $data = [];
+    while ($r = mysqli_fetch_assoc($result)) {
+        $data[] = $r;
+    }
+    echo json_encode($data);
+    exit();
+  }
+
+  if ($_GET['action'] == 'ajaxDelGloss') {
+    $sql = "DELETE FROM glosses WHERE id = ".(int)$_GET['gid'].";";
+    mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    exit();
+  }
+
+  if ($_GET['action'] == 'listGlosses') {
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM glosses;") or die(mysqli_error($GLOBALS['dblink']));
+    while ($r = mysqli_fetch_assoc($result)) {
+        echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
+            <div class="col" onClick="abrirGloss('.$r['id'].')">
+                <a href="#" >'.htmlspecialchars($r['gloss']).' - '.htmlspecialchars($r['descricao']).'</a>
+            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delGloss('.$r['id'].')">X</a></div>
+        </div></div>';
+    }
+    exit();
+  }
+
+  if ($_GET['action'] == 'ajaxGravarUsuario') {
+      if ($_GET['uid'] > 0) {
+          $sql = "UPDATE usuarios SET
+              username = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['username'])."',
+              nome_completo = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome_completo'])."',
+              descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."'
+              WHERE id = ".(int)$_GET['uid'].";";
+      } else {
+          die('no create');
+          $sql = "INSERT INTO usuarios SET
+              id = ".generateId().",
+              username = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['username'])."',
+              nome_completo = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome_completo'])."',
+              descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
+              senha = '', 
+              id_idioma_nativo = 1,
+              email = '',
+              confirmacao = '',
+              acesso = 0,
+              publico = 0,
+              data_cadastro = NOW();";
+      }
+      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      echo mysqli_insert_id($GLOBALS['dblink']) ?: $_GET['uid'];
+      exit();
+  }
+
+  if ($_GET['action'] == 'listUsuarios') {
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id, username, nome_completo FROM usuarios;") or die(mysqli_error($GLOBALS['dblink']));
+      while ($r = mysqli_fetch_assoc($result)) {
+          echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
+              <div class="col" onClick="abrirUsuario(\''.$r['id'].'\')">
+                  <a href="#" >'.htmlspecialchars($r['username']).' - '.htmlspecialchars($r['nome_completo']).'</a>
+              </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delUsuario(\''.$r['id'].'\')">X</a></div>
+          </div></div>';
+      }
+      exit();
+  }
+
+  if ($_GET['action'] == 'getDetalhesUsuario') { 
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM usuarios WHERE id = ".(int)$_GET['uid'].";") or die(mysqli_error($GLOBALS['dblink']));
+      $data = [];
+      while ($r = mysqli_fetch_assoc($result)) {
+          $data[] = $r;
+      }
+      echo json_encode($data);
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxDelUsuario') {
+      $sql = "DELETE FROM usuarios WHERE id = ".(int)$_GET['uid'].";";
+      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      echo 'ok';
+      exit();
+  }
 
   if ($_GET['action'] == 'limparBanco') {  die('no');
 
@@ -4348,6 +4443,7 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
   };
 
 }else{
+  if ($_GET['action']=='ajaxGravarOption') die('Sertno admin');
   if ($_GET['action']=='ajaxGravarOpsons') die('Sertno admin');
   if ($_GET['action']=='ajaxGravarGloss') die('Sertno admin');
   if ($_GET['action']=='limparBanco') die('Sertno admin');
@@ -4399,7 +4495,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action']=='ajaxGravarPerfyl') {
 
     // if email diferente, confirmação = 0
-    $r = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarioes WHERE username = '".$_POST['usuario']."';") or die(mysqli_error($GLOBALS['dblink']));
+    $r = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE username = '".$_POST['usuario']."' AND id <> ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($GLOBALS['dblink']));
     if (mysqli_num_rows($r)>0) die('user');
 
     $sqlQuerys = "UPDATE usuarios SET 
@@ -4545,28 +4641,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die();
   }
 
-  if ($_GET['action']=='ajaxGravarTraducao') {
-
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM traducoes WHERE base = '".$_POST['base']."' AND id_idioma = ".$_POST['id_idioma'].";") or die(mysqli_error($GLOBALS['dblink']));
-    if(mysqli_num_rows($result)>0){ 
-      $sqlQuerys = "UPDATE traducoes SET 
-        traducao = '".$_POST['traducao']."'
-        WHERE id_idioma = ".$_POST['id_idioma']." 
-        AND base = '".$_POST['base']."' LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      echo 1;
-    } else {  
-        $sqlQuerys = "INSERT INTO traducoes SET 
-          base = '".$_POST['base']."',
-          traducao = '".$_POST['traducao']."',
-          id_idioma = ".$_POST['id_idioma'].";";
-
-        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-        echo mysqli_insert_id($GLOBALS['dblink']);
-    }; 
-    die();
-  }
-
   if ($_GET['action']=='ajaxSalvarListaSC') { // otimizar sql os 2 ultimos
 
     // POST p = chanages
@@ -4691,62 +4765,28 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
   if ($_GET['action']=='ajaxGravarGenPal') {
 
-    // classesGeneros pid iid i
     echo setGenPalDeriv($_GET['pid'],$_GET['i']);
     die();
-
-    /*
-
-    $t = mysqli_query($GLOBALS['dblink'],"SELECT * FROM classesGeneros WHERE 
-          id_palavra = ".$_GET['pid']." AND
-          id_genero IN(SELECT id FROM generos WHERE id_classe = ( SELECT id_classe FROM palavras WHERE id = ".$_GET['pid']." LIMIT 1) );") or die(mysqli_error($GLOBALS['dblink']));
-
-    if(mysqli_num_rows($t)>0){ 
-      $p = mysqli_fetch_assoc($t);
-
-      $sqlQuerys = "UPDATE classesGeneros SET 
-        id_genero = ".$_GET['i']."
-        WHERE id_palavra = ".$_GET['pid']." LIMIT 1;";
-      //echo $sqlQuerys;
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      echo 1;
-
-    } else {  
-        $sqlQuerys = "INSERT INTO classesGeneros SET 
-          id_palavra = ".$_GET['pid'].",
-          id_classe = ( SELECT id_classe FROM palavras WHERE id = ".$_GET['pid']." LIMIT 1),
-          id_genero = ".$_GET['i'].";";
-
-          //echo $sqlQuerys;
-        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-        echo mysqli_insert_id($GLOBALS['dblink']);
-    }; 
-    */
     die();
   }
 
-  if ($_GET['action']=='ajaxGravarReferente') {
-
-    if($_GET['id']>0){ 
-      $sqlQuerys = "UPDATE referentes SET 
-        detalhes = '".$_POST['detalhes']."',
-        descricaoPort = '".$_POST['descricaoPort']."',
-        descricao = '".$_POST['descricao']."'
-        WHERE id = ".$_GET['id']." LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      echo $_GET['id'];
-
-    } else {  
-        $rid = generateId();
-        $sqlQuerys = "INSERT INTO referentes SET id = $rid,
-        detalhes = '".$_POST['detalhes']."',
-        descricaoPort = '".$_POST['descricaoPort']."',
-        descricao = '".$_POST['descricao']."';";
-
-        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-        echo $rid;
-    }; 
-    die();
+  if ($_GET['action'] == 'ajaxGravarReferente') {
+      if ($_GET['rid'] > 0) {
+          $sql = "UPDATE referentes SET
+              descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
+              descricaoPort = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoPort'])."',
+              detalhes = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['detalhes'])."'
+              WHERE id = ".$_GET['rid'].";";
+      } else {
+          $sql = "INSERT INTO referentes SET
+              id = ".generateId().",
+              descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
+              descricaoPort = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoPort'])."',
+              detalhes = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['detalhes'])."';";
+      }
+      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      echo mysqli_insert_id($GLOBALS['dblink']) ?: $_GET['rid'];
+      exit();
   }
 
   if ($_GET['action']=='ajaxGravarPalavra') {
@@ -8916,7 +8956,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action']=='ajaxGravarRealidade') die('not_user');
   if ($_GET['action']=='getLikeButton') die('<a class="btn btn-default disabled">Seguir</a>');
   if ($_GET['action']=='ajaxGravarRegra') die('not_user');
-  if ($_GET['action']=='ajaxGravarTraducao') die('not_user');
   if ($_GET['action']=='ajaxSalvarListaSC') die('not_user');
   if ($_GET['action']=='ajaxUpdateIpids') die('not_user');
   if ($_GET['action']=='ajaxCarregarTimeline') die('not_user');
@@ -9058,10 +9097,19 @@ if ($_GET['action'] == 'ajaxCarregarListaPalavras') {
     $q = "SELECT p.pronuncia, p.romanizacao FROM palavras p 
         WHERE p.id_idioma = ".$_GET['iid'].";";
   else{
-
-    // split char get id 1 char do resto
-    // nX nivelUso
-    // kX classe
+    $iid = substr($_GET['id'],1);
+    $tipo = substr($_GET['id'],0,1);
+    if ($tipo == 'n'){
+      // nivel de uso
+      $q = "SELECT p.pronuncia, p.romanizacao FROM palavras p 
+          WHERE p.id_idioma = ".$_GET['iid']." AND p.id_uso = $iid;";
+    }else if ($tipo == 'k'){
+      // classe
+      $q = "SELECT p.pronuncia, p.romanizacao FROM palavras p 
+          WHERE p.id_idioma = ".$_GET['iid']." AND p.id_classe = $iid;";
+    }else{
+      // geral ?
+    }
 
   }
 
@@ -9247,8 +9295,11 @@ if ($_GET['action'] == 'getLastChange') { // lastupdated
 
   }else if($_GET['data']=='fonts'){
 
-      // geral
-      echo '1';
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id
+            FROM fontes ORDER BY id DESC LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+        
+      $row = mysqli_fetch_assoc($result);
+      echo $row['id'];
 
   }else if($_GET['data']=='sounds'){
       $last = mysqli_query($GLOBALS['dblink'],
@@ -9518,8 +9569,8 @@ if ($_GET['action'] == 'listarGlosses') {
         <thead><tr><th>Nome</th></tr></thead><tbody>';
   while($r = mysqli_fetch_assoc($result)){
 
-    echo "<tr id='row_".$r['id']."'><td onClick='abrirPalavra(".$r['id'].")'>".$r['gloss']." - ".$r['descricao']." (".tipoGloss($r['tipo']).
-        ")<a class='btn btn-xs btn-info btn-rounded pull-right' onClick='apagarOpcao(".$r['id'].")'>X</a></td></tr>";
+    echo "<tr id='row_".$r['id']."'><td onClick='abrirPalavra(".$r['id'].")'>".$r['gloss']." - ".$r['descricao'].
+      "<a class='btn btn-xs btn-info btn-rounded pull-right' onClick='apagarOpcao(".$r['id'].")'>X</a></td></tr>";
   };
   echo '</tbody></table><script>$("#tabelaPalavras").DataTable({
           paging: false,
@@ -9558,10 +9609,10 @@ if ($_GET['action'] == 'listParts') { // otimizar sql queries
     //  .$r['nome']." : ".$r['gloss']."".$generos.$concords." </td></tr>";
 
     echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
-          <div class="col" onClick="abrirPalavra('.$r['id'].')">
+          <div class="col" onClick="abrirPalavra(\''.$r['id'].'\')">
             <a href="#" >'.$r['nome'].' : '.$r['gloss'].'</a>
             <a class="text-body text-secondary">'.$generos.$concords.'</a> 
-          </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delPart('.$r['id'].')">X</a></div>
+          </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delPart(\''.$r['id'].'\')">X</a></div>
         </div></div>';
   };
     die();
@@ -9829,28 +9880,6 @@ if ($_GET['action'] == 'ajaxGetOrigens') {
   die();
 };
 
-if ($_GET['action'] == 'listarTraducoes') {
-  if (!$_GET['iid']>0) {
-    echo _t('Selecione um idioma primeiro.'); 
-    die();
-  }
-  $result = mysqli_query($GLOBALS['dblink'],"SELECT t.base, t.id, ok.traducao FROM traducoes t 
-        LEFT JOIN traducoes ok ON (t.base = ok.base AND ok.id_idioma = ".$_GET['iid'].") 
-        GROUP BY t.base;") or die(mysqli_error($GLOBALS['dblink']));
-  echo '<table id="tabelaPalavras" data-ride="datatables" class="table table-m-b-none">
-        <thead><tr><th>Base</th><th>Texto em tela</th></tr></thead><tbody>';
-  while($r = mysqli_fetch_assoc($result)){
-    echo "<tr id='row_".$r['base']."' onClick='abrirPalavra(\"".$r['base']."\")'><td>".$r['base']."</td>
-            <td>".$r['traducao']."</td></tr>";
-  };
-  echo '</tbody></table><script>$("#tabelaPalavras").DataTable({
-          paging: false,
-          "scrollY": "500px",
-          "scrollCollapse": true 
-      });</script>';
-    die();
-};
-
 if ($_GET['action'] == 'getDetMorfPalavra') {
   echo getCombosGenPalavra($_GET['pid']).getCombosPalavra($_GET['pid']);
   die();
@@ -9867,7 +9896,7 @@ if ($_GET['action'] == 'getPalavrasMesmaPronuncia') {
 };
 
 if ($_GET['action'] == 'getPalavrasMesmaEscrita') {
-  echo getPalavrasMesmaEscrita($_GET['pid'],$_GET['eid']);
+  echo getPalavrasMesmaEscrita((int)$_GET['pid'],(int)$_GET['eid']);
   die();
 };
 
@@ -10046,20 +10075,6 @@ if ($_GET['action'] == 'getDetalhesGloss') {
   die();
 };
 
-if ($_GET['action'] == 'getDetalhesTraducao') {
-  
-  $result = mysqli_query($GLOBALS['dblink'],"SELECT t.base, t.id, ok.traducao FROM traducoes t 
-    LEFT JOIN traducoes ok ON (t.base = ok.base AND ok.id_idioma = ".$_GET['iid'].") 
-    WHERE t.base = '".$_GET['base']."' AND t.id_idioma = 1;");
-  $rows = array();
-    while($r = mysqli_fetch_assoc($result)) {
-      $rows[] = $r;
-    }
-
-  print json_encode($rows);
-  die();
-};
-
 if ($_GET['action'] == 'getDetalhesPalavra') {
 
     //get palavras com mesmos referente:
@@ -10203,7 +10218,7 @@ if ($_GET['action'] == 'getSintazBazic') {
 if ($_GET['action'] == 'getDetalhesReferente') {
 
   $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM referentes 
-    WHERE id = ".$_GET['pid']." LIMIT 1;");
+    WHERE id = ".$_GET['rid']." LIMIT 1;");
   $rows = array();
     while($r = mysqli_fetch_assoc($result)) {
       $rows[] = $r;
@@ -10212,6 +10227,19 @@ if ($_GET['action'] == 'getDetalhesReferente') {
   print json_encode($rows);
   die();
 };
+
+if ($_GET['action'] == 'listReferentes') {
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM referentes;") or die(mysqli_error($GLOBALS['dblink']));
+    while ($r = mysqli_fetch_assoc($result)) {
+        echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
+          <div class="col" onClick="abrirReferente('.$r['id'].')">
+            <a href="#" >'.$r['descricao'].' - '.$r['descricaoPort'].'</a>
+            <a class="text-body text-secondary">'.$r['detalhes'].'</a> 
+          </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delReferente('.$r['id'].')">X</a></div>
+        </div></div>';
+  } 
+    die();
+}
 
 if ($_GET['action'] == 'getDetalhesClasse') {
 
@@ -11673,7 +11701,7 @@ if ($_GET['action'] == 'getKWG') {  // Kondisonair Word Generator
     $restrictions = $config['restrictions'];
 
     $wordCount = 10;
-    if ($_GET['count']>0) $wordCount = $_GET['count'];
+    if ($_GET['count']>0) $wordCount = (int)$_GET['count'];
 
     $result = generateWords($classes, $syllableFormats, $substitutions, $restrictions, $minSyllables, $maxSyllables, $wordCount);
 
@@ -11828,11 +11856,11 @@ if ($_GET['action'] == 'ajaxLoadUnidadesTempo') {
         $subNamesJson = json_encode($subNames);
         
         $html .= '<div class="list-group-item"><div class="row">
-            <div class="col" onclick="addUnidade('.$u['id_time_system'].','.$u['id'].',\''.htmlspecialchars($u['nome']).'\','.$u['duracao'].','.($u['id_unidade_ref'] ? $u['id_unidade_ref'] : 0).','.($u['quantidade'] ? $u['quantidade'] : '0').',\''.htmlspecialchars($u['equivalente']).'\',\''.htmlspecialchars(addslashes($subNamesJson)).'\','.($u['id_ref_sub'] ? $u['id_ref_sub'] : 0).','.($u['quantidade_sub'] ? $u['quantidade_sub'] : 0).')">
+            <div class="col" onclick="addUnidade(\''.$u['id_time_system'].'\',\''.$u['id'].'\',\''.htmlspecialchars($u['nome']).'\','.$u['duracao'].',\''.($u['id_unidade_ref'] ? $u['id_unidade_ref'] : 0).'\','.($u['quantidade'] ? $u['quantidade'] : '0').',\''.htmlspecialchars($u['equivalente']).'\',\''.htmlspecialchars(addslashes($subNamesJson)).'\',\''.($u['id_ref_sub'] ? $u['id_ref_sub'] : 0).'\','.($u['quantidade_sub'] ? $u['quantidade_sub'] : 0).')">
                 <a>'.htmlspecialchars($u['nome']).'</a>
                 <a class="text-body text-secondary"><br><small>'._t('Duração').': '.$u['duracao'].'s</small>'.$ref.'</a>
             </div>
-            <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarUnidade('.$u['id'].','.$u['id_time_system'].')">X</a></div>
+            <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarUnidade(\''.$u['id'].'\',\''.$u['id_time_system'].'\')">X</a></div>
         </div></div>';
         
     }
@@ -12309,7 +12337,7 @@ if ($_GET['action'] == 'listStories') {
             ? '<a href="?page=editstories&rid='.$rid.'&superior='.$h['id'].'">'._t('Ver').' '.$filhas.' '._t('história(s) filha(s)').'</a>'
             : '<a href="?page=editstories&rid='.$rid.'&superior='.$h['id'].'">'._t('Criar história filha').'</a>';
         
-        $html .= '<div id="row_'.$h['id'].'" class="list-group-item" onclick="abrirHistoria('.$h['id'].')">
+        $html .= '<div id="row_'.$h['id'].'" class="list-group-item" onclick="abrirHistoria(\''.$h['id'].'\')">
             <div class="row">
                 <div class="col">'.htmlspecialchars($h['titulo']).'  <a href="?page=editstory&rid='.$rid.'&hid='.$h['id'].'" class="btn btn-sm btn-success">Abrir</a><br>
                     <small>
@@ -12317,7 +12345,7 @@ if ($_GET['action'] == 'listStories') {
                         '.( $h['descricao'] ? '<br><span class="text-secondary">'.htmlspecialchars($h['descricao']).'</span>' : '' ).'                       
                     </small><br>'.$filhas_html.'
                 </div>
-                <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="event.stopPropagation(); delHistoria('.$h['id'].')">X</a></div>
+                <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="event.stopPropagation(); delHistoria(\''.$h['id'].'\')">X</a></div>
             </div>
         </div>';
     }
@@ -12567,14 +12595,14 @@ if ($_GET['action'] == 'listMoments') {
     // Função para obter o caminho completo da história
     function getStoryPath($story_id, $dblink, $rid) {
         $path = [];
-        $current_id = (int)$story_id;
+        $current_id = $story_id;
         while ($current_id > 0) {
             $result = mysqli_query($dblink, "SELECT id, titulo, id_superior 
                 FROM historias 
                 WHERE id = $current_id AND id_realidade = $rid LIMIT 1;") or die(mysqli_error($dblink));
             if ($story = mysqli_fetch_assoc($result)) {
                 $path[] = htmlspecialchars($story['titulo']);
-                $current_id = (int)$story['id_superior'];
+                $current_id = $story['id_superior'];
             } else {
                 break;
             }
@@ -12640,7 +12668,7 @@ if ($_GET['action'] == 'listMoments') {
         }
 
         $momentos[] = [
-            'id' => (int)$m['id'],
+            'id' => $m['id'],
             'subs' => (int)$m['numSubs'],
             'nome' => htmlspecialchars($m['nome']),
             'descricao' => htmlspecialchars($m['descricao'] ?? ''),
@@ -12650,7 +12678,7 @@ if ($_GET['action'] == 'listMoments') {
             'momento_pai_nome' => htmlspecialchars($m['momento_pai_nome'] ?? ''),
             'historias' => array_map(function ($id, $titulo, $caminho) {
                 return [
-                    'id' => (int)$id,
+                    'id' => $id,
                     'titulo' => htmlspecialchars($titulo),
                     'caminho' => $caminho
                 ];

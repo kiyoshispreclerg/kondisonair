@@ -43,7 +43,7 @@
 		LEFT JOIN fontes f ON f.id = e.id_fonte
 		WHERE id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 	while ($e = mysqli_fetch_assoc($langs)){
-		$scriptSalvarNativo .= 'salvarNativo('.$e['id'].');';
+		$scriptSalvarNativo .= 'salvarNativo(\''.$e['id'].'\');';
 		$autoon = '';
 		if ($e['padrao']==1) {
 			$escritaPadrao = $e['id'];
@@ -73,7 +73,7 @@
 					<div class="mb-3" id="drawchar_'.$e['id'].'"></div></div>';
 					*/
 			$inputsNativos .= '<div class="mb-3">
-					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv('.$e['id'].',\'drawcharlist'.$e['id'].'\',false,'.$e['id_fonte'].')">'._t('Inserir caractere').'</a></label>
+					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv(\''.$e['id'].'\',\'drawcharlist'.$e['id'].'\',false,\''.$e['id_fonte'].'\')">'._t('Inserir caractere').'</a></label>
 					<input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$e['id'].'" />
 					<div class="form-control editable-drawchar" id="drawchar_editable_'.$e['id'].'" contenteditable="true" data-eid="'.$e['id'].'" data-fonte="'.$e['id_fonte'].'" data-tamanho="'.$e['tamanho'].'"></div>
 				</div>';
@@ -108,10 +108,10 @@
 			}
 			
 			$inputsNativos .= '<div class="mb-3">
-					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasNativeBtns" role="button" aria-controls="offcanvasEnd"  onclick="loadCharDiv('.$e['id'].')">'._t('Inserir caractere').'</a></label>
+					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasNativeBtns" role="button" aria-controls="offcanvasEnd"  onclick="loadCharDiv(\''.$e['id'].'\')">'._t('Inserir caractere').'</a></label>
 					<input type="text" class="form-control escrita_nativa custom-font-'.$e['id'].'" id="escrita_nativa_'.$e['id'].'" ';
 					
-			if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,'.$e['id'].')"';
+			if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,\''.$e['id'].'\')"';
 			else $inputsNativos .= ' onchange="editarPalavra()"';
 			$inputsNativos .= ' placeholder=""></div>';
 		};
@@ -189,7 +189,7 @@
 								<div class="col-6">
 									<label class="form-label"><?=_t('Pronúncia')?>* <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasPronBtns" role="button" aria-controls="offcanvasStart" onclick="loadPronDiv()"><?=_t('Inserir sons')?></a></label>
 									<input type="text" class="form-control" id="pronuncia"  autofocus
-										onchange="checarPronuncia(this,<?=$id_idioma?>)" onkeyup="editarPalavra()"
+										onchange="checarPronuncia(this,'<?=$id_idioma?>')" onkeyup="editarPalavra()"
 										placeholder="<?=_t('Pronúncia em IPA')?>">
 								</div>
 								
@@ -359,7 +359,7 @@
 							<div class="mb-3" >
 								<label class="form-label"><?=_t('Romanização')?></label>
 								<input type="text" class="form-control" id="romanizacao" 
-								onchange="checarRomanizacao(this,<?=$id_idioma?>)"
+								onchange="checarRomanizacao(this,'<?=$id_idioma?>')"
 								onkeyup="editarPalavra()"
 								placeholder="Palavra no alfabeto latino">
 							</div>
@@ -862,15 +862,6 @@
 		});
 	};
 
-	function loadFleksons(pid,d,c){ alert('to do'); return;
-		$("#detalhesPalavr").hide();
-		$("#fleksonsPalavr").show();
-		$("#fleksonsPalavr").html('<div class="loaderSpin"></div>');
-		$("#modaltitle").html( 'Flexões de ' + $("#palavrDis").val() );
-		$("#fleksonsPalavr").load('index.php?page=editforms&pid='+pid+'&d='+d+'&c='+c);
-
-	}
-
 	function addIpaPronuncia(char){
 		$("#tempPron").val($("#tempPron").val() + char);
 		//$("#pronuncia").trigger("change");
@@ -982,7 +973,7 @@
 		loadReferentes();
 		loadOrigens();
 		
-		<?php echo 'loadWord('.$_GET['pid'].');'; ?>
+		<?php echo 'loadWord(\''.$_GET['pid'].'\');'; ?>
 		
 		setTimeout(() => {
 			createTablerSelect('id_idsig',null);

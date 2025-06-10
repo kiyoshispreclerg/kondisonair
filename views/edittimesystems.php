@@ -19,15 +19,15 @@ $script = '';
 
 $sistemas = mysqli_query($GLOBALS['dblink'], "SELECT * FROM time_systems WHERE id_realidade = ".$id_realidade." ORDER BY padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 while ($s = mysqli_fetch_assoc($sistemas)) {
-    $script .= 'carregarTabelaUnidades('.$s['id'].');carregarCalendario('.$s['id'].');';
+    $script .= 'carregarTabelaUnidades(\''.$s['id'].'\');carregarCalendario(\''.$s['id'].'\');';
 
     $contents .= '<div class="col-12">
         <div class="card">
             <div class="card-header">
                 <div class="card-title" onclick="window.history.replaceState({}, \'\', \'index.php?page=edittimesystems&rid='.$id_realidade.'&sid='.$s['id'].'\');$(\'.cb_'.$s['id'].'\').toggle()">'.$s['nome'].($s['padrao']==1?' ('._t('Padrão').')':'').'</div>
                 <div class="card-actions btn-actions">
-                    <a href="#" onclick="apagarSistema('.$s['id'].')" class="btn btn-danger">'._t('Apagar').'</a>
-                    <a href="#" onclick="execSalvarSistema('.$s['id'].')" id="btnSalvar'.$s['id'].'" class="btn btn-primary" style="display:none">'._t('Salvar').'</a>
+                    <a href="#" onclick="apagarSistema(\''.$s['id'].'\')" class="btn btn-danger">'._t('Apagar').'</a>
+                    <a href="#" onclick="execSalvarSistema(\''.$s['id'].'\')" id="btnSalvar'.$s['id'].'" class="btn btn-primary" style="display:none">'._t('Salvar').'</a>
                 </div>
             </div>
             <div class="card-body cb_'.$s['id'].'" '.($_GET['sid']==$s['id']?'':'style="display:none"').'>
@@ -36,25 +36,25 @@ while ($s = mysqli_fetch_assoc($sistemas)) {
                     <div class="col-xl-4">
                         <div class="mb-3">
                             <label class="form-label">'._t('Nome').'</label>
-                            <input type="text" class="form-control" id="nome'.$s['id'].'" value="'.$s['nome'].'" onchange="salvarSistema('.$s['id'].')">
+                            <input type="text" class="form-control" id="nome'.$s['id'].'" value="'.$s['nome'].'" onchange="salvarSistema(\''.$s['id'].'\')">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">'._t('Descrição').'</label>
-                            <textarea class="form-control" id="descricao'.$s['id'].'" rows="4" onchange="salvarSistema('.$s['id'].')">'.$s['descricao'].'</textarea>
+                            <textarea class="form-control" id="descricao'.$s['id'].'" rows="4" onchange="salvarSistema(\''.$s['id'].'\')">'.$s['descricao'].'</textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">'._t('Data padrão').'</label>
-                            <input type="date" class="form-control" id="data_padrao'.$s['id'].'" value="'.$s['data_padrao'].'" onchange="salvarSistema('.$s['id'].')">
+                            <input type="date" class="form-control" id="data_padrao'.$s['id'].'" value="'.$s['data_padrao'].'" onchange="salvarSistema(\''.$s['id'].'\')">
                         </div>
                         <div class="mb-3">
                             <label class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="padrao'.$s['id'].'" '.($s['padrao']==1?'checked':'').' onchange="setPadrao('.$s['id'].')">
+                                <input class="form-check-input" type="checkbox" id="padrao'.$s['id'].'" '.($s['padrao']==1?'checked':'').' onchange="setPadrao(\''.$s['id'].'\')">
                                 <span class="form-check-label">'._t('Sistema padrão').'</span>
                             </label>
                         </div>
                         <div class="mb-3">
                             <label class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="publico'.$s['id'].'" '.($s['publico']==1?'checked':'').' onchange="salvarSistema('.$s['id'].')">
+                                <input class="form-check-input" type="checkbox" id="publico'.$s['id'].'" '.($s['publico']==1?'checked':'').' onchange="salvarSistema(\''.$s['id'].'\')">
                                 <span class="form-check-label">'._t('Público').'</span>
                             </label>
                         </div>
@@ -69,7 +69,7 @@ while ($s = mysqli_fetch_assoc($sistemas)) {
                                 <a class="btn btn-primary" onclick="addUnidade('.$s['id'].')">+</a>
                             </div>
                             <div id="unidades'.$s['id'].'" class="list-group list-group-flush list-group-hoverable">
-                                <a class="btn btn-primary" onClick="carregarTabelaUnidades('.$s['id'].')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
+                                <a class="btn btn-primary" onClick="carregarTabelaUnidades(\''.$s['id'].'\')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
                             </div>
                         </div>
                     </div>
@@ -80,7 +80,7 @@ while ($s = mysqli_fetch_assoc($sistemas)) {
                         </div>
                         <div class="mb-3 overflow-auto" style="max-height: 45rem">
                             <div id="calendario'.$s['id'].'" class="list-group list-group-flush list-group-hoverable">
-                                <a class="btn btn-primary" onClick="carregarCalendario('.$s['id'].')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
+                                <a class="btn btn-primary" onClick="carregarCalendario(\''.$s['id'].'\')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
                             </div>
                         </div>
                     </div>
@@ -265,73 +265,6 @@ function updateDuracaoSubs() {
     }
 }
 
-/*
-function execAddUnidade() {
-    var sid = $('#sid').val();
-    var uid = $('#uid').val();
-    var nome = $('#unome').val();
-    var duracao = $('#uduracao').val();
-    var ref = $('#uref').val();
-    var equivalente = $('#uequivalente').val();
-    var quantidade = $('#uquantidade').val();
-    var nameSub = $('#namesub').val();
-
-    if (nome == '' || duracao == '') {
-        $.alert('Insira nome e duração da unidade!');
-        return false;
-    }
-
-    // Coletar nomes das subunidades
-    var subNames = [];
-    if (nameSub === '1' && quantidade > 0) {
-        for (let i = 1; i <= parseInt(quantidade); i++) {
-            const subName = $(`#subname-${i}`).val();
-            //if (subName) { // Só incluir se o nome não estiver vazio
-                subNames.push({ posicao: i, nome: subName });
-            //}
-        }
-    }
-
-    $.post("api.php?action=ajaxAddUnidadeTempo&rid=<?=$id_realidade?>&sid="+sid+"&uid="+uid, {
-        nome: nome,
-        duracao: duracao,
-        equivalente: equivalente,
-        ref: ref,
-        quantidade: quantidade,
-        subNames: JSON.stringify(subNames)
-    }, function(data) {
-        if (data > 0) {
-            carregarTabelaUnidades(sid);
-            $('#modal-add-unidade').modal('hide');
-            verificarCiclos(sid, data);
-        } else {
-            alert(data);
-        }
-    });
-}
-*/
-
-function verificarCiclos2(sid, uid) {
-    $.get("api.php?action=ajaxVerificarCiclos&sid="+sid+"&uid="+uid, function(data) {
-        if (data != 'ok') {
-            var res = JSON.parse(data);
-            $.confirm({
-                title: '<?=_t('Ajuste de ciclos')?>',
-                content: '<div class="alert alert-warning">'+res.mensagem+'</div>'+
-                         '<div class="mt-3">'+
-                         '<p><?=_t('Sugestões:')?></p>'+
-                         (res.sugestoes.criar_unidade ? '<button class="btn btn-primary me-2" onclick="criarUnidadeExtra('+sid+','+res.sugestoes.criar_unidade.duracao+')"><?=_t('Criar unidade extra')?></button>' : '')+
-                         (res.sugestoes.redistribuir ? '<button class="btn btn-primary me-2" onclick="redistribuirSobras('+sid+','+res.sugestoes.redistribuir.unidade+','+res.sugestoes.redistribuir.quantidade+')"><?=_t('Redistribuir sobras')?></button>' : '')+
-                         '<button class="btn btn-secondary" onclick="ignorarAjuste('+sid+')"><?=_t('Ignorar')?></button>'+
-                         '</div>',
-                buttons: {
-                    close: { text: '<?=_t('Fechar')?>', action: function() {} }
-                }
-            });
-        }
-    });
-}
-
 function verificarCiclos(sid, uid) {
     $.get(`api.php?action=ajaxVerificarCiclos&sid=${sid}&uid=${uid}`, function(data) {
         if (data != 'ok') {
@@ -339,12 +272,12 @@ function verificarCiclos(sid, uid) {
             const mensagem = `<div class="alert alert-warning">${res.mensagem}</div>`;
             let sugestoes = '';
             if (res.sugestoes.criar_unidade) {
-                sugestoes += `<button class="btn btn-primary me-2" onclick="criarUnidadeExtra(${sid},${res.sugestoes.criar_unidade.duracao})"><?=_t('Criar unidade extra')?></button>`;
+                sugestoes += `<button class="btn btn-primary me-2" onclick="criarUnidadeExtra('${sid}',${res.sugestoes.criar_unidade.duracao})"><?=_t('Criar unidade extra')?></button>`;
             }
             if (res.sugestoes.redistribuir) {
-                sugestoes += `<button class="btn btn-primary me-2" onclick="redistribuirSobras(${sid},${res.sugestoes.redistribuir.unidade},${res.sugestoes.redistribuir.quantidade})"><?=_t('Redistribuir sobras')?></button>`;
+                sugestoes += `<button class="btn btn-primary me-2" onclick="redistribuirSobras('${sid}',${res.sugestoes.redistribuir.unidade},${res.sugestoes.redistribuir.quantidade})"><?=_t('Redistribuir sobras')?></button>`;
             }
-            sugestoes += `<button class="btn btn-secondary" onclick="ignorarAjuste(${sid})"><?=_t('Ignorar')?></button>`;
+            sugestoes += `<button class="btn btn-secondary" onclick="ignorarAjuste('${sid}')"><?=_t('Ignorar')?></button>`;
 
             $('#ajuste-mensagem').html(mensagem);
             $('#ajuste-sugestoes').html(sugestoes);

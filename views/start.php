@@ -100,7 +100,7 @@
                 <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
                 <div class="card mt-3">
                   <div class="card-header">
-                    <h3 class="card-title"><?=_t('Minhas conlangs')?></h3>
+                    <h3 class="card-title"><?=_t('Meus idiomas')?></h3>
                   </div>
                   <div class="card-body">
                     <div class="row row-cards">
@@ -272,60 +272,84 @@
                     <div class="card-header">
                       <h3 class="card-title"><?=_t('Administração')?></h3>
                     </div>
-                      <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Idiomas por usuário</label>
-                            <input type="number" class="form-control" id="limite_langs" value="<?=$op['limite_langs']?>" onchange="gravarOpsons()">
+                      <div class="card-body row">
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Idiomas por usuário')?></label>
+                            <input type="number" class="form-control" id="limite_langs" value="<?=$op['limite_langs']?>" onchange="gravarOpsons('limite_langs')">
                         </div>  
-                        <div class="mb-3">
-                            <label class="form-label">Palavras base por idioma</label>
-                            <input type="number" class="form-control" id="palavras_lang" value="<?=$op['palavras_lang']?>" onchange="gravarOpsons()">       
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Palavras base por idioma')?></label>
+                            <input type="number" class="form-control" id="palavras_base_lang" value="<?=$op['palavras_base_lang']?>" onchange="gravarOpsons('palavras_base_lang')">       
                         </div>  
-                        <div class="mb-3">
-                            <label class="form-label">Fontes por usuario</label>
-                            <input type="number" class="form-control" id="fonts_usuario" value="<?=$op['fonts_usuario']?>" onchange="gravarOpsons()">  
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Palavras total por idioma')?></label>
+                            <input type="number" class="form-control" id="palavras_lang" value="<?=$op['palavras_lang']?>" onchange="gravarOpsons('palavras_lang')">       
+                        </div>  
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Fontes por usuario')?></label>
+                            <input type="number" class="form-control" id="fonts_usuario" value="<?=$op['fonts_usuario']?>" onchange="gravarOpsons('fonts_usuario')">  
                         </div> 
-                        <div class="mb-3">
-                            <label class="form-label">Classes por idioma</label>
-                            <input type="number" class="form-control" id="classes_idioma" value="<?=$op['classes_idioma']?>" onchange="gravarOpsons()">  
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Classes por idioma')?></label>
+                            <input type="number" class="form-control" id="lim_lang_parts" value="<?=$op['lim_lang_parts']?>" onchange="gravarOpsons('lim_lang_parts')">  
                         </div> 
-                        <div class="mb-3">
-                            <label class="form-label">Concordâncias por idioma</label>
-                            <input type="number" class="form-control" id="concordancias_idioma" value="<?=$op['concordancias_idioma']?>" onchange="gravarOpsons()">  
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Concordâncias por idioma')?></label>
+                            <input type="number" class="form-control" id="lim_conc_lang" value="<?=$op['lim_conc_lang']?>" onchange="gravarOpsons('lim_conc_lang')">  
                         </div> 
-                        <div class="mb-3">
-                            <label class="form-label">Itens por concordância</label>
-                            <input type="number" class="form-control" id="itens_concordancia" value="<?=$op['itens_concordancia']?>" onchange="gravarOpsons()">  
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Itens por concordância')?></label>
+                            <input type="number" class="form-control" id="lim_itens_conc" value="<?=$op['lim_itens_conc']?>" onchange="gravarOpsons('lim_itens_conc')">  
                         </div> 
-                        <div class="mb-3">
-                            <label class="form-label">Sons por idioma</label>
-                            <input type="number" class="form-control" id="sons_idioma" value="<?=$op['sons_idioma']?>" onchange="gravarOpsons()">  
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Sons por idioma')?></label>
+                            <input type="number" class="form-control" id="lim_sons_lang" value="<?=$op['lim_sons_lang']?>" onchange="gravarOpsons('lim_sons_lang')">  
                         </div> 
-                        <div class="mb-3">
-                              <label class="form-label">Aberto para novos usuários?</label>
-                              <select id="inscr_aberta" class="chosen-select form-control" onchange="gravarOpsons()">
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Sistemas de escrita por idioma')?></label>
+                            <input type="number" class="form-control" id="limite_escritas_l" value="<?=$op['limite_escritas_l']?>" onchange="gravarOpsons('limite_escritas_l')">  
+                        </div> 
+
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Listas de alteração sonora por idioma')?></label>
+                            <input type="number" class="form-control" id="limite_scs_lang" value="<?=$op['limite_scs_lang']?>" onchange="gravarOpsons('limite_scs_lang')">  
+                        </div> 
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label"><?=_t('Listas de alteração sonora por usuário')?></label>
+                            <input type="number" class="form-control" id="limite_scs_user" value="<?=$op['limite_scs_user']?>" onchange="gravarOpsons('limite_scs_user')">  
+                        </div> 
+                        
+                        <div class="mb-3 col-md-6">
+                              <label class="form-label"><?=_t('Aberto para novos usuários?')?></label>
+                              <select id="inscr_aberta" class="chosen-select form-control" onchange="gravarOpsons('inscr_aberta')">
                                   <option value="0" <?php if ($op['inscr_aberta']==0) echo 'selected'; ?> >Não</option>
                                   <option value="1" <?php if ($op['inscr_aberta']==1) echo 'selected'; ?> >Sim</option>
                               </select>
                         </div>
+                        <div class="mb-3 col-md-6">
+                              <label class="form-label"><?=_t('Idioma padrão do sistema')?></label>
+                              <select id="def_lang" class="chosen-select form-control" onchange="gravarOpsons('def_lang')">
+                                  <option value="1" <?php if ($op['def_lang']==1) echo 'selected'; ?> >Português brasileiro</option>
+                                  <option value="5" <?php if ($op['def_lang']==5) echo 'selected'; ?> >English</option>
+                                  <option value="4" <?php if ($op['def_lang']==4) echo 'selected'; ?> >日本語</option>
+                                  <option value="6" <?php if ($op['def_lang']==6) echo 'selected'; ?> >Esperanto</option>
+                              </select>
+                        </div>
+                      </div>
+                      <div class="card-body">
 
                         <a href="index.php?page=ipa" class="btn btn-primary"><?=_t('IPA')?></a>
                         <a href="index.php?page=glosses" class="btn btn-primary"><?=_t('Glosses')?></a>
                         <a href="index.php?page=referents" class="btn btn-primary"><?=_t('Referentes')?></a>
-                        <a href="index.php?page=userlist" class="btn btn-primary"><?=_t('Usuários')?></a>
-
+                        <a href="index.php?page=users" class="btn btn-primary"><?=_t('Usuários')?></a>
                       </div>
                     </div>
                   </div>
                   <script>
 
-                  function gravarOpsons(){
-                      $.post("api.php?action=ajaxGravarOpsons", 
-                          {   limite_langs: $('#limite_langs').val(),
-                              inscr_aberta:$('#inscr_aberta').val(),
-                              fonts_usuario:$('#fonts_usuario').val(),
-                              palavras_lang:$('#palavras_lang').val()
-                          }, function (data){
+                  function gravarOpsons(param){
+                      $.get("api.php?action=ajaxGravarOption&param="+param+"&value="+$('#'+param).val(), 
+                          function (data){
                           if ($.trim(data) == 'ok'){
                               //alert('ok');//window.location = "dash.php?ason=opsons";
                           }else{
