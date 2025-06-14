@@ -23,8 +23,8 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
 
 ?>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.7/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.7/theme/monokai.min.css">
+<link rel="stylesheet" href="codemirror.css">
+<link rel="stylesheet" href="monokai.min.css">
 
 <style>textarea{font-family:monospace;line-height: normal !important;/*font-size: 12px !important;*/}</style>
 <input type="hidden" id="codigo" value="<?=$id_idioma?>" />
@@ -89,7 +89,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                           <span class="form-check-label"><?=_t('Editar classes')?></span>
                         </label>
                         <?php if ($id_idioma > 0){?><div class="text_classes"><?php echo formatCategoriesAsButtons(getSCHeader('ksc',$id_idioma,'cats')); ?></div><?php } ?>
-                        <textarea class="form-control text_classes" id="text_classes" spellcheck="false" onchange="updateDeclaredClasses('')" style="height: 12rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?php 
+                        <textarea class="form-control text_classes nowrap" id="text_classes" spellcheck="false" onchange="updateDeclaredClasses('')" style="height: 12rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?php 
                         echo getSCHeader('ksc',$id_idioma,'cats'); ?></textarea>
                       </div>
                       <div class="mb-3">
@@ -98,7 +98,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                           <span class="form-check-label"><?=_t('Editar substituições')?></span>
                         </label>
                         <?php if ($id_idioma > 0){?><div class="text_rewrites"></div><?php } ?>
-                        <textarea class="form-control text_rewrites" id="text_rewrites" spellcheck="false" style="height: 8rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"></textarea>
+                        <textarea class="form-control text_rewrites nowrap" id="text_rewrites" spellcheck="false" style="height: 8rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"></textarea>
                       </div>
                     </div>
                   </div>
@@ -175,7 +175,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                         </div>
                         <div class="card-body row_extras">
                           <div>
-                              <textarea class="form-control ksc" id="instrucoes" style="height: 35rem" spellcheck="false" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"></textarea>
+                              <textarea class="form-control ksc nowrap" id="instrucoes" style="height: 35rem" spellcheck="false" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"></textarea>
                           </div>
                         </div>
                       </div>
@@ -218,7 +218,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                           </div>
                           <div class="card-body">
                             <div>
-                              <textarea class="form-control ksc" id="entrada" onkeyup="setInputPersonalizado()" spellcheck="false" style="height: 35rem"
+                              <textarea class="form-control ksc nowrap" id="entrada" onkeyup="setInputPersonalizado()" spellcheck="false" style="height: 35rem"
                               onscroll="saida.scrollTop=scrollTop"></textarea>
                             </div>
                           </div>
@@ -257,7 +257,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                           </div>
                           <div class="card-body">
                             <div>
-                              <textarea class="form-control ksc" id="saida" readonly="readonly" style="height: 35rem"
+                              <textarea class="form-control ksc nowrap" id="saida" readonly="readonly" style="height: 35rem"
                                   cols="1" spellcheck="false" onscroll="entrada.scrollTop=scrollTop"></textarea>
                             </div>
                           </div>
@@ -461,8 +461,6 @@ document.addEventListener("DOMContentLoaded", function () {
     tinyMCE.init(options);
 
     loadDefCats();
-
-    //xxxxx usar motor padrao por idioma, ao menos nas flexões - ele será o que abre na tela de changer, mesmo estando todos disponiveis aqui
 })
 
 // Armazena as classes declaradas
@@ -535,14 +533,12 @@ const editor = CodeMirror.fromTextArea(textarea, {
 // Função para atualizar a lista de classes declaradas
 function updateDeclaredClasses(text) {
     declaredClasses = [];
-    //const categoryPattern =   /^(\p{Lu}\p{Ll}*)\s*=\s*(\{[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+)*\s*\}|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+)*)\s*$/u;
     const categoryPattern =   /^\s*([%\p{Lu}\p{Ll}]*)\s*=\s*(\{[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+)*\s*\}|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+)*)\s*$/u;
-    //const categoryPattern =   /^([%\p{Lu}\p{Ll}]*)\s*=\s*([\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}']+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}']+)*|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}']+)\s*$/u;
-
+    
     const classes = document.getElementById("text_classes").value.split('\n');
 
     classes.forEach(line => { 
-        const match = line.match(categoryPattern); console.log(match);
+        const match = line.match(categoryPattern);
         if (match) {
             const className = match[1]; // Ex.: X, Ng
             declaredClasses.push(className);
@@ -576,20 +572,6 @@ editor.on("change", function(cm) {
         $('#nomeLista').hide();
     }, 500); // Atraso de 300ms
 
-    //hiddenInput.value = cm.getValue();
-    //onRulesChange(cm.getValue()); // Chama função personalizada
-
-    /*
-    const lines = content.split("\n").filter(line => line.trim() && !line.match(/^\s*(\/\/|#)/));
-    const valid = lines.every(line => {
-        return line.match(/^\s*([^=]*)\s*=>\s*([^\/]*)(?:\s*\/\s*[^\/]*)?(?:\s*\/\s*[^\/]*)?\s*$/);
-    });
-    alert(document.getElementById("validation-message").innerHTML = valid ? 
-        "<?php echo _t("Regras válidas"); ?>" : 
-        "<?php echo _t("Erro: Alguma regra está inválida"); ?>"
-    );
-    */
-    
 });
 
 // Modifica a função do switch "Mostrar entrada e saída"
@@ -640,7 +622,7 @@ document.getElementById('saida').addEventListener('scroll', function() {
 });
  
 
-function aplicarMudancasPHP(){
+function aplicarMudancas(){
     
     const formData = new FormData();
     formData.append('palavras', document.getElementById('entrada').value);
@@ -679,7 +661,7 @@ function aplicarMudancasPHP(){
                 intermediateSteps.innerHTML += `
                     <div class="intermediate-card">
                         <div class="intermediate-label">${ruleText}</div>
-                        <textarea class="form-control ksc intermediate-textarea" readonly>${data.intermediate[key].join('\n')}</textarea>
+                        <textarea class="form-control ksc intermediate-textarea nowrap" readonly>${data.intermediate[key].join('\n')}</textarea>
                     </div>
                 `;
             //}
@@ -696,9 +678,6 @@ function aplicarMudancasPHP(){
     
 };
 
-
-
-// Função para sincronizar scroll entre todas as textareas
 function syncScrollTextareas() {
     const entrada = document.getElementById('entrada');
     const saida = document.getElementById('saida');
@@ -729,85 +708,5 @@ function showError(erro){
                         </div>`);
 }
 
-</script>
-<script src="ksc.js"></script>
-
-<script>
-function aplicarMudancasJS() {
-    // Collect input data
-    const palavras = document.getElementById('entrada').value;
-    const regras = editor.getValue().split('\n').filter(line => line.trim());
-    const v = document.getElementById('ksc2') ? document.getElementById('ksc2').checked ? 1 : 0 : 0;
-    const classesInput = document.getElementById('check_classes').checked ? document.getElementById('text_classes').value : '';
-    const substituicoesInput = document.getElementById('check_rewrites').checked ? document.getElementById('text_rewrites').value : '';
-
-    // Parse classes
-    const classes = {};
-    if (classesInput) {
-        classesInput.split('\n').forEach(line => {
-            const match = line.match(/^(\p{Lu}\p{Ll}*)\s*=\s*(\{.*\}|[^,\s]+|.*,.*)$/u);
-            if (match) {
-                const [, className, classValue] = match;
-                let characters;
-                if (classValue.match(/^\{([^\}]*)\}\s*$/u)) {
-                    characters = classValue.slice(1, -1).split(',').map(s => s.trim()).filter(s => s);
-                } else if (classValue.includes(',')) {
-                    characters = classValue.split(',').map(s => s.trim()).filter(s => s);
-                } else {
-                    characters = [...classValue];
-                }
-                classes[className] = characters;
-            }
-        });
-    }
-
-    // Parse substitutions
-    const substituicoes = substituicoesInput ? substituicoesInput.split('\n').filter(line => line.trim()) : [];
-
-    try {
-        // Call applySoundChanges
-        const [words, errors, { intermediate, rules }] = applySoundChanges(palavras, regras, substituicoes, classes);
-
-        // Display output
-        document.getElementById('saida').value = words ? (Array.isArray(words) ? words.join('\n').trim() : words.trim()) : '';
-        document.getElementById('erros').innerHTML = '<h2 class="card-title">Erros</h2>';
-
-        // Display errors
-        if (errors && Array.isArray(errors)) {
-            errors.forEach(error => showError(error));
-        }
-
-        // Process intermediate forms
-        const intermediateSteps = document.getElementById('intermediateSteps');
-        intermediateSteps.innerHTML = '';
-
-        let index = 0;
-        Object.keys(intermediate).forEach(key => {
-            index++;
-            if (index === 0) return;
-            const ruleKey = key;
-            const ruleText = rules[ruleKey] || 'Regra desconhecida';
-            intermediateSteps.innerHTML += `
-                <div class="intermediate-card">
-                    <div class="intermediate-label">${ruleText}</div>
-                    <textarea class="form-control ksc intermediate-textarea" readonly>${intermediate[key].join('\n')}</textarea>
-                </div>
-            `;
-        });
-
-        // Sync scroll of textareas
-        syncScrollTextareas();
-    } catch (error) {
-        console.error('Erro:', error);
-        showError('Erro ao processar a requisição: ' + error.message);
-    }
-}
-
-
-function aplicarMudancas(){
-  aplicarMudancasPHP();
-}
-
 $('[data-toggle="tooltip"]').tooltip();
-
 </script>

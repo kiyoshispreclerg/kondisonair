@@ -22,13 +22,6 @@ if ($_GET['pid']>0) {
 
 $scriptAutoSubstituicao = '';
 
-/*
-$romanizacao = 0;
-$result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas WHERE id = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
-$idioma = mysqli_fetch_assoc($result);
-if ($idioma['romanizacao']=='1') $romanizacao = 1;
-*/
-
 if($_GET['d']>0) $id_depende = $_GET['d'] ; // apenas para criação na primeira vez
 $id_subclasse = $_GET['c']; //esse é o id
 
@@ -77,49 +70,25 @@ $langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, e.padrao as padr, f.arquiv
     LEFT JOIN fontes f ON f.id = e.id_fonte
     WHERE id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 while($e = mysqli_fetch_assoc($langs)){
-    //$scriptSalvarNativo .= 'salvarNativo('.$e['id'].');';
     $autoon = '';
-    if($e['id_fonte']<0){
+    if($e['id_fonte']== 3){
 
         if($e['substituicao']==1){
-
-            //xxxxx aqui no JS deve pegar retorno (ids separados por virgulas), salvar em campo oculto e colocar divs/spans com draws na tela
-            /*$scriptAutoSubstituicao .= '$.post("api.php?action=getAutoSubstituicao&eid='.$e['id'].'",{ p: data }, function (data2){
-                if(data2=="-1") exibirNativa('.$e['id'].',"",'.$e['id_fonte'].',"'.$e['tamanho'].'"); 
-                else { if(data2.length > 0) exibirNativa('.$e['id'].',data2,'.$e['id_fonte'].',"'.$e['tamanho'].'"); }
-            });';
-            */
-
             $autoon = ' ('._t('Automático').')';
         }
         
-        /*$inputsNativos .= '<div class="mb-3"><input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$e['id'].'" />
-                <label class="form-label">'.$e['nome'].$autoon.'</label>
-                <div class="mb-3" id="drawchar_'.$e['id'].'"></div></div>';*/
         $inputsNativos .= '<div class="mb-3">
                 <label class="form-label">'.$e['nome'].$autoon.'</label>
                 <input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$e['id'].'" />
                 <div class="form-control editable-drawchar" id="drawchar_editable_'.$e['id'].'" contenteditable="true" data-eid="'.$e['id'].'" data-fonte="'.$e['id_fonte'].'" data-tamanho="'.$e['tamanho'].'"></div>
             </div>';
-      
-
-        /*$inseridorDrawchar .= '<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDrawchar" aria-labelledby="offcanvasEndLabel">
-            <div class="offcanvas-header">
-                <h2 class="offcanvas-title" id="offcanvasEndLabel">Carateres</h2>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body">
-                <div class="mb-3" id="drawcharlist'.$e['id'].'"> </div>
-                <div>
-                </div>
-            </div>
-            </div><script>loadSideDrawchars('.$e['id'].')</script>'; */
     }else{
         if($e['substituicao']==1){
-            $scriptAutoSubstituicao .= '$.post("api.php?action=getAutoSubstituicao&eid='.$e['id'].'",{ p: data }, function (data2){
-                if(data2=="-1") $("#escrita_nativa_'.$e['id'].'").val( "" );
-                else { if(data2.length > 0) $("#escrita_nativa_'.$e['id'].'").val( data2 );}
-            });';  // comentar ?
+
+            $scriptAutoSubstituicao .= 'let data2 = getAutoSubstituicao("'.$e['id'].'",data);
+                if (data2 == "-1") $("#escrita_nativa_'.$e['id'].'").val( "" );
+                else if(data2.length > 0) $("#escrita_nativa_'.$e['id'].'").val( data2 );';
+
             $autoon = ' ('._t('Automático').')';
         }
 
@@ -127,7 +96,7 @@ while($e = mysqli_fetch_assoc($langs)){
                     <label class="form-label">'.$e['nome'].'</label>
                     <input type="text" class="form-control escrita_nativa custom-font-'.$e['id'].'" id="escrita_nativa_'.$e['id'].'" ';
         if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,\''.$e['id'].'\')"';
-        // else $inputsNativos .= ' onchange="editarPalavra()"';           // onchange="checarNativo(this,'.$e['id'].')" placeholder=""></div>';
+        
         $inputsNativos .= ' placeholder=""></div>';
         if($e['padr']==1) {
             $escrita = $e['id'];
@@ -268,11 +237,6 @@ if (mysqli_num_rows($result)>2) {
             <div class="card mb-3">
                 <div class="card-header">
                     <h3 class="card-title"><?=_t('Detalhes')?></h3>
-                    <!--div class="card-actions">
-                        <a class="btn btn-primary" data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras()">
-                        Mais
-                        </a>
-                    </div-->
                 </div>
                 <div class="card-body" id="detalhesPalavra" style="display:none">
                     <div>
@@ -356,40 +320,12 @@ if (mysqli_num_rows($result)>2) {
                     </div>
                 </div>
                 <div class="card-body" id="detalhesPalavra" style="display:none">
-                        
-                        <!--div class="mb-3">
-                                <label class="form-label"><?=_t('Nome')?></label>
-                                <input type="text" class="form-control" id="nome" 
-                                onchange="showGravarFlexao()" placeholder="Nome">
-                        </div>
-
-                        <div class="mb-3">
-                                <label class="form-label"><?=_t('Descrição')?></label>
-                                <textarea class="form-control" id="descricao" rows="5" onchange="showGravarFlexao()"
-                                        placeholder="Descrição (opcional)"></textarea>
-                        </div-->
-
-                        <!--div class="mb-3">
-                            <div class="form-label"><?=_t('Motor')?></div>
-                            <select class="form-select" id="sel_motor_sc" onchange="showGravarFlexao()">
-                                <option value="manual" title="Manual" selected><?=_t('Nenhum')?></option>
-                                <option value="sca2" title="Motor mais simples">Rosenfeld SCA2</option>
-                                <option value="trisca" title="Motor simples">Tri SCA</option>
-                                <option value="regex" title="Motor de programador">RegExp</option>
-                                <option value="lexurgy" title="Motor mais complexo">Lexurgy 1.2.2 (ainda não integrado)</option>
-                                <option value="kond" title="Motor interno">Kondisonair</option>
-                            </select>
-                        </div-->
 
                         <div class="mb-3">
                                 <label class="control-label"><?=_t('Regras')?></label> 
                                 <textarea class="form-control mb-3" rows=10 id="regra_pronuncia" onkeyup="showGravarFlexao()"></textarea>
                                 <span id="extraPanel"><?php echo 'Categorias:<br>'.formatCategoriesAsButtons(getSCHeader('ksc',$id_idioma,'cats')); ?></span>
                         </div> 
-                        <!--div class="mb-3">
-                                <label class="control-label">Regra (romanização)</label> 
-                                <textarea class="form-control" rows=3 id="regra_romanizacao" onchange="showGravarFlexao()"></textarea>
-                        </div-->
 
                         <div class="mb-3">
                                 <a class="btn btn-primary pull-right"  id="btnGravarFlexao" onClick="gravarFlexao()"><?=_t('Salvar')?></a>
@@ -431,7 +367,6 @@ function reloadDimensoes(l,este){ alert('to do reload dimensoes'); return;
 function gravarFlexao(){
     if ($('#regra').val()=='') return;
 
-
     $.post("api.php?action=salvarFlexao&id="+$('#idPalavra').val(), 
     {   nome:'',//$('#nome').val(),
         motor:'ksc', //$('#sel_motor_sc').val(),
@@ -447,36 +382,6 @@ function gravarFlexao(){
         };
     });
 }; 
-
-<?php if($_GET['pid']>0){ ?>
-function autoPreencher(l=0,c=0){ return;
-    
-    // sonalMdason($('#schanges').val() /*editor.getValue()*/, $('#input').val(), $('#sel_motor_sc').val(), '#output');
-
-    let text = 'Preencher todas as linhas e colunas?'
-    if (l>0) {
-        text = 'Preencher esta linha?';
-    };
-    if (c>0) {
-        text = 'Preencher esta coluna?';
-        l = c;
-    };
-    if ( confirm("Autopreencher?") ) {
-        
-        $("#tabelaFlexoes").html('<div class="loaderSpin"></div>');
-        $.get("api.php?action=autoCompletarFlexoes&pid=<?=$_GET['pid']?>&iid=<?=$id_idioma?>&c="+l+"&d=<?=$_GET['d']?>", function (data){
-            if ($.trim(data) > 0){
-                carregaTabela();
-            }else{
-                alert(data);
-                // carregaTabela();
-            };
-        });
-
-    }
-}
-
-<?php } ?>
 
 function gravarPalavra(){ 
     <?php if ($romanizacao){ ?>
@@ -536,9 +441,6 @@ function carregaTabela(){
     $("#btnGravarPalavra").hide();
     $("#btnGravarFlexao").hide();
 
-    // appLoad(false); //$("#tabelaFlexoes").html('<div class="loaderSpin"></div>');
-
-    // get dimExtra combos e seus valores selecionados, add em dex + "&de2=65"
     var cex = new Array();
     $(".dimExtra").each(function() {
         cex.push( { val : $(this).val(), did : $(this).attr('id').replace("dimExtra","")} ); 
@@ -577,36 +479,10 @@ function carregaTabela(){
                 }
             });
 
-            /*
-            $.post( "api.php?action=getDetalhesFlexao&id=" +regras, {id: regras} , function(data){ 
-                data = JSON.parse(data);
-                if (data.length == 0) {
-                    for (var i = 0; i < linhas.length; i++){
-                        tb = tb.replaceAll("%%"+i+"%%", "" );
-                    }
-                }
-                $.each( data, function( key, val ) {
-                    sonalMdason(val.regra_pronuncia, raiz, '<?=$motor?>', "#tmpSpan",'<?=$id_idioma?>',defCats)
-                    .then(tmp => {
-                        console.log( 'TMP: '+ tmp);
-                        if (tmp == undefined) tmp = raiz;
-
-                        tb = tb.replaceAll("%%"+key+"%%", tmp );
-                    });
-                })
-                $("#tabelaFlexoes").html( tb );
-
-                appLoad();
-            });
-            */
-
             processarFlexoes(regras, raiz, '<?=$motor?>', '<?=$id_idioma?>', defCats, tb)
                 .then(() => console.log('Flexões processadas com sucesso'))
                 .catch(error => console.error('Erro ao processar flexões:', error));
 
-            
-
-            //xxxxx carregarOrfans(); #divOrfans orfas
             if (orfas.length > 0) {
                 $("#divOrfans").html(orfas);
                 $("#divOrfans").show();
@@ -627,23 +503,20 @@ function carregaTabela(){
 async function processarFlexoes(regras, raiz, motor, idIdioma, defCats, tb) {
     const formData = new FormData();
     formData.append('id', regras);
-    console.log(motor);
+    //console.log(motor);
 
     try {
-        // Faz a requisição com fetch
         const response = await fetch(`api.php?action=getDetalhesFlexao&id=${regras}`, {
             method: 'POST',
             body: formData
         });
-        const data = await response.json(); // Parseia a resposta como JSON
+        const data = await response.json();
         
-        // Se não houver dados, limpa os placeholders
         if (data.length === 0) {
             for (let i = 0; i < data.length; i++) {
                 tb = tb.replaceAll(`%%${i}%%`, '');
             }
         } else {
-            // Cria um array de Promises para todas as chamadas de sonalMdason
             const promises = data.map(async (val, key) => {
                 const tmp = await sonalMdason(
                     val.regra_pronuncia,
@@ -653,21 +526,23 @@ async function processarFlexoes(regras, raiz, motor, idIdioma, defCats, tb) {
                     idIdioma,
                     defCats
                 );
-                console.log('TMP:', tmp);
-                // Usa o valor de tmp ou raiz, se tmp for undefined
-                const result = tmp === undefined || tmp === null ? raiz : tmp;
-                // Substitui o placeholder correspondente
+                //console.log('TMP:', tmp);
+                let result = tmp === undefined || tmp === null ? raiz : tmp;
+                //result = '<span class="custom-font-<?=$escrita?>">ww</span><br>'+result;
+                //result = 
+                let teclas = checarDigitacao(idIdioma, result);
+                //let nativo = getSpanNativo('<?=$escrita?>',teclas)
+                console.log( teclas +': ' + getAutoSubstituicao('<?=$escrita?>', checarDigitacao(idIdioma, result)[0] ) )
+                // mudar função que traz nativo ou pron pra pegar pela pronuncia ipa tbm, não só pela digitação !!!!
+                
                 tb = tb.replaceAll(`%%${key}%%`, result);
             });
 
-            // Aguarda todas as chamadas de sonalMdason serem resolvidas
             await Promise.all(promises);
         }
 
-        // Atualiza o HTML apenas após todas as Promises serem resolvidas
         $('#tabelaFlexoes').html(tb);
 
-        // Chama appLoad após a atualização do DOM
         appLoad();
     } catch (error) {
         console.error('Erro:', error);
@@ -740,12 +615,12 @@ function loadCharDiv(eid,destDiv = "divInserirChars", forceReload = false, fonte
                 $("#"+destDiv).html(lex);
                 localStorage.setItem("k_chars"+eid, lex);
                 localStorage.setItem("k_chars"+eid+"_updated", data);
-                if(fonte < 0) addNatDraw(''); else $('#tempNat').addClass('custom-font-'+eid);
+                if(fonte == 3) addNatDraw(''); else $('#tempNat').addClass('custom-font-'+eid);
             })
         }else{
             console.log('local chars load');
             $("#"+destDiv).html( localStorage.getItem("k_chars"+eid) );
-            if(fonte < 0) addNatDraw(''); else $('#tempNat').addClass('custom-font-'+eid);
+            if(fonte == 3) addNatDraw(''); else $('#tempNat').addClass('custom-font-'+eid);
         }
     });
 
@@ -827,7 +702,7 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
                     $('#pronuncia').val(data[0].pronuncia); 
                     
                     data[0].escrita_nativa.forEach(function(e){
-                        exibirNativa(e['id'],e['palavra'],e['fonte'],e['tamanho']);//$('#escrita_nativa_'+e['id']).val(e['palavra']); // exibirNativa(e['id'],e['palavra'],e['fonte']),e['tamanho']));
+                        exibirNativa(e['id'],e['palavra'],e['fonte'],e['tamanho']);
                     })
                 }else{
                     $('#romanizacao').val(""); 
@@ -843,17 +718,6 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
             showGravarPalavra();
             checarPronuncia("#pronuncia", '<?=$id_idioma?>', 0);
         });
-
-        /*
-	    $('#idPalavra').val(0);
-	    $('#idFormaDicionario').val(<?=$_GET['pid']?>);
-        $('#romanizacao').val(''); 
-        $('#pronuncia').val(''); 
-        $('#irregular').val(0); 
-        
-        $('.escrita_nativa').val(''); 
-        $('#significado').val(''); 
-        */
     }
     $("#detalhesPalavra").show();
 };
@@ -872,17 +736,14 @@ function checarRomanizacao(este,idioma){
 function checarPronuncia(este = "#pronuncia",idioma=<?=$id_idioma?>,checar = 1){ 
     $(este).removeClass( 'is-invalid' );
     showGravarPalavra();
-  	$.post('api.php?action=getChecarPronuncia&iid='+idioma+'&checar='+checar,{
-    	p: $(este).val()
-  	}, function (data){
-		if(data=='-1'){ 
-			//$(este).val( '*' );
-			$(este).addClass( 'is-invalid' );
-		}else{
-			$(este).val( data );
-			<?=$scriptAutoSubstituicao?>
-		};
-	} ); 
+    var tmpPron = $(este).val();
+    let data = getChecarPronuncia(idioma, tmpPron, checar);
+    if(data=='-1'){ 
+        $(este).addClass( 'is-invalid' );
+    }else{
+        $(este).val( data );
+        <?=$scriptAutoSubstituicao?>
+    };
 };
 <?php }else{
 	echo 'function checarPronuncia(este,idioma){$(este).removeClass("is-invalid");showGravarPalavra();}';
@@ -914,6 +775,9 @@ $(document).ready(function(){
     if (localStorage.getItem("k_forms_long") == "1"){
 		$("#lpc").attr("checked",true); $('#tabelaFlexoes').removeClass('listaLonga');
     }
+
+
+loadPronuncias('<?=$id_idioma?>',true);
     
 });
 
@@ -988,26 +852,8 @@ function dropHandler(ev) {
     });
 }
 
-/*
-function exibirNativa(eid,palavra,fonte = 0, tamanho = ''){ //xxxxx ajustar pra funcionar com drawchars
-    $('#escrita_nativa_'+eid).val( palavra );
-    if(fonte < 0){
-        $('#drawchar_'+eid).html("");
-        // inserir desenhos em $('#drawchar_'+eid).val( palavra );
-        palavra.split(",").forEach(function(e){
-            $('#drawchar_'+eid).append( '<span class="drawchar drawchar-'+tamanho+' rounded" style="background-image: url(./writing/'+eid+'/' +e+ '.png?2025)"></span>' );
-        });
-    }
-}
-*/
-
-function loadSideDrawchars(eid){
-    // ver no cache local
-    // dps buscar get
-    // preencher offscreen div drawcharlist + eid
-    // loop de '<span class="drawchar drawchar-'.$tamanho.'" style="background-image: url(./writing/'.$eid.'/'.$r['id'].'.svg?'.$r['ultima'].')"></span>';
-}
-
+loadPronuncias('<?=$id_idioma?>',true);
+loadAutoSubstituicoes('<?=$escrita?>', true);
 </script>
 
 <style>

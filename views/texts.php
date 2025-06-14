@@ -51,8 +51,8 @@
                     </div>
                     <div>
                         <label class="form-label">'._t('Texto nativo').($substituicao ? ' ('._t('Automático').')' : '').
-                        ($fonte < 0 ? ' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv('.$eid.',\'drawcharlist'.$eid.'\',false,'.$fonte.')">'._t('Inserir caractere').'</a>' : '').'</label>'.
-                        ( $fonte < 0 ?
+                        ($fonte ==3 ? ' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv('.$eid.',\'drawcharlist'.$eid.'\',false,'.$fonte.')">'._t('Inserir caractere').'</a>' : '').'</label>'.
+                        ( $fonte ==3 ?
                             '<input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$eid.'" />
                             <div class="form-control editable-drawchar" id="drawchar_editable_'.$eid.'" contenteditable="true" data-eid="'.$eid.'" data-fonte="'.$fonte.'" data-tamanho="'.$tamanho.'" style="height: 200px; overflow-y: auto;"></div>'
                             :
@@ -74,7 +74,7 @@
             $("#modaltitle").html("'._t('Editar texto').'");
             $("#testTytol").val(title);
             $.get("api.php?action=testMdason&id="+id, function(data){'.(
-                $fonte < 0 ?
+                $fonte == 3 ?
                 'exibirNativa('.$eid.', $.trim(data), '.$fonte.', "'.$tamanho.'");'
                 :'$("#testStudason").val( $.trim(data) );'
                 ).'$("#modalAddText").modal("show");

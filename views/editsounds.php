@@ -260,8 +260,12 @@ function execSalvarTecla(){
     */
     
     $.post("api.php?action=ajaxEditarTeclaIpa&id="+id+"&ipa="+inventario+"&k="+tecla,{k:tecla,p:peso}, function (data){
-        carregaTabela(); 
-        $("#modal-tecla").modal('hide');
+      if ($.trim(data) == '1'){
+          carregaTabela(); 
+          $("#modal-tecla").modal('hide');
+      }else{
+        alert(data);
+      }
     });
 }
 function renomearDimensao(id,nome){ 
@@ -389,6 +393,7 @@ function dropHandler(ev) {
             <span class="text-secondary"><?=_t('Tecla(s) a ser(em) digitada(s) nos campos pronúncia para virar este fonema.')?></span>
             <span class="text-secondary"><?=_t('Para mais de uma tecla/combinação para o mesmo som, separe-os com espaços.')?></span>
             <span class="text-secondary"><?=_t('Este(s) será(ão) o(s) caractere(s) usado(s) também nos alteradores sonoros.')?></span>
+            <span class="text-secondary"><?=_t('Não use teclas cujos símbolos já sejam algum som diferente na tabela!')?></span>
         </div>
         <div class="mb-3">
             <label class="form-label"><?=_t('Peso')?></label>

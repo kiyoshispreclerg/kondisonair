@@ -658,24 +658,6 @@ function saveDateSelection() {
         $('#dateModal').modal('hide');
         return;
     }
-
-    /*
-    $.post('?action=saveMomentDate', {
-        action: 'saveMomentDate',
-        rid: <?=$id_realidade?>,
-        id_time_system,
-        values
-    }, function(response) {
-        if (response.error) {
-            alert(response.error);
-        } else {
-            $('#formatted_date').val(response.formatted_date);
-            $('#time_value').val(response.time_value);
-            $('#unit_values').val(JSON.stringify(response.stored_values));
-            $('#dateModal').modal('hide');
-        }
-    }, 'json');
-    */
 }
 
 function loadDefaultTimeSystem() {

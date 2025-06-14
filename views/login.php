@@ -78,8 +78,8 @@
         <?=_t('Ainda não tem uma conta?')?> <a href="?page=signup" tabindex="-1"><?=_t('Cadastrese')?></a>
         </div>
         <div class="text-center text-secondary mt-3"><?php
-        if ($_SESSION['KondisonairUzatorDiom']!=5) echo '<li class="list-inline-item"><a href="'.str_replace('&lang=','&nus=',$_SERVER['REQUEST_URI']).'&lang=5" class="link-secondary">English</a></li>'; // str_replace('&theme=dark','',$_SERVER['REQUEST_URI'])&theme=light
-        if ($_SESSION['KondisonairUzatorDiom']!=1) echo '<li class="list-inline-item"><a href="'.str_replace('&lang=','&nus=',$_SERVER['REQUEST_URI']).'&lang=1" class="link-secondary">Português brasileiro</a></li>';
+        include 'idiomas_utils.php';
+        echo gerarLinksIdiomas($_SESSION['KondisonairUzatorDiom'], false);
         ?></div>
       </div>
     </div>

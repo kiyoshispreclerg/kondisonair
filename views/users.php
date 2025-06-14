@@ -4,14 +4,6 @@ if (!isset($_SESSION['KondisonairUzatorIDX']) || $_SESSION['KondisonairUzatorNiv
     echo '<script>window.location = "index.php";</script>';
     exit;
 }
-
-// Map id_idioma_nativo to language names
-$idiomas_nativos = [
-    1 => 'Português Brasileiro',
-    4 => 'Japonês',
-    5 => 'Inglês',
-    6 => 'Esperanto'
-];
 ?>
 <input type="hidden" id="idUsuario" value="0" />
 
@@ -131,7 +123,7 @@ function abrirUsuario(uid){
             $('#nome_completo').val(data[0].nome_completo); 
             $('#descricao').val(data[0].descricao); 
             $('#data_cadastro').text(data[0].data_cadastro || '<?=_t('N/A')?>');
-            var idiomas = <?php echo json_encode($idiomas_nativos); ?>;
+            var idiomas = <?php echo json_encode($idiomas_sistema); ?>;
             $('#id_idioma_nativo').text(idiomas[data[0].id_idioma_nativo] || '<?=_t('N/A')?>');
             $('#email').text(data[0].email || '<?=_t('N/A')?>');
             $('#publico').text(data[0].publico == 1 ? '<?=_t('Público')?>' : '<?=_t('Privado')?>');

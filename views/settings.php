@@ -1,6 +1,6 @@
 
 <?php
-if ( ! $_SESSION['KondisonairUzatorIDX'] > 1) {echo '<script>window.location = "dash.php";</script>';
+if ( ! $_SESSION['KondisonairUzatorIDX'] > 1) {echo '<script>window.location = "index.php";</script>';
     exit;
 }
 
@@ -8,9 +8,7 @@ if ( ! $_SESSION['KondisonairUzatorIDX'] > 1) {echo '<script>window.location = "
 
 $usuario = array();  
 $result = mysqli_query($GLOBALS['dblink'],
-    "SELECT *,
-	(SELECT COUNT(*) FROM sosail_sgisons WHERE id_seguido = ".$_SESSION['KondisonairUzatorIDX'].") as seguidores, 
-	(SELECT COUNT(*) FROM sosail_sgisons WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].") as seguidos 
+    "SELECT *
     FROM usuarios WHERE id = ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($GLOBALS['dblink']));
 while($r = mysqli_fetch_assoc($result)) { 
     $usuario  = $r;
@@ -68,13 +66,10 @@ while($r = mysqli_fetch_assoc($result)) {
                         <input type="text" class="form-control" id="usuario" value="<?=$usuario['username']?>">
                       </div>
                       <div class="col-md">
-                        <div class="form-label"><?=_t('Idioma nativo')?></div>
-                        <select id="nativo" class="chosen-select form-control " onchange="gravarOpsons()">
-                          <option value="1" <?php if ($usuario['id_idioma_nativo'] == '1') echo 'selected'; ?> ><?=_t('Português brasileiro')?></option>
-                          <option value="5" <?php if ($usuario['id_idioma_nativo'] == '5') echo 'selected'; ?> ><?=_t('Inglês')?></option>
-                          <option value="4" <?php if ($usuario['id_idioma_nativo'] == '4') echo 'selected'; ?> ><?=_t('Japonês')?></option>
-                          <option value="6" <?php if ($usuario['id_idioma_nativo'] == '6') echo 'selected'; ?> ><?=_t('Esperanto')?></option>
-                        </select>
+                        <div class="form-label"><?=_t('Idioma')?></div>
+                        <?php
+                          echo gerarSelectIdiomas('nativo', $usuario['id_idioma_nativo'], 'gravarOpsons()', true);
+                        ?>
                       </div>
                     </div>
 

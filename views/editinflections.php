@@ -225,7 +225,7 @@ function execGuardarPalavra(){
         +"&cid="+ $('#idPalavra').val()+"&iid=<?=$id_idioma?>&k=<?=$id_classe?>", 
     { nome:$('#nome').val(),
         gloss:$('#gloss').val(),
-        depende:<?=$id_depende?>,
+        depende:'<?=$id_depende?>',
         descricao:$('#descricao').val(),
         obrigatorio:$('#obrigatorio').val()
     }, function (data){

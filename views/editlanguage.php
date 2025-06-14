@@ -87,7 +87,7 @@ if ($id_idioma>0){
 
                                 <div class="mb-3">
                                     <label class="form-label"><?=_t('Nome legível')?></label>
-                                    <input type="text" class="form-control" id="nome_legivel" placeholder="Português" value="<?=$idioma['nome_legivel']?>" onchange="showGravarDados()">
+                                    <input type="text" class="form-control" id="nome_legivel" value="<?=$idioma['nome_legivel']?>" onchange="showGravarDados()">
                                 </div>
 
                                 <div class="mb-3">
@@ -179,19 +179,11 @@ if ($id_idioma>0){
                                     <div class="col-4">
                                         <div class="mb-3">
                                             <label class="form-label"><?=_t('Idioma da descrição')?></label>
-                                            <select type="text" class="form-select" id="idioma_descricao" value="" onchange="showGravarDados()">
-                                            <?php 
-                                                $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas WHERE status > 7 AND buscavel = 1;") or die(mysqli_error($GLOBALS['dblink'])); //xxxxx AND buscavel = 1?
-                                                if($idioma['id_idioma_descricao']>0) $l = $idioma['id_idioma_descricao'];
-                                                else $l = $_SESSION['KondisonairUzatorDiom'];
-                                                while ($lang = mysqli_fetch_assoc($langs)){
-                                                    if ($lang['id'] > 0) {
-                                                    echo '<option value="'.$lang['id'].'" ';
-                                                    if ($idioma['id_idioma_descricao'] == $lang['id']) echo ' selected';
-                                                    echo ' >'.$lang['nome_legivel'].'</option>';}
-                                                }
+                                            <?php
+                                            if($idioma['id_idioma_descricao']>0) $l = $idioma['id_idioma_descricao'];
+                                            else $l = $_SESSION['KondisonairUzatorDiom'];
+                                            echo gerarSelectIdiomas('idioma_descricao', $l, 'showGravarDados()', false);
                                             ?>
-                                            </select>
                                         </div>
                                     </div>
                                     <div class="col-4">
@@ -438,14 +430,14 @@ function loadNativeWords(){
                 localStorage.setItem("k_opwords_<?=$id_idioma?>", lex);
                 localStorage.setItem("k_opwords_<?=$id_idioma?>_updated", data);
                 //createTablerSelectDrawcharWords
-                createTablerSelectNativeWords('id_nome_nativo',<?=$idioma['id_fonte']?>,'<?=$idioma['tamanho']?>');
+                createTablerSelectNativeWords('id_nome_nativo','<?=$idioma['id_fonte']?>','<?=$idioma['tamanho']?>');
                 updateTablerSelect("id_nome_nativo",'<?=$idioma['id_nome_nativo']?>');
             });
         }else{
             console.log('local words load');
             $("#id_nome_nativo").html( localStorage.getItem("k_opwords_<?=$id_idioma?>") );
             //createTablerSelectDrawcharWords
-            createTablerSelectNativeWords('id_nome_nativo',<?=$idioma['id_fonte']?>,'<?=$idioma['tamanho']?>');
+            createTablerSelectNativeWords('id_nome_nativo','<?=$idioma['id_fonte']?>','<?=$idioma['tamanho']?>');
             updateTablerSelect("id_nome_nativo",'<?=$idioma['id_nome_nativo']?>');
         }
     });

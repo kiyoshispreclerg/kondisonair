@@ -2,33 +2,36 @@
 header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
 
-define('CONFIG_PATH', 'db.php');
+require('config.php');
 
-if (!file_exists(CONFIG_PATH)) {
+if (!file_exists(DB_CONFIG)) {
     header('Location: install.php');
     exit;
 }
 
 mb_internal_encoding('UTF-8');
-require(CONFIG_PATH);
-$tituloPagina = 'Kondisonair';
-$versaoK1 = 0;
-$versaoK2 = 1;
-$versaoK3 = 5;
+require(DB_CONFIG);
 $maxSilabas = 10;
 
 error_reporting(E_ERROR);
+$GLOBALS['dblink'] =  mysqli_connect($mysql_host, $mysql_user, $mysql_pass) or die('DATABASE: mysql_connect: ' . mysqli_error($GLOBALS['dblink']));
+mysqli_select_db( $GLOBALS['dblink'], $mysql_db) or die('DATABASE: mysql_select_db: ' . mysqli_error($GLOBALS['dblink']));
+mysqli_set_charset( $GLOBALS['dblink'],'utf8');
 
 if (!isset($_SESSION)) session_start(); 
 //header('Content-Type: text/html; charset=ISO-8859-1');
 
 if (!isset($_SESSION['KondisonairUzatorIDX'])) $_SESSION['KondisonairUzatorIDX'] = 0;
-if ($_COOKIE["KondisonairUzatorIDX"]>0) {
-  $_SESSION['KondisonairUzatorIDX'] = $_COOKIE["KondisonairUzatorIDX"];
-  $_SESSION['KondisonairUzatorNome'] = $_COOKIE["KondisonairUzatorNome"];
-  $_SESSION['KondisonairUzatorID'] = $_COOKIE["KondisonairUzatorID"];
-  $_SESSION['KondisonairUzatorDiom'] = $_COOKIE["KondisonairUzatorDiom"];
-  $_SESSION['KondisonairUzatorNivle'] = $_COOKIE["KondisonairUzatorNivle"];
+
+if ($_COOKIE["KondisonairUzatorToken"]) {
+  $logged = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE token = '".$_COOKIE["KondisonairUzatorToken"]."';") or die(mysqli_error($GLOBALS['dblink']));
+  $logged = mysqli_fetch_assoc($logged);
+
+  $_SESSION['KondisonairUzatorIDX'] = $logged['id']; //$_COOKIE["KondisonairUzatorIDX"];
+  $_SESSION['KondisonairUzatorNome'] = $logged['nome_completo']; //$_COOKIE["KondisonairUzatorNome"];
+  $_SESSION['KondisonairUzatorID'] = $logged['username']; //$_COOKIE["KondisonairUzatorID"];
+  $_SESSION['KondisonairUzatorDiom'] = $logged['id_idioma_nativo']; //$_COOKIE["KondisonairUzatorDiom"];
+  $_SESSION['KondisonairUzatorNivle'] = $logged['acesso']; //$_COOKIE["KondisonairUzatorNivle"];
 }
 
 if (!isset($_SESSION['KondisonairUzatorIDX'])) session_destroy();
@@ -40,11 +43,6 @@ if (!isset($_GET['gason'])) $_GET['gason'] = '';
 
 $timerzinho = '2'; // segundos entre buscas complexas
 $feedLimit = 10; // posts exibidos na lista de atividades recentes
-
-
-$GLOBALS['dblink'] =  mysqli_connect($mysql_host, $mysql_user, $mysql_pass) or die('DATABASE: mysql_connect: ' . mysqli_error($GLOBALS['dblink']));
-mysqli_select_db( $GLOBALS['dblink'], $mysql_db) or die('DATABASE: mysql_select_db: ' . mysqli_error($GLOBALS['dblink']));
-mysqli_set_charset( $GLOBALS['dblink'],'utf8');
 
 $resop = mysqli_query($GLOBALS['dblink'],"SELECT * FROM opcoes_sistema;") or die(mysqli_error($GLOBALS['dblink']));
 while($ro = mysqli_fetch_assoc($resop)) { 
@@ -79,26 +77,26 @@ function userLoginAPI($usuario, $senha){
     $a = mysqli_fetch_row($r);
     
     if( password_verify($senha, $a[0]) && $a[1] == '1' ) {
-		if (!isset($_SESSION)) session_start();
-    session_regenerate_id(true);
-		$_SESSION['KondisonairUzatorID']            = trim($usuario);
-		$_SESSION['KondisonairUzatorNome']          = trim($b[0]);
-		$_SESSION['KondisonairUzatorIDX'] 			 = trim($b[1]);
-		$_SESSION['KondisonairUzatorDiom'] 			 = trim($b[2]);
-		$_SESSION['KondisonairUzatorNivle']         = trim($b[4]);
-		$auth = [ 'auth' =>'true' ] ;
-		echo json_encode($auth);
+      if (!isset($_SESSION)) session_start();
+      session_regenerate_id(true);
+      $_SESSION['KondisonairUzatorID']            = trim($usuario);
+      $_SESSION['KondisonairUzatorNome']          = trim($b[0]);
+      $_SESSION['KondisonairUzatorIDX'] 			 = trim($b[1]);
+      $_SESSION['KondisonairUzatorDiom'] 			 = trim($b[2]);
+      $_SESSION['KondisonairUzatorNivle']         = trim($b[4]);
+      $auth = [ 'auth' =>'true' ] ;
 
-		setcookie("KondisonairUzatorIDX",$_SESSION['KondisonairUzatorIDX'],time()+60*60*24*30/*,"/","kondisonair"*/);
-		setcookie("KondisonairUzatorNome",$_SESSION['KondisonairUzatorNome'],time()+60*60*24*30/*,"/","kondisonair"*/);
-		setcookie("KondisonairUzatorID",$_SESSION['KondisonairUzatorID'],time()+60*60*24*30/*,"/","kondisonair"*/);
-    setcookie("KondisonairUzatorDiom",$_SESSION['KondisonairUzatorDiom'],time()+60*60*24*30/*,"/","kondisonair"*/);
-    setcookie("KondisonairUzatorNivle",$_SESSION['KondisonairUzatorNivle'],time()+60*60*24*30/*,"/","kondisonair"*/);
-			
-		return true;
-	}else{
-		return false;
-	};
+      $loginToken = bin2hex(random_bytes(64));
+      mysqli_query($GLOBALS['dblink'],"UPDATE usuarios SET token = '".$loginToken."' WHERE id = '".$b[1]."';");
+
+      echo json_encode($auth);
+
+      setcookie("KondisonairUzatorToken",$loginToken,time()+60*60*24*30/*,"/","kondisonair"*/);
+        
+      return true;
+    }else{
+      return false;
+    };
 		
 };
 
@@ -298,6 +296,7 @@ switch($page){
     case 'users': $tituloPagina .= ' - '._t('Usuários'); break;
     case 'ipa': $tituloPagina .= ' - '._t('Tabelas IPA'); break;
     case 'editentity': $tituloPagina .= ' - '._t('Entidade'); break;
+    case 'wordgen': $tituloPagina .= ' - '._t('Gerador de palavras'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -517,69 +516,6 @@ function getStatus($s){
   }
   return $r;
 };
-
-function parseSoundChangeRules($text) {
-  $lines = array_map('trim', explode("\n", $text)); // Divide o texto em linhas e remove espaços
-  $result = []; // Array associativo final com grupos de regras
-  $currentBlock = false; // Rastreia o bloco atual
-  $blockRules = []; // Regras do bloco atual
-  $blockName = 'default'; // Nome padrão para blocos sem nome e regras soltas
-
-  // Inicializa o grupo default
-  $result['default'] = [];
-
-  foreach ($lines as $line) {
-      // Ignora linhas vazias ou comentários
-      if ($line === '' || preg_match('/^(\/\/|##)/', $line)) {
-          continue;
-      }
-
-      // Verifica chave de abertura de bloco ({ ou { nome)
-      if (preg_match('/^\{\s*([a-zA-Z][a-zA-Z0-9]*)?\s*$/', $line, $matches)) {
-          if ($currentBlock) {
-              // Fecha o bloco anterior, se houver
-              $result[$blockName] = $blockRules;
-              $blockRules = [];
-          }
-          $blockName = !empty($matches[1]) ? $matches[1] : 'default';
-          $currentBlock = true;
-          $result[$blockName] = $result[$blockName] ?? []; // Inicializa o bloco, se não existir
-          continue;
-      }
-
-      // Verifica chave de fechamento de bloco (})
-      if ($line === '}' && $currentBlock) {
-          $result[$blockName] = $blockRules;
-          $currentBlock = false;
-          $blockRules = [];
-          $blockName = 'default';
-          continue;
-      }
-
-      // Processa regras
-      if ($currentBlock) {
-          // Adiciona regra ao bloco atual
-          $blockRules[] = $line;
-      } else {
-          // Adiciona regra solta ao grupo default
-          $result['default'][] = $line;
-      }
-  }
-
-  // Fecha o bloco atual, se aberto
-  if ($currentBlock && !empty($blockRules)) {
-      $result[$blockName] = $blockRules;
-  }
-
-  // Remove grupos vazios
-  foreach ($result as $key => $rules) {
-      if (empty($rules)) {
-          unset($result[$key]);
-      }
-  }
-
-  return $result;
-}
 
 function textoParaArrayClasses($texto) {
   // Garante que o ambiente PHP usa UTF-8
@@ -1420,7 +1356,7 @@ function setGenPalDeriv($pid,$i=0){
             $novoId = generateId();
             $sqlQuerys = "INSERT INTO classesGeneros SET 
               id_palavra = ".$pid.",
-              id = ".$novoId."
+              id = ".$novoId.",
               id_classe = ( SELECT id_classe FROM palavras WHERE id = ".$pid." LIMIT 1),
               id_genero = ".$i.";";
 
@@ -1768,7 +1704,7 @@ function soltarContracao($res,$entrada,$geto){
 
       $ax = mysqli_fetch_assoc($a);
 
-      if($ax['id_classe']=='-2'){ // -2 = contração
+      if($ax['id_classe']=='2'){ // -2 = contração
 
           $b = mysqli_query($GLOBALS['dblink'],"SELECT po.*, 
           (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem 
@@ -3167,19 +3103,23 @@ function getSCHeader($motor='',$iid,$tipo=''){ // depende da tela de pronuncia e
     
   }else{
     
-    $cats['sca2'] = "  C=ptknh\n  V=aio\n";
-    $cats['gen'] = "  C=ptknh\n  V=aio\n";
-    $cats['awk'] = "  C=ptknh\n  V=aio\n";
-    $cats['trisca'] = "C=ptknh\nV=aio\n";
-    $cats['lexurgy'] = "Class consoantes {p,t,k,n,h}\nClass vogais {a,i,o}\n";
-    $cats['lexifer'] = "C = p t k n h\nV = a i o\n";
+    $cats['sca2'] = "  C=ptknsh\n  V=aio\n";
+    $cats['gen'] = "  C=ptknsh\n  V=aio\n";
+    $cats['awk'] = "  C=ptknsh\n  V=aio\n";
+    $cats['trisca'] = "C=ptknsh\nV=aio\n";
+    $cats['lexurgy'] = "Class consoantes {p,t,k,n,s,h}\nClass vogais {a,i,o}\n";
+    $cats['lexifer'] = "C = p t k n s h\nV = a i o\n";
+    $cats['ksc'] = "C = p, t, k, n, s, h\nV = a, i, o\n";
 
     
     if($tipo=='cats'){
         return str_replace("  ","",$cats[$motor]);
     }
     if($tipo=='classes'){
-        return [];
+        return [
+          'C' => ['p','t','k','n','s','h'],
+          'V' => ['a','i','o']
+        ];
     }
     
     $header['sca2'] .= $cats['sca2'];
@@ -3452,26 +3392,6 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                       AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
                       AND p.id_idioma = ".$idioma." ;";
                       
-
-                  // sql teste sem join, com subquery
-                  /*
-                    $sql = "SELECT p.*, 
-                      (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa 
-                      FROM palavras p 
-                        LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
-                        LEFT JOIN itens_palavras ip2 ON ip2.id_palavra = p.id  
-                      WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
-                        AND (ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$y2['id']." AND ip2.usar = 1) 
-
-                        AND ( 
-                          (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$extra[0]['did']." AND ip3.id_item = ".$extra[0]['val']." AND ip3.usar = 1 ) IS NOT NULL
-                          OR
-                          (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$extra[0]['did'].") IS NULL 
-                        )
-
-                        AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
-                        AND p.id_idioma = ".$idioma." ;";
-                  */
                   $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('1972'.mysqli_error($GLOBALS['dblink']));
 
                   $pal = mysqli_fetch_assoc($ps);
@@ -3481,16 +3401,6 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                       //$pal['pronuncia'] .= '=AUTOINSERT='.$pal['c3'].' '.$pal['i3'];
                       //mysqli_query($GLOBALS['dblink'],"INSERT INTO itens_palavras SET id_item = ".$extra[0]['val'].", id_palavra = ".$pal['id'].", id_concordancia = ".$extra[0]['did'].", usar = 1;") or die(mysqli_error($GLOBALS['dblink']));
                   };
-
-                  /*
-                    //if($pal['nativa']!='') echo $sql; // irregular, id, pronuncia, romanizacao, id_forma_dicionario, nativa
-                    // fazer while, pegando o primeiro (que seria neutro) e checando se algum tem o ip3 ou tá no default
-                    //if ($p['dims']==2) $p = mysqli_fetch_assoc($ps); 
-                    /*$naOpcao = null; $naPadrao = null;
-                    while($p = mysqli_fetch_assoc($ps)){
-                      if($p['c3']==$extra[0]['did'] && $p['i3']==$extra[0]['val']) $pal = $p;
-                    }
-                  */
 
                   $autogen = ""; if (! $pal['id'] > 0 && $tryauto) {
                     
@@ -3504,24 +3414,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                           AND (if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") 
                           AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen." 
                           ;";
-                          /*
-                    $sql = "SELECT f.* FROM flexoes f 
-                        WHERE (SELECT if1.id FROM itens_flexoes if1 WHERE if1.id_flexao = f.id AND if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") IS NOT NULL 
-                          AND (SELECT if2.id FROM itens_flexoes if2 WHERE if2.id_flexao = f.id AND if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") IS NOT NULL 
-                          AND (SELECT if3.id FROM itens_flexoes if3 WHERE if3.id_flexao = f.id AND if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") IS NOT NULL 
-                          -- AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen." 
-                          ;";
-                    //try meio termo
-                    $sql = "SELECT f.* FROM flexoes f 
-                        LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                        LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id 
-
-                        WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") 
-                        AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") 
-                        AND (SELECT if3.id FROM itens_flexoes if3 WHERE if3.id_flexao = f.id AND if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") IS NOT NULL 
-                        -- AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen." 
-                        ;";
-                        */
+                          
                     $psx = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
                     $px = mysqli_fetch_assoc($psx);
                     if ($px['id']>0) $regra = $px['id'];
@@ -3588,33 +3481,10 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                     AND (ip3.id_concordancia = ".$extra[0]['did']." AND ip3.id_item = ".$extra[0]['val']." AND ip3.usar = 1)
                     AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
                     AND p.id_idioma = ".$idioma." ;";
-                    //AND ( (ip3.id_concordancia = ".$extra[0]['did']." AND ip3.id_item = ".$extra[0]['val']." AND ip3.usar = 1)       )
-
-                // sql teste sem join, com subquery 
-                /*
-                $sql = "SELECT p.*, 
-                  (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa 
-                  FROM palavras p 
-                  WHERE ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
-                    AND p.id_idioma = ".$idioma." 
-
-                    AND (SELECT ip1.id FROM itens_palavras ip1 WHERE ip1.id_palavra = p.id AND ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1 ) IS NOT NULL 
-                    AND (SELECT ip2.id FROM itens_palavras ip2 WHERE ip2.id_palavra = p.id AND ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$y2['id']." AND ip2.usar = 1 ) IS NOT NULL
-                    AND (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$extra[0]['did']." AND ip3.id_item = ".$extra[0]['val']." AND ip3.usar = 1 ) IS NOT NULL
-                     ;";
-                     */
-                  //xxxxx
-                //echo $sql;
+                    
                 $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('1972'.mysqli_error($GLOBALS['dblink']));
 
-                $pal = mysqli_fetch_assoc($ps); // se tem 2 palavras aqui dentro, há algum erro????
-                //if($pal['nativa']!='') echo $sql; // irregular, id, pronuncia, romanizacao, id_forma_dicionario, nativa
-                // fazer while, pegando o primeiro (que seria neutro) e checando se algum tem o ip3 ou tá no default
-                //if ($p['dims']==2) $p = mysqli_fetch_assoc($ps); 
-                /*$naOpcao = null; $naPadrao = null;
-                while($p = mysqli_fetch_assoc($ps)){
-                  if($p['c3']==$extra[0]['did'] && $p['i3']==$extra[0]['val']) $pal = $p;
-                }*/
+                $pal = mysqli_fetch_assoc($ps);
 
                 $autogen = ""; if (! $pal['id'] > 0 && $tryauto) {
 
@@ -3628,14 +3498,6 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                           AND (if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") 
                           AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen."
                           ;";
-                          /*
-                    $sql = "SELECT f.* FROM flexoes f 
-                        WHERE (SELECT if1.id FROM itens_flexoes if1 WHERE if1.id_flexao = f.id AND if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") IS NOT NULL 
-                          AND (SELECT if2.id FROM itens_flexoes if2 WHERE if2.id_flexao = f.id AND if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") IS NOT NULL 
-                          AND (SELECT if3.id FROM itens_flexoes if3 WHERE if3.id_flexao = f.id AND if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") IS NOT NULL 
-                          -- AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen." 
-                          ;";
-                          */
                     $psx = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
                     $px = mysqli_fetch_assoc($psx);
                     if ($px['id']>0) $regra = $px['id'];
@@ -3724,15 +3586,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
   echo '%%%'.$autogenlist.$pronDic.'%%%'; //.$fdic;
 
   $orfas = '';
-  //xxxxx palavras com id dicionario mas que filtro ??
-  /*
-  (SELECT 
- 	GROUP_CONCAT(ip.id_concordancia, '.', ip.id_item SEPARATOR '-' ) 
- 	FROM itens_palavras ip
- 	LEFT JOIN concordancias c ON ip.id_concordancia = c.id
- 	WHERE ip.id_palavra = p.id
-	AND c.depende = 95) as ipids ,
-  */
+  
   $sql = "SELECT p.*, pn.palavra as nativa,
           (SELECT COUNT(id) FROM itens_palavras WHERE id_palavra = p.id) as ips FROM palavras p 
             LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = ".$escrita."
@@ -3828,27 +3682,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
     $opsx .= '>'.$r['nome'].'</option>';
   }
 
-  /*
-  if ($isTabela && $ops1 != ''){
-    echo '<div class="col-sm-6">Linhas: <select class="form-control " onchange="reloadDimensoes(\'l\',\'this\')">'.
-      $ops1.'</select></div>';
-  }
-  if ($isTabela && $ops2 != ''){
-    echo '<div class="col-sm-6">Colunas: <select class="form-control " onchange="reloadDimensoes()">'.
-      $ops2.'</select></div>';
-  }
-  if ($extras > 2) {
-      echo '<div class="col-sm-12">Outras dimensões: </div>';
-      while ($extras > 2) {
-          echo '<div class="col-sm-6"><select class="form-control " onchange="reloadDimensoes()">'.$opsx.'</select></div>';
-          $extras--;
-      }
-  }
-  */
-  
-  // echo $linhas.' '.$colunas; die();
-
-  // loop itens conc 2, row cabeça
   echo '<div class="col-sm-12"><table class="table table-m-b-none">';
   if ($isTabela){
       echo '<tr><td></td>';
@@ -4067,50 +3900,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                   $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
             
                 }
-                // else echo 'Tem flexao aqui!<br>';
                 
-                
-                /*
-                  // teste //
-                  $sql = "SELECT f.* FROM flexoes f 
-                        LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                        LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id  
-                        LEFT JOIN itens_flexoes if3 ON if3.id_flexao = f.id  
-
-                        WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") 
-                        AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") 
-                        AND (if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") 
-                        AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen."  AND if3.id_genero = ".$gen."
-                        LIMIT 1;";
-                        
-                    
-                  $sql = "SELECT f.* FROM flexoes f
-                    WHERE 
-                        (SELECT if1.id FROM itens_flexoes if1 WHERE if1.id_flexao = f.id AND if1.id_concordancia = ".$linhas." 
-                          AND if1.id_item = ".$x['id']." AND if1.id_genero = ".$gen." LIMIT 1) IS NOT NULL 
-                      AND (SELECT if2.id FROM itens_flexoes if2 WHERE if2.id_flexao = f.id AND if2.id_concordancia = ".$colunas." 
-                          AND if2.id_item = ".$y2['id']." AND if2.id_genero = ".$gen." LIMIT 1) IS NOT NULL 
-                      AND (SELECT if3.id FROM itens_flexoes if3 WHERE if3.id_flexao = f.id AND if3.id_concordancia = ".$extra[0]['did']." 
-                          AND if3.id_item = ".$extra[0]['val']." AND if3.id_genero = ".$gen." LIMIT 1) IS NOT NULL 
-                      LIMIT 1;";
-                        
-                        
-                  // teste //
-                  $sql = "SELECT f.* FROM flexoes f 
-                    LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                    LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id  
-
-                    WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") 
-                    AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") 
-                    AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen."  
-                    AND (SELECT if3.id FROM itens_flexoes if3 WHERE if3.id_flexao = f.id AND if3.id_concordancia = ".$extra[0]['did']." 
-                          AND if3.id_item = ".$extra[0]['val']." AND if3.id_genero = ".$gen." LIMIT 1) IS NOT NULL 
-                    LIMIT 1;";
-
-                  //echo $sql.'<br>';
-                  $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
-                  // fim teste//
-                */
 
                 $p = mysqli_fetch_assoc($ps);
 
@@ -4126,11 +3916,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
         }
     }else{ // só 1 col / dimensão
 
-          //if tem mais 1 dimensao, abrir mais LI dentro das celulas, ou mini tabelinha
-
-            //Regex
-
-            //if (esta for forma desmarcada em ambos x e y) skip, carregaRegra(-1)
             $sql = "SELECT * FROM itensConcordancias i1
                     WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
                     AND i1.padrao = 1;";
@@ -4144,12 +3929,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
             }else{
 
-              //verificar se tem con dependente
-
-              //xxxxx em vez de buscar depende, só checr se i1.padrao = 2
-              /* "SELECT * FROM concordancias 
-                  WHERE id_idioma = ".$idioma." AND id_classe = ".$class." 
-                  AND depende = ".$x['id'].";" */
               $sql = "SELECT * FROM itensConcordancias i1
                     WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
                     AND i1.padrao = 2;";
@@ -4222,7 +4001,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 function getSpanPalavraNativa($palavra,$eid,$fonte,$tamanho){
     $ret = '';
     if (mb_strlen($palavra)>0){
-      if($fonte<0){
+      if($fonte== 3){
           $cs = explode(",",$palavra);
           foreach ($cs as $c) $ret .= '<span class="drawchar drawchar-'.$tamanho.'" style="background-image: url(./writing/'.$eid.'/'.$c.'.png)"></span>';
           //$ret = '';
@@ -5170,8 +4949,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       }else{
 
-        //xxxxxxx inverter: checar primeiro se tem tecla associada, e se não tiver, ver se tem ipa 
-
         // buscar se esta letra tem no inventário ipa
         $sql = "SELECT s.ipa, p.ipa as ipa2 FROM inventarios i
               LEFT JOIN teclas t ON t.id_inventario = i.id
@@ -5213,6 +4990,34 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die();
   };
 
+  if ($_GET['action'] == 'getAllPronuncias') {
+      $iid = $_GET['iid'];
+      
+      $sql = "SELECT t.tecla, s.ipa, p.ipa as ipa2, t.ordem 
+              FROM inventarios i
+              LEFT JOIN teclas t ON t.id_inventario = i.id
+              LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
+              LEFT JOIN sonsPersonalizados p ON (p.id = i.id_som AND i.id_tipoSom = 0)
+              WHERE i.id_idioma = " . $iid . "
+              AND (t.tecla IS NOT NULL OR s.ipa IS NOT NULL OR p.ipa IS NOT NULL)
+              ORDER BY t.ordem";
+      
+      $result = mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      
+      $pronuncias = [];
+      while ($r = mysqli_fetch_assoc($result)) {
+          $pronuncias[] = [
+              'tecla' => $r['tecla'] ?? '',
+              'ipa' => $r['ipa'] ?? '',
+              'ipa2' => $r['ipa2'] ?? '',
+              'ordem' => $r['ordem'] ?? 0
+          ];
+      }
+      
+      echo json_encode($pronuncias);
+      die();
+  }
+
   if ($_GET['action']=='getChecarNativo') {
 
     // ver se é fonte ou draw
@@ -5242,61 +5047,32 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die();
   };
 
-  if ($_GET['action']=='getAutoSubstituicaoOld') { 
-
-    $palavra = "";
-
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT id_fonte FROM escritas WHERE id = ".$_GET['eid']) or die(mysqli_error($GLOBALS['dblink']));
-    $r = mysqli_fetch_assoc($result);
-    $fonte = $r['id_fonte'];
-    $result = mysqli_query($GLOBALS['dblink'],
-      "SELECT *, CHAR_LENGTH(tecla) as tam FROM autosubstituicoes WHERE id_escrita = ".$_GET['eid']." ORDER BY tam DESC;");
-    $found = '*';
-
-    if($fonte < 0){
+  if ($_GET['action'] == 'getAllAutoSubstituicoes') {
+      $eid = $_GET['eid'];
       
-        for ($i = 0; $i < mb_strlen($_POST['p']); $i++) {
-          $found = '*';
-          mysqli_data_seek($result, 0);
-          while($r = mysqli_fetch_assoc($result)){
-
-            if( mb_substr($_POST['p'], $i, $r['tam']) == $r['tecla']){ 
-
-              $found = $r['glifos']; 
-              // se for fonte -1 (draw), glifos devem add outro esquema: spans com classes com ids pra puxar img de fundo?
-              // ou enviar os ids separados por virgula, e a pagina js cria as divs/spans e coloca no input oculto esses ids a virgula
-
-              $i += $r['tam']-1;
-              break;
-            }
-          }
-          $palavra .= ",".$found;
-        };
-        $palavra = mb_substr($palavra,1);
-
-    }else{
-        for ($i = 0; $i < mb_strlen($_POST['p']); $i++) {
-          $found = '*';
-          mysqli_data_seek($result, 0);
-          while($r = mysqli_fetch_assoc($result)){
-
-            if( mb_substr($_POST['p'], $i, $r['tam']) == $r['tecla']){ 
-
-              $found = $r['glifos']; 
-              // se for fonte -1 (draw), glifos devem add outro esquema: spans com classes com ids pra puxar img de fundo?
-              // ou enviar os ids separados por virgula, e a pagina js cria as divs/spans e coloca no input oculto esses ids a virgula
-
-              $i += $r['tam']-1;
-              break;
-            }
-          }
-          $palavra .= $found;
-        };
-    }
-
-    if (mb_substr_count($palavra,'*')==0) echo $palavra;
-    die('');
-  };
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id_fonte FROM escritas WHERE id = " . $eid) or die(mysqli_error($GLOBALS['dblink']));
+      $r = mysqli_fetch_assoc($result);
+      $fonte = $r['id_fonte'];
+      
+      $result = mysqli_query($GLOBALS['dblink'], 
+          "SELECT *, CHAR_LENGTH(tecla) as tam FROM autosubstituicoes WHERE id_escrita = " . $eid . " ORDER BY tam DESC;") 
+          or die(mysqli_error($GLOBALS['dblink']));
+      
+      $autosubs = [];
+      while ($r = mysqli_fetch_assoc($result)) {
+          $autosubs[] = [
+              'tecla' => $r['tecla'],
+              'glifos' => $r['glifos'],
+              'tam' => $r['tam']
+          ];
+      }
+      
+      echo json_encode([
+          'fonte' => $fonte,
+          'autosubs' => $autosubs
+      ]);
+      die();
+  }
 
   if ($_GET['action'] == 'getAutoSubstituicao') {
     $palavra = "";
@@ -5311,7 +5087,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         "SELECT *, CHAR_LENGTH(tecla) as tam FROM autosubstituicoes WHERE id_escrita = " . $eid . " ORDER BY tam DESC;") 
         or die(mysqli_error($GLOBALS['dblink']));
 
-    if ($fonte < 0) {
+    if ($fonte == 3) {
         $matches = [];
         $input_len = mb_strlen($input);
         
@@ -6083,7 +5859,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $fonte = $r['id_fonte'];
     $tamanho = $r['tamanho'];
 
-    if($fonte < 0){
+    if($fonte == 3){
       $query = "SELECT g.*, DATE_FORMAT( data_modificado,'%Y%m%d%H%i%s') as ultima,
         (SELECT GROUP_CONCAT(glifo SEPARATOR' ') FROM drawChars v WHERE v.id_principal = g.id) as variantes
         FROM drawChars g 
@@ -6100,7 +5876,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
     
     while($r = mysqli_fetch_assoc($result)){
-      if($fonte < 0){
+      if($fonte == 3< 0){
         $glifo = '<span title="'.$r['descricao'].'" class="drawchar drawchar-'.$tamanho.'" style="background-image: url(./writing/'.$eid.'/'.$r['id'].'.png?'.$r['ultima'].')"></span> ';
         echo '<label><span onclick="addNatDraw(\''.$r['id'].'\','.$fonte.',\''.$tamanho.'\')" class="form-selectgroup-label">'.$glifo.'</span></label>';
       }else{
@@ -6110,7 +5886,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     };
 
-    if($fonte < 0) echo '<div class="mt-3">
+    if($fonte == 3) echo '<div class="mt-3">
           <div id="tmpdrawchar"></div>
           <button class="btn btn-primary" type="button" data-bs-dismiss="offcanvas" onclick="exibirNativa('.$eid.',$(\'#tempNat\').val(),'.$fonte.',\''.$tamanho.'\')">
           '._t('Ok').'
@@ -6130,7 +5906,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $fonte = $r['id_fonte'];
       $tamanho = $r['tamanho'];
 
-      if ($fonte < 0) {
+      if ($fonte == 3) {
           $query = "SELECT g.*, DATE_FORMAT(data_modificado,'%Y%m%d%H%i%s') as ultima,
               (SELECT GROUP_CONCAT(glifo SEPARATOR ' ') FROM drawChars v WHERE v.id_principal = g.id) as variantes
               FROM drawChars g 
@@ -6145,7 +5921,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $result = mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
       
       while ($r = mysqli_fetch_assoc($result)) {
-          if ($fonte < 0) {
+          if ($fonte == 3) {
               $glifo = '<span title="'.$r['descricao'].'" class="drawchar drawchar-'.$tamanho.'" style="background-image: url(./writing/'.$eid.'/'.$r['id'].'.png?'.$r['ultima'].')"></span>';
               echo '<label><span onclick="addNatDraw(\''.$r['id'].'\','.$fonte.',\''.$tamanho.'\')" class="form-selectgroup-label">'.$glifo.'</span></label>';
           } else {
@@ -6153,21 +5929,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
               echo '<label><span onclick="addNatChar(\''.$r['glifo'].'\')" class="form-selectgroup-label">'.$glifo.'</span></label>';
           }
       }
-
-      /*
-      if ($fonte < 0) {
-          echo '<div class="mt-3">
-              <div id="tmpdrawchar"></div>
-              <div class="input-group">
-                  <input type="text" class="form-control" id="tempNat">
-                  <button class="btn btn-primary" type="button" data-bs-dismiss="offcanvas" onclick="okInsertNativo()">
-                      '._t('Ok').'
-                  </button>
-              </div>
-          </div>';
-      }
-      */
-
       die();
   }
 
@@ -6232,8 +5993,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       // ver se tem keystroke em 
       $keys = mysqli_query($GLOBALS['dblink'],"SELECT GROUP_CONCAT(tecla ORDER BY ordem SEPARATOR ' ') as tecla FROM teclas WHERE id_inventario = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
       $key = mysqli_fetch_assoc($keys);
-      if ($key['tecla']=='') $key = '<span onclick="salvarTecla(0,\'\','.$i['id_inventario'].','.$i['peso'].')"><small>'._t('Definir tecla').'</small>';
-      else $key = '<span onclick="salvarTecla(1,\''.($key['tecla']=='\''?'*':$key['tecla']).'\','.$i['id_inventario'].','.$i['peso'].')">'.$key['tecla'].' <small>('._t('alterar tecla').')</small>';
+      if ($key['tecla']=='') $key = '<span onclick="salvarTecla(0,\'\',\''.$i['id_inventario'].'\','.$i['peso'].')"><small>'._t('Definir tecla').'</small>';
+      else $key = '<span onclick="salvarTecla(1,\''.($key['tecla']=='\''?'*':$key['tecla']).'\',\''.$i['id_inventario'].'\','.$i['peso'].')">'.$key['tecla'].' <small>('._t('alterar tecla').')</small>';
       
       /*echo '<div class="mb-3" style="background-color:#111;border-radius:4px;margin:8px"><div class="col-sm-8"><h4>'
       .$key.' &nbsp; /'
@@ -6243,7 +6004,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       
       echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="panelpal form-fieldset" id="'.$i['id_inventario'].'"><div class="form-group">'.$key.' &nbsp; /'
         .$i['ipa'].'/<br>'.$i['nome'].
-        '</span><br><a href="#" class="text-secondary" onClick="removerSom('.$i['id_som'].')">'._t('Remover').'</a></div></div>';
+        '</span><br><a href="#" class="text-secondary" onClick="removerSom(\''.$i['id_som'].'\')">'._t('Remover').'</a></div></div>';
 
 
     }
@@ -6256,12 +6017,12 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       
       $keys = mysqli_query($GLOBALS['dblink'],"SELECT GROUP_CONCAT(tecla ORDER BY ordem SEPARATOR ' ') as tecla FROM teclas WHERE id_inventario = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
       $key = mysqli_fetch_assoc($keys);
-      if ($key['tecla']=='') $key = '<span onclick="salvarTecla(0,\'\','.$i['id_inventario'].','.$i['peso'].')"><small>'._t('Definir tecla').'</small>';
-      else $key = '<span onclick="salvarTecla(1,\''.($key['tecla']=='\''?'*':$key['tecla']).'\','.$i['id_inventario'].','.$i['peso'].')">'.$key['tecla'].' <small>('._t('alterar tecla').')</small>';
+      if ($key['tecla']=='') $key = '<span onclick="salvarTecla(0,\'\',\''.$i['id_inventario'].'\','.$i['peso'].')"><small>'._t('Definir tecla').'</small>';
+      else $key = '<span onclick="salvarTecla(1,\''.($key['tecla']=='\''?'*':$key['tecla']).'\',\''.$i['id_inventario'].'\','.$i['peso'].')">'.$key['tecla'].' <small>('._t('alterar tecla').')</small>';
 
       echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="panelpal form-fieldset" id="'.$i['id_inventario'].'"><div class="form-group">'.$key.' &nbsp; /'
         .$i['ipa'].'/<br>'.$i['nome'].'</span>
-        <br><a class="text-secondary"  onclick="removerSom('.$i['id'].',2)">'._t('Remover').'</a></div></div>';
+        <br><a class="text-secondary"  onclick="removerSom(\''.$i['id'].'\',2)">'._t('Remover').'</a></div></div>';
     }
 
     echo '<div class="mb-3">
@@ -6341,9 +6102,18 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action'] == 'ajaxEditarTeclaIpa') {
 
     $ks = explode(" ",$_POST['k']);
+    foreach($ks as $k){
+        $sqlQuerys = "SELECT s.ipa, p.ipa as ipa2 FROM inventarios i
+            LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
+            LEFT JOIN sonsPersonalizados p ON ( p.id = i.id_som AND i.id_tipoSom = 0 )
+            WHERE BINARY s.ipa = \"".$k."\" OR BINARY p.ipa = \"".$k."\";";
+        $existentes = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+        if ( mysqli_num_rows($existentes)>0){
+            echo _t("Esta tecla já é outro som!"); die();
+        }
+    }
     
     if($_GET['ipa']>0){ 
-
       $sqlQuerys = "DELETE FROM teclas 
         WHERE id_inventario = ".$_GET['ipa'].";";
       mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
@@ -6361,36 +6131,12 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
         
         $sqlQuerys = "UPDATE inventarios SET 
-          peso = ".$p."
+          peso = ".$p.", data_modificado = NOW()
           WHERE id = ".$_GET['ipa'].";";
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
     }
 
     die('1');
-  };
-
-  if ($_GET['action'] == 'ajaxEditarTeclaIpa') {
-    
-    if($_GET['id']>0){ 
-      $sqlQuerys = "UPDATE teclas SET 
-        tecla = \"".$_GET['k']."\"
-        WHERE id = ".$_GET['id']." LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      echo $_GET['id'];
-
-    } else {  
-        $tid = generateId();
-        $sqlQuerys = "INSERT INTO teclas SET 
-          tecla = \"".$_GET['k']."\",
-          ordem = 0, id = $tid,
-          id_inventario = ".$_GET['ipa'].",
-          id_idioma = 0;";
-
-        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-        echo $tid;
-    }; 
-
-    die();
   };
 
   if ($_GET['action'] == 'ajaxEditarAutosubstituicao') { // otimizar sql query
@@ -6417,18 +6163,17 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         }
     }
 
-
-    //get K tbm buscar em teclas
+    //xxxxx TO DO: get K tbm buscar em teclas, afinal é digitando elas que o sistema vai fazer a substituição quando estas existem
     $torigem = mb_str_split($_GET['k']);
     $ipa = '';
     for ($i = 0; $i < sizeof($torigem) ; $i++) {
-      $sql = "SELECT s.ipa 
-                FROM teclas t
-                LEFT JOIN inventarios i ON i.id = t.id_inventario 
+      $sql = "SELECT s.ipa as ipa1, sp.ipa as ipa2, t.tecla 
+                FROM inventarios i
+                LEFT JOIN teclas t ON i.id = t.id_inventario 
                 LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
                 LEFT JOIN sonsPersonalizados sp ON (i.id_som = sp.id AND i.id_tipoSom = 0)
-                WHERE BINARY t.tecla = \"".$torigem[$i]."\"
-              AND id_inventario IN (SELECT id FROM inventarios WHERE id_idioma = (SELECT id_idioma FROM escritas WHERE id = ".$_GET['eid']." LIMIT 1)) LIMIT 1;";
+                WHERE ( BINARY t.tecla = \"".$torigem[$i]."\" OR BINARY s.ipa = \"".$torigem[$i]."\" OR BINARY sp.ipa = \"".$torigem[$i]."\")
+              AND i.id IN (SELECT id FROM inventarios WHERE id_idioma = (SELECT id_idioma FROM escritas WHERE id = ".$_GET['eid']." LIMIT 1)) LIMIT 1;";
         //echo $sql;
         $glifos = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
         //
@@ -6436,7 +6181,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           die(_t('Tecla de entrada não encontrada em sons: %1',[$torigem[$i]]));
         }else{
           $r = mysqli_fetch_assoc($glifos);
-          $ipa .= $r['ipa'];
+          $ipa .= $r['ipa2'].$r['ipa1'];
         }
     }
 
@@ -7381,15 +7126,15 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         AND p.id_forma_dicionario = 0;";
         //echo $sql;
       $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-      //echo '<option value="-2">Contração</option>';
-      //echo '<option value="-1">Morfema que não aparece no dicionário</option>'; '._t('Esta e a forma de dicionario').'
+      //echo '<option value="2">Contração</option>';
+      //echo '<option value="1">Morfema que não aparece no dicionário</option>'; '._t('Esta e a forma de dicionario').'
       echo '<option value="0" data-eid="" data-nativa="" selected>-</option>';
       while ($lang = mysqli_fetch_assoc($langs)){
         echo '<option value="'.$lang['id'].'" title="'.$lang['significado'].'"';
         if ($idioma['id_forma_dicionario'] == $lang['id']) echo ' selected'; 
 
         $cna = '';
-        if($fonte > 0) $cna = 'custom-font-';
+        if($fonte == 3) $cna = 'custom-font-';
       
         if ($romanizacao==1) {
           echo ' data-eid="'.$cna.$escrita.'" data-nativa="'.$lang['palavra'].'"> &nbsp; '.$lang['romanizacao'].' - '.$lang['significado'].'</option>'; //'.$lang['escrita_nativa'].' -   // /'.$lang['pronuncia'].'/
@@ -7419,7 +7164,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           FROM palavras p WHERE p.id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
 
       $cna = '';
-      if($fonte > 0) $cna = 'custom-font-';
+      if($fonte == 3) $cna = 'custom-font-';
       while ($pal = mysqli_fetch_assoc($pals)){
           echo '<option title="'.$pal['romanizacao'].'" value="'.$pal['id'].'"';
           if ($_GET['selected'] == $pal['id']) echo ' selected';
@@ -7505,7 +7250,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
         LEFT JOIN classes c ON p.id_classe = c.id 
         LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -2 ".$ordem.";";
+        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = 2 ".$ordem.";";
 
     }else if ($filtro == 'morf'){
 
@@ -7519,7 +7264,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
         LEFT JOIN classes c ON p.id_classe = c.id 
         LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -1 ".$ordem.";";
+        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = 1 ".$ordem.";";
 
     }else if ($filtro == 'expr'){
 
@@ -7533,7 +7278,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
         LEFT JOIN classes c ON p.id_classe = c.id 
         LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -3 ".$ordem.";";
+        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = 3 ".$ordem.";";
 
     }else if ($filtro > 0){ // id_classe
 
@@ -7576,191 +7321,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     };
     print json_encode($rows);
     die();
-  };
-
-  if ($_GET['action'] == 'listWords') { // MAINLIST WORDS in editlexicon // otimizar sql queries
-
-    // GET o = ordem (por rom, pron ou id escrita)
-    // GET to = tipo ordem (pc:primeiro char, uc ultimo, nc, num. chars)
-    // GET i = index (0: todas palavras, 1= caractere 1 na ordem alfabetica, nativo ou romano)
-
-    $romanizacao = 0;
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas WHERE id = ".$_GET['id']." AND romanizacao = 1;") or die(mysqli_error($GLOBALS['dblink']));
-    if (mysqli_num_rows($result)>0) $romanizacao = 1;
-
-    $en = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
-                      LEFT JOIN fontes f ON f.id = e.id_fonte
-                      WHERE e.id_idioma = ".$_GET['id']." AND e.padrao = 1;") or die(mysqli_error($GLOBALS['dblink']));
-    if(mysqli_num_rows($en)>0){
-      $en = mysqli_fetch_assoc($en);
-      $escrita = $en['id'];
-      $fonte = $en['fonte'];
-      $tamanho = $en['tamanho'];
-      $id_fonte = $en['id_fonte'];
-    }else { $escrita = 1; $fonte = 'notosans';}
-
-    $ordem = ' order by p.pronuncia ';
-    $firstch = 'pronuncia';
-    if ($romanizacao > 0) {
-      $ordem = ' order by p.romanizacao '; $firstch = 'romanizacao';
-    }else if ($escrita > 0) {
-      $ordem = ' order by palavra '; $firstch = 'palavra';
-    }
-    
-    $filtro = $_GET['t'];
-
-    $indice = 'a';
-
-    if ($filtro == 'dici'){
-
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl,  (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels,
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ' ', significado, ' ', romanizacao, ' ', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = 0 ".$ordem.";";
-
-    }else if ($filtro == 'tudo'){
-
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl,  (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels,
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ' ', significado, ' ', romanizacao, ' ', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." ".$ordem.";";
-
-
-    }else if ($filtro == 'cont'){
-
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -2 ".$ordem.";";
-
-    }else if ($filtro == 'morf'){
-
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -1 ".$ordem.";";
-
-    }else if ($filtro == 'expr'){
-
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, 
-        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -3 ".$ordem.";";
-
-    }else if ($filtro > 0){ // id_classe
-
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = 0 AND p.id_classe = ".$filtro." ".$ordem.";";
-    }else {
-      echo 'err dtyp dfyltr'; die();
-    }
-
-    //echo $query;
-    
-    $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
-          
-    $inicialAnterior = '';
-    while($r = mysqli_fetch_assoc($result)){
-      $inicialAtual = substr( iconv('UTF-8', 'ASCII//TRANSLIT', $r[$firstch]),0,1); //substr($r[$firstch],0,1); //iconv('UTF-8', 'ASCII//TRANSLIT', $inicialAnterior)
-      if ($inicialAnterior != $inicialAtual) {
-        echo '<div class="list-group-header sticky-top">'.$inicialAtual.'</div>';
-        $inicialAnterior = $inicialAtual;
-      };
-
-      /*
-      $indice = // '6-5-0-0-12'; //nativo inicial/final, romaniz inic/fin, num.chars,
-        'ni:'.substr($r['palavra'],0,1).'|nf:'.substr($r['palavra'],strlen($r['palavra'])-1,strlen($r['palavra'])-1).
-        '|ri:'.substr($r['romanizacao'],0,1).'|rf:'.substr($r['romanizacao'],strlen($r['romanizacao'])-1,strlen($r['romanizacao'])-1).
-        '|nc:'.strlen($r['palavra']).'|';
-      $indexdata = 'data-ni="'.substr($r['palavra'],0,1).'" data-nf="'.substr($r['palavra'],strlen($r['palavra'])-1,strlen($r['palavra'])-1).
-      '" data-ri="'.substr($r['romanizacao'],0,1).'" data-rf="'.substr($r['romanizacao'],strlen($r['romanizacao'])-1,strlen($r['romanizacao'])-1).
-      '" data-nc="'.strlen($r['palavra']).'" ';
-      */
-
-      $searchField = 'k'.$r['id_classe'].' '.$r['palavra'].' '.$r['pronuncia'].' '.$r['significado'].' '.$r['romanizacao'].' '.$r['tags'];
-      
-      // add no searchField as palavras relacionadas, as cuja forma_dic é esta
-      $searchField .= ' '.$r['extras_palavras'];
-
-      //$nativo = '';
-      //if($escrita>0)
-        $nativo = getSpanPalavraNativa($r['palavra'],$escrita,$id_fonte,$tamanho);
-
-      if ($romanizacao==1) {
-          if ($nativo=="<span class='custom-font-".$escrita."' ></span>") {
-            if($r['romanizacao']!='') $nativo = "<span class='text-secondary' >".$r['romanizacao']."</span> ";
-            else $nativo = "<span class='text-secondary' >/".$r['pronuncia']."/</span> ";
-          }
-
-          //echo '<tr><td style="display:none">'.$indice.' </td><td onClick=\'abrirPalavra('.$r['id'].')\' class="sort-name">'.$nativo.' '.$r['romanizacao'].' /'.$r['pronuncia'].'</td><td class="sort-city">'.$r['cgl'].'</td><td class="sort-type">'.$r['significado'].'</td><td class="sort-score">x</td></tr>';
-          echo '<div data-search="'.$searchField.'" class="list-group-item divWord" '.$indexdata.'><div class="row">
-            <div class="col-auto" data-bs-toggle="tooltip" title="'.$r['romanizacao'].' /'.$r['pronuncia'].'/">
-              <a href="?page=editword&iid='.$_GET['id'].'&pid='.$r['id'].'">'.$nativo.' </a>
-            </div>
-            <div class="col text-truncate">
-              <a href="?page=editword&iid='.$_GET['id'].'&pid='.$r['id'].'" class="text-body d-block">'.$r['significado'].'</a> 
-              <div class="text-secondary text-truncate">'.$r['classe'].($r['rels']>0?' - '._t('%1 formas',[$r['rels']]):'').'</div>
-            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord('.$r['id'].','.$r['id_forma_dicionario'].')">Del</a></div>
-          </div></div>';
-
-      }else{ 
-          if ($nativo=="<span class='custom-font-".$escrita."' ></span>") $nativo = "<span class='text-secondary' >/".$r['pronuncia']."/</span> ";
-
-          //echo '<tr><td style="display:none">'.$indice.' </td><td onClick=\'abrirPalavra('.$r['id'].')\' class="sort-name">'.$nativo.' '.$r['romanizacao'].' /'.$r['pronuncia'].'</td><td class="sort-city">'.$r['cgl'].'</td><td class="sort-type">'.$r['significado'].'</td><td class="sort-score">x</td></tr>';
-          echo '<div data-search="'.$searchField.'" class="list-group-item divWord" '.$indexdata.'><div class="row">
-            <div class="col-auto" data-bs-toggle="tooltip" title="/'.$r['pronuncia'].'/">
-              <a  href="?page=editword&iid='.$_GET['id'].'&pid='.$r['id'].'" >'.$nativo.' </a>
-            </div>
-            <div class="col text-truncate">
-              <a href="?page=editword&iid='.$_GET['id'].'&pid='.$r['id'].'" class="text-body d-block">'.$r['significado'].'</a>
-              <div class="text-secondary text-truncate">'.$r['classe'].($r['rels']>0?' - '._t('%1 formas',[$r['rels']]):'').'</div>
-            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord('.$r['id'].','.$r['id_forma_dicionario'].')">Del</a></div>
-          </div></div>';
-      }
-
-    };
-    
-    echo '<script>$(\'[data-bs-toggle="tooltip"]\').tooltip();</script>';
-    die();
-
   };
 
   if ($_GET['action'] == 'ajaxDelClasse') { 
@@ -8064,7 +7624,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $result = mysqli_query($GLOBALS['dblink'],"SELECT id_fonte FROM escritas WHERE id = ".$eid) or die(mysqli_error($GLOBALS['dblink']));
     $r = mysqli_fetch_assoc($result);
     $fonte = $r['id_fonte'];
-    if($fonte < 0){
+    if($fonte == 3){
       if($_GET['force']=='1') {
           mysqli_query($GLOBALS['dblink'],"DELETE FROM drawChars WHERE id = ".$g) or die(mysqli_error($GLOBALS['dblink']));
           // deletar arquivos
@@ -8141,6 +7701,65 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     };
     die();
   };
+
+  if ($_GET['action'] == 'ajaxLoadAlphabetData') {
+      if (!isset($_GET['eid'])) {
+          header('Content-Type: application/json');
+          echo json_encode(['error' => 'novalered']);
+          exit;
+      }
+      
+      $eid = $_GET['eid'];
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id_fonte, tamanho FROM escritas WHERE id = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid)) or die(json_encode(['error' => mysqli_error($GLOBALS['dblink'])]));
+      $r = mysqli_fetch_assoc($result);
+      
+      if (!$r) {
+          header('Content-Type: application/json');
+          echo json_encode(['error' => 'escrita_not_found']);
+          exit;
+      }
+      
+      $fonte = $r['id_fonte'];
+      $tamanho = $r['tamanho'];
+      $glyphs = [];
+
+      if ($fonte == 3) {
+          $query = "SELECT g.*, DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as ultima,
+                    (SELECT GROUP_CONCAT(glifo SEPARATOR ' ') FROM drawChars v WHERE v.id_principal = g.id) as variantes
+                    FROM drawChars g 
+                    WHERE g.id_escrita = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid) . " AND g.id_principal = 0 ORDER BY g.ordem";
+      } else {
+          $query = "SELECT g.*,
+                    (SELECT GROUP_CONCAT(glifo SEPARATOR ' ') FROM glifos v WHERE v.id_principal = g.id) as variantes
+                    FROM glifos g 
+                    WHERE g.id_escrita = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid) . " AND g.id_principal = 0 ORDER BY g.ordem";
+      }
+
+      $result = mysqli_query($GLOBALS['dblink'], $query) or die(json_encode(['error' => mysqli_error($GLOBALS['dblink'])]));
+      
+      while ($r = mysqli_fetch_assoc($result)) {
+          $glyph = [
+              'id' => $r['id'],
+              'id_escrita' => $r['id_escrita'],
+              'glifo' => $r['glifo'],
+              'descricao' => $r['descricao'],
+              'variantes' => $r['variantes'] ? $r['variantes'] : '',
+              'vetor' => $r['vetor'] ?? ''
+          ];
+          if ($fonte == 3) {
+              $glyph['ultima'] = $r['ultima'];
+          }
+          $glyphs[] = $glyph;
+      }
+      
+      header('Content-Type: application/json');
+      echo json_encode([
+          'fonte' => $fonte,
+          'tamanho' => $tamanho,
+          'glyphs' => $glyphs
+      ]);
+      exit;
+  }
   
   if ($_GET['action'] == 'ajaxLoadAlphabet') {
     if($_GET['eid']) $eid = $_GET['eid']; else die('novalered'); 
@@ -8151,15 +7770,15 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $fonte = $r['id_fonte'];
     $tamanho = $r['tamanho'];
 
-    if($fonte < 0){
-      $editChar = 'drawCaractere(';
+    if($fonte == 3){
+      $editChar = 'drawCaractere(\'';
       $query = "SELECT g.*, DATE_FORMAT( data_modificado,'%Y%m%d%H%i%s') as ultima,
         (SELECT GROUP_CONCAT(glifo SEPARATOR' ') FROM drawChars v WHERE v.id_principal = g.id) as variantes
         FROM drawChars g 
         WHERE g.id_escrita = ".$eid." AND g.id_principal = 0 ORDER BY g.ordem;";
         //
     }else{
-      $editChar = 'addCaractere(';
+      $editChar = 'addCaractere(\'';
       $query = "SELECT g.*,
             (SELECT GROUP_CONCAT(glifo SEPARATOR' ') FROM glifos v WHERE v.id_principal = g.id) as variantes
             FROM glifos g 
@@ -8170,7 +7789,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
     
     while($r = mysqli_fetch_assoc($result)){
-      if($fonte < 0){
+      if($fonte == 3){
         $glifo = '<span class="drawchar drawchar-'.$tamanho.'" style="background-image: url(./writing/'.$eid.'/'.$r['id'].'.png?'.$r['ultima'].')"></span> '.$r['descricao'];
         //$glifo = '<span class="avatar avatar-md" style="background-image: url(./writing/'.$eid.'/'.$r['id'].'.png?'.$r['ultima'].')"></span> '.$r['descricao'];
       }else{
@@ -8182,25 +7801,18 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       echo '
         <div class="list-group-item">
           <div class="row align-items-center">
-            <div class="col-auto" onclick="'.$editChar.$r['id_escrita'].",'".$r['descricao']."',".$r['id'].",'".str_replace("'","*",$r['glifo'])."','".str_replace("'","*",$r['variantes']).'\',`'.htmlspecialchars($r['vetor']).'`)"
+            <div class="col-auto" onclick="'.$editChar.$r['id_escrita']."','".$r['descricao']."','".$r['id']."','".str_replace("'","*",$r['glifo'])."','".str_replace("'","*",$r['variantes']).'\',`'.htmlspecialchars($r['vetor']).'`)"
               >'.$glifo.'</div>
             <div class="col text-end"> 
               <div class="text-secondary text-truncate mt-n1">'." 
-                <a  class='btn btn-danger btn-sm' onClick='apagarGlifo(".$r['id'].",".$eid.")'>X</a> 
-                <a  class='btn btn-primary btn-sm' onClick='moverAbaixo(".$r['id'].",".$eid.")'>v</a></a> 
-                <a  class='btn btn-primary btn-sm' onClick='moverAcima(".$r['id'].",".$eid.")'>^</a>".'
+                <a  class='btn btn-danger btn-sm' onClick='apagarGlifo(\"".$r['id']."\",\"".$eid."\")'>X</a> 
+                <a  class='btn btn-primary btn-sm' onClick='moverAbaixo(\"".$r['id']."\",\"".$eid."\")'>v</a></a> 
+                <a  class='btn btn-primary btn-sm' onClick='moverAcima(\"".$r['id']."\",\"".$eid."\")'>^</a>".'
               </div>
             </div>
           </div>
         </div>';
     };
-    /*echo '</tbody></table><script>$("#tabelaAlfabeto'.$eid.'").DataTable({
-          paging: false,
-          "scrollY": "500px",
-          "scrollCollapse": true,
-					"order": [[2, \'asc\']],   r ordem asc
-          "bFilter": false 
-        });</script>';*/
     die();
 
   };
@@ -8209,6 +7821,71 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     mysqli_query($GLOBALS['dblink'],"DELETE FROM autosubstituicoes WHERE id = ".$_GET['id']) or die(mysqli_error($GLOBALS['dblink']));
     die('ok');
   };
+
+  if ($_GET['action'] == 'ajaxLoadAutosubstitutionData') {
+      if (!isset($_GET['eid'])) {
+          header('Content-Type: application/json');
+          echo json_encode(['error' => 'novalered']);
+          exit;
+      }
+      
+      $eid = $_GET['eid'];
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id_fonte, tamanho FROM escritas WHERE id = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid)) or die(json_encode(['error' => mysqli_error($GLOBALS['dblink'])]));
+      $r = mysqli_fetch_assoc($result);
+      
+      if (!$r) {
+          header('Content-Type: application/json');
+          echo json_encode(['error' => 'escrita_not_found']);
+          exit;
+      }
+      
+      $fonte = $r['id_fonte'];
+      $tamanho = $r['tamanho'];
+      $autosubstitutions = [];
+
+      if ($fonte == 3) {
+          $query = "SELECT s.*, c.id as cid, CHAR_LENGTH(tecla) as tam, DATE_FORMAT(c.data_modificado, '%Y%m%d%H%i%s') as ultima
+                    FROM autosubstituicoes s 
+                    LEFT JOIN drawChars c ON c.id = s.glifos
+                    WHERE s.id_escrita = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid) . " ORDER BY tam DESC";
+          $result = mysqli_query($GLOBALS['dblink'], $query) or die(json_encode(['error' => mysqli_error($GLOBALS['dblink'])]));
+          
+          while ($r = mysqli_fetch_assoc($result)) {
+              $autosubstitutions[] = [
+                  'id' => $r['id'],
+                  'tecla' => $r['tecla'],
+                  'ipa' => $r['ipa'],
+                  'glifos' => $r['glifos'],
+                  'cid' => $r['cid'],
+                  'ultima' => $r['ultima'],
+                  'tam' => $r['tam']
+              ];
+          }
+      } else {
+          $query = "SELECT s.*, CHAR_LENGTH(tecla) as tam
+                    FROM autosubstituicoes s 
+                    WHERE s.id_escrita = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid) . " ORDER BY tam DESC";
+          $result = mysqli_query($GLOBALS['dblink'], $query) or die(json_encode(['error' => mysqli_error($GLOBALS['dblink'])]));
+          
+          while ($r = mysqli_fetch_assoc($result)) {
+              $autosubstitutions[] = [
+                  'id' => $r['id'],
+                  'tecla' => $r['tecla'],
+                  'ipa' => $r['ipa'],
+                  'glifos' => $r['glifos'],
+                  'tam' => $r['tam']
+              ];
+          }
+      }
+      
+      header('Content-Type: application/json');
+      echo json_encode([
+          'fonte' => $fonte,
+          'tamanho' => $tamanho,
+          'autosubstitutions' => $autosubstitutions
+      ]);
+      exit;
+  }
   
   if ($_GET['action'] == 'ajaxLoadAutosubstitution') {
     if($_GET['eid']) $eid = $_GET['eid']; else die('novalered');
@@ -8218,7 +7895,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $fonte = $r['id_fonte'];
     $tamanho = $r['tamanho'];
 
-    if($fonte < 0){
+    if($fonte == 3){
         $query = "SELECT s.*, c.id as cid, CHAR_LENGTH(tecla) as tam, DATE_FORMAT( c.data_modificado,'%Y%m%d%H%i%s') as ultima
               FROM autosubstituicoes s 
               LEFT JOIN drawChars c ON c.id = s.glifos
@@ -8231,12 +7908,12 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           echo "
           <div class=\"list-group-item\">
             <div class=\"row align-items-center\" >
-              <div onclick=\"addSubstituicaoDraw(".$eid.",".$r['id'].",'".str_replace("'","*",$r['tecla'])."','".$r['glifos']."')\" 
+              <div onclick=\"addSubstituicaoDraw('".$eid."','".$r['id']."','".str_replace("'","*",$r['tecla'])."','".$r['glifos']."')\" 
                   class=\"col-auto\">".$r['tecla']." /".$r['ipa']."/ → ".'<span class="drawchar drawchar-'.$tamanho.'" style="background-image: url(./writing/'.$eid.'/'.$r['cid'].'.png?'.$r['ultima'].')"></span>'."
               </div>
               <div class=\"col text-end\"> 
                 <div class=\"text-secondary text-truncate mt-n1\">
-                  <a  class='btn btn-danger btn-sm' onClick='remAutosubs(".$r['id'].",".$eid.")'>X</a>
+                  <a  class='btn btn-danger btn-sm' onClick='remAutosubs(\"".$r['id']."\",\"".$eid."\")'>X</a>
                 </div>
               </div>
             </div>
@@ -8254,69 +7931,18 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           echo "
           <div class=\"list-group-item\">
             <div class=\"row align-items-center\" >
-              <div onclick=\"addSubstituicao(".$eid.",".$r['id'].",'".str_replace("'","*",$r['tecla'])."','".str_replace("'","*",$r['glifos'])."')\" 
+              <div onclick=\"addSubstituicao('".$eid."','".$r['id']."','".str_replace("'","*",$r['tecla'])."','".str_replace("'","*",$r['glifos'])."')\" 
                   class=\"col-auto\">".$r['tecla']." /".$r['ipa']."/ → <span class='custom-font-".$eid."'>".$r['glifos']."</span>
               </div>
               <div class=\"col text-end\"> 
                 <div class=\"text-secondary text-truncate mt-n1\">
-                  <a  class='btn btn-danger btn-sm' onClick='remAutosubs(".$r['id'].",".$eid.")'>X</a>
+                  <a  class='btn btn-danger btn-sm' onClick='remAutosubs(\"".$r['id']."\",\"".$eid."\")'>X</a>
                 </div>
               </div>
             </div>
           </div>";
         };
     }
-    die();
-  };
-  
-  if ($_GET['action'] == 'ajaxCarregarTabelaAlfabeto') { die('sem uso ?????');
-    if($_GET['eid']) $eid = $_GET['eid']; else die('novalered'); 
-
-    //query metadados
-    //loop inserindo na query principal os metadados
-    // evitando query dentro de loop !!
-    
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT id_fonte FROM escritas WHERE id = ".$eid) or die(mysqli_error($GLOBALS['dblink']));
-    $r = mysqli_fetch_assoc($result);
-    $fonte = $r['id_fonte'];
-
-    if($fonte < 0){
-      $editChar = 'drawCaractere(';
-      $query = "SELECT g.*,
-        (SELECT GROUP_CONCAT(glifo SEPARATOR' ') FROM drawChars v WHERE v.id_principal = g.id) as variantes
-        FROM drawChars g 
-        WHERE g.id_escrita = ".$eid." AND g.id_principal = 0 ORDER BY g.ordem;";
-        //
-    }else{
-      $editChar = 'addCaractere(';
-        $query = "SELECT g.*,
-          (SELECT GROUP_CONCAT(glifo SEPARATOR' ') FROM glifos v WHERE v.id_principal = g.id) as variantes
-          FROM glifos g 
-          WHERE g.id_escrita = ".$eid." AND g.id_principal = 0 ORDER BY g.ordem;";
-    }
-
-    $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
-    echo '<table id="tabelaAlfabeto'.$eid.'" data-ride="datatables" class="table table-m-b-none">
-          <thead><tr><th>Caractere</th><th></th></tr></thead><tbody>';
-    while($r = mysqli_fetch_assoc($result)){
-      
-
-      echo "<tr id='row_".$r['id']."'><td onClick='".$editChar.$r['id_escrita'].",\"".$r['descricao']."\",".$r['id'].",\"".str_replace("'","*",$r['glifo'])."\",\"".str_replace("'","*",$r['variantes'])."\",`".addslashes($r['vetor'])."`)'>
-        <span class='custom-font-".$r['id_escrita']."'>".$r['glifo']."</span>";
-      if($r['descricao']!='') echo ' ('.$r['descricao'].')'; 
-      if($r['variantes']!='') echo "<br><span class='custom-font-".$r['id_escrita']."'><small>".$r['variantes'].'</small></span>'; 
-
-      echo "</td><td>".$r['ordem']." <a  class='btn btn-sm btn-danger' onClick='apagarGlifo(".$r['id'].",".$eid.")'>X</a> 
-          <a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='moverAbaixo(".$r['id'].",".$eid.")'><i class='fa fa-arrow-down'></i></a></a> 
-          <a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='moverAcima(".$r['id'].",".$eid.")'><i class='fa fa-arrow-up'></i></a></td></tr>";
-    };
-    echo '</tbody></table><script>$("#tabelaAlfabeto'.$eid.'").DataTable({
-          paging: false,
-          "scrollY": "500px",
-          "scrollCollapse": true,
-					"order": [[2, \'asc\']],
-          "bFilter": false 
-        });</script>';
     die();
   };
   
@@ -9816,8 +9442,8 @@ if ($_GET['action'] == 'ajaxGetRaizes') {
       AND p.id_forma_dicionario = 0;";
       //echo $sql;
   $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-  //echo '<option value="-2">Contração</option>';
-  //echo '<option value="-1">Morfema que não aparece no dicionário</option>'; Esta é a forma de dicionário!
+  //echo '<option value="2">Contração</option>';
+  //echo '<option value="1">Morfema que não aparece no dicionário</option>'; Esta é a forma de dicionário!
   echo '<option value="0" selected>-</option>';
   while ($lang = mysqli_fetch_assoc($langs)){
       echo '<option value="'.$lang['id'].'" title="'.$lang['significado'].'"';
@@ -9949,81 +9575,6 @@ if ($_GET['action'] == 'getGlossesPalavra') { // otimizar sql queries
     //checarFlexoes($_GET['pid']);
   }
 
-  /*
-    //buscar mesma escrita, por sistema de escrita
-    $escrita = 1;
-    $fonte = 'notosans';
-    $escritaq = '';
-    $escjoin = '';
-    $escp = '';
-    $ex = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e
-        LEFT JOIN fontes f ON f.id = e.id_fonte
-      WHERE e.id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
-      
-    if (mysqli_num_rows($ex)>0){
-
-      while($e = mysqli_fetch_assoc($ex)){
-          if ($e>0) {
-            if ($e['id']>1) {
-              $escrita = $e['id'];
-              $fonte = $e['fonte'];
-            }
-            $escritaq = " AND p2.id_escrita = ".$escrita;
-            $escjoin = ' LEFT JOIN palavrasNativas p2 ON p2.id_palavra  = p.id ';
-            $escp = ', p2.palavra';
-          }
-          
-          //$return .= getPalavrasMesmaEscrita($_GET['pid'],$escrita,$e['nome'],$id_idioma);
-      }
-
-    }
-
-    mysqli_data_seek($ex, 0);
-
-    if (mysqli_num_rows($ex)>0){
-      $e = mysqli_fetch_assoc($ex);
-      if ($e['id']>1) {
-        $escrita = $e['id'];
-        $fonte = $e['fonte'];
-      }
-    }else
-      $escrita = 1;
-    
-    if ($escrita>0) {
-      $escritaq = " AND p2.id_escrita = ".$escrita;
-      $escjoin = ' LEFT JOIN palavrasNativas p2 ON p2.id_palavra  = p.id ';
-      $escp = ', p2.palavra';
-    }
-  */
-
-  /*
-    //buscar mesma pronuncia
-
-    //$return .= getPalavrasRelacionadas($_GET['pid'],$escrita,$e['nome'],$id_idioma,$base);
-
-
-    //
-    //if (false) // tem btns flexoes
-    //echo '<div class="col-sm-12"><a class="btn btn-sm btn-info btn-rounded" href="api.php?action=fleksons&pid='.$_GET['pid'].'">Flexões</a></div>';
-    
-    /*
-    echo '<div class="col-sm-6">
-        <div class="form-group" >
-          <label class="control-label">Antônimos</label><ul>';
-
-        echo '<li>Palavras com um referente oposto ???<li>';
-
-    echo '</ul></div></div>';
-
-    //THESAURUS:
-    // PARES MÍNIMOS
-    // RIMAS
-    // MESMO NÚMERO DE LETRAS
-    // ANAGRAMAS ????
-    // FRASES EXEMPLO CONTENDO ESTA PALAVRA
-    // EQUIVALENTE (via referente) EM OUTROS IDIOMAS/CONLANGS
-  */
-
   if ($return == '') $return = _t('Palavras desta classe não mudam de forma.');
   
   echo $return;
@@ -10121,7 +9672,7 @@ if ($_GET['action'] == 'getDetalhesPalavra') {
 
       //se for contração, ver origens
       $ids = $nat = '';
-      //if($rows[0]['id_classe']=='-2'){
+      //if($rows[0]['id_classe']=='2'){
 
         $sql = "SELECT po.*, p.romanizacao, p.pronuncia,
               (SELECT e.id FROM escritas e WHERE e.id_idioma = ".$rows[0]['id_idioma']." AND e.padrao = 1 LIMIT 1) as escrita,
@@ -10558,16 +10109,16 @@ if ($_GET['action'] == 'carregarTabelaSons') { // otimizar sql queries
   $yres = mysqli_query($GLOBALS['dblink'],"SELECT * FROM ipaTitulos WHERE dimensao = ".$dimx." AND id_idioma = ".$_GET['iid']." ORDER BY pos;") or die(mysqli_error($GLOBALS['dblink']));
   while($y = mysqli_fetch_assoc($yres)){
     echo '<td class="text-secondary">';
-    echo "<span onClick='renomearDimensao(".$y['id'].",\"".$y['nome']."\")'>".$y['nome']."</span>&nbsp;<a class='btn btn-sm btn-danger' onClick='apagarDimensao(".$y['dimensao'].",".$y['pos'].")'>X</a>";
+    echo "<span onClick='renomearDimensao(\"".$y['id']."\",\"".$y['nome']."\")'>".$y['nome']."</span>&nbsp;<a class='btn btn-sm btn-danger' onClick='apagarDimensao(\"".$y['dimensao']."\",\"".$y['pos']."\")'>X</a>";
     echo '</td>';
   }
   echo '</tr>';
   $xres = mysqli_query($GLOBALS['dblink'],"SELECT * FROM ipaTitulos WHERE dimensao = ".$dimy." AND id_idioma = ".$_GET['iid']." ORDER BY pos;") or die(mysqli_error($GLOBALS['dblink']));
   while($x = mysqli_fetch_assoc($xres)){
-    echo '<tr><td class="text-secondary">'."<span onClick='renomearDimensao(".$x['id'].",\"".$x['nome']."\")'>".$x['nome']."</span>"."<a class='btn btn-sm btn-danger' onClick='apagarDimensao(".$x['dimensao'].",".$x['pos'].")'>X</a></td>";
+    echo '<tr><td class="text-secondary">'."<span onClick='renomearDimensao(\"".$x['id']."\",\"".$x['nome']."\")'>".$x['nome']."</span>"."<a class='btn btn-sm btn-danger' onClick='apagarDimensao(\"".$x['dimensao']."\",\"".$x['pos']."\")'>X</a></td>";
     $yres = mysqli_query($GLOBALS['dblink'],"SELECT * FROM ipaTitulos WHERE dimensao = ".$dimx." AND id_idioma = ".$_GET['iid']." ORDER BY pos;") or die(mysqli_error($GLOBALS['dblink']));
     while($y = mysqli_fetch_assoc($yres)){
-      echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)" ondragstart="dragstartHandler(event)" class="cell__" id="cell_'.$x['pos'].'_'.$y['pos'].'" onclick="editarCelula('.$x['pos'].','.$y['pos'].',0,0)">';
+      echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)" ondragstart="dragstartHandler(event)" class="cell__" id="cell_'.$x['pos'].'_'.$y['pos'].'" onclick="editarCelula(\''.$x['pos'].'\',\''.$y['pos'].'\',0,0)">';
 
       $is = mysqli_query($GLOBALS['dblink'],"SELECT *, i.id as id_inventario FROM inventarios i 
           LEFT JOIN sons s ON i.id_som = s.id 
@@ -11689,18 +11240,38 @@ if ($_GET['action'] == 'getKSC') {  // Kondisonair Sound Changer
 if ($_GET['action'] == 'getKWG') {  // Kondisonair Word Generator
     require_once 'kwg.php'; // Arquivo com applySoundChanges // Grok
 
-    $config = getWordGenConfig($_GET['iid']);
-    $classes = $config['classes'];
-    $syllableFormats = $config['syllableFormats'];
-    //print_r($syllableFormats); 
-    //die();
-    $minSyllables = 1;
-    $maxSyllables = $config['silabas']>0?$config['silabas']:$maxSilabas;
-
-    $substitutions = $config['substitutions'];
-    $restrictions = $config['restrictions'];
-
     $wordCount = 10;
+    $minSyllables = 1;
+    $maxSyllables = $maxSilabas;
+
+    if($_GET['iid']>0){
+        $config = getWordGenConfig($_GET['iid']);
+        $classes = $config['classes'];
+        $syllableFormats = $config['syllableFormats'];
+        $maxSyllables = $config['silabas']>0?$config['silabas']:$maxSyllables;
+
+        $substitutions = $config['substitutions'];
+        $restrictions = $config['restrictions'];
+    }else{
+        if (strlen($_POST['silabas'])>2){
+          $text = $_POST['silabas'];
+          $formats = preg_split('/\s+/', trim(str_replace("\n", " ", $text)));
+          $syllableFormats = array_map(function($format) {
+              return ['format' => $format, 'weight' => 1];
+          }, $formats);
+        }else{
+          die();
+        };
+
+        if (strlen($_POST['classes'])>2){
+          $classes = textoParaArrayClasses($_POST['classes']);
+        }else{
+        };
+        
+        $substitutions = [];
+        $restrictions = [];
+    }
+
     if ($_GET['count']>0) $wordCount = (int)$_GET['count'];
 
     $result = generateWords($classes, $syllableFormats, $substitutions, $restrictions, $minSyllables, $maxSyllables, $wordCount);
@@ -11946,10 +11517,10 @@ if ($_GET['action'] == 'listEntityTypes') {
       }
 
       echo '<div class="list-group-item" id="row_' . $r['id'] . '"><div class="row">
-            <div class="col" onClick="abrirTipo(' . $r['id'] . ',' . $r['id_superior'] . ')">
+            <div class="col" onClick="abrirTipo(\'' . $r['id'] . '\',\'' . $r['id_superior'] . '\')">
               <a href="#" >' . htmlspecialchars($r['nome']) . '</a>
               <a class="text-body text-secondary">' . $superior . $descricao . '</a> 
-            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delTipo(' . $r['id'] . ')">X</a></div>
+            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delTipo(\'' . $r['id'] . '\')">X</a></div>
           </div></div>';
   }
   die();
@@ -12896,188 +12467,8 @@ if ($_GET['action'] == 'getMomentos') {
     die();
 }
 
-
-
-
-
-
-
 if ($_GET['action']=='ajaxApagarEntidade') {
     echo 'Não implementado';
-    die();
-}
-
-// action listEntities  GET rid t i
-
-/*
-
-
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-// AÇÕES CALENDARIO TESTE
-
-// Função para formatar data a partir de time_value
-
-
-
-if ($_GET['action'] == 'listMomentsXXXX') {
-    $rid = (int)$_GET['rid'];
-    $superior = isset($_GET['superior']) ? (int)$_GET['superior'] : 0;
-    $filterType = $_GET['filterType'] ?? 'current';
-    $stories = isset($_GET['stories']) ? array_map('intval', (array)$_GET['stories']) : [];
-    $moments = isset($_GET['moments']) ? array_map('intval', (array)$_GET['moments']) : [];
-    $entities = isset($_GET['entities']) ? array_map('intval', (array)$_GET['entities']) : [];
-    $entitiesScope = $_GET['entitiesScope'] ?? 'current';
-
-    // Função para obter todos os IDs de sub-histórias recursivamente
-    function getAllStoryIds($story_ids, $dblink, $rid) {
-        $all_ids = $story_ids;
-        $new_ids = $story_ids;
-        do {
-            $ids_str = implode(',', $new_ids);
-            $result = mysqli_query($dblink, "SELECT id FROM historias WHERE id_superior IN ($ids_str) AND id_realidade = $rid;") or die(mysqli_error($dblink));
-            $new_ids = [];
-            while ($row = mysqli_fetch_assoc($result)) {
-                if (!in_array($row['id'], $all_ids)) {
-                    $new_ids[] = $row['id'];
-                    $all_ids[] = $row['id'];
-                }
-            }
-        } while (!empty($new_ids));
-        return $all_ids;
-    }
-
-    // Função para obter todos os IDs de sub-momentos recursivamente
-    function getAllMomentIds($moment_ids, $dblink, $rid) {
-        $all_ids = $moment_ids;
-        $new_ids = $moment_ids;
-        do {
-            $ids_str = implode(',', $new_ids);
-            $result = mysqli_query($dblink, "SELECT id FROM momentos WHERE id_superior IN ($ids_str) AND id_realidade = $rid;") or die(mysqli_error($dblink));
-            $new_ids = [];
-            while ($row = mysqli_fetch_assoc($result)) {
-                if (!in_array($row['id'], $all_ids)) {
-                    $new_ids[] = $row['id'];
-                    $all_ids[] = $row['id'];
-                }
-            }
-        } while (!empty($new_ids));
-        return $all_ids;
-    }
-
-    // Função para obter o caminho completo da história
-    function getStoryPath($story_id, $dblink, $rid) {
-        $path = [];
-        $current_id = (int)$_POST['id_historia'];
-        while ($current_id > 0) {
-            $result = mysqli_query($dblink, "SELECT id, titulo, id_superior 
-                FROM historias 
-                WHERE id = $current_id AND id_realidade = $rid LIMIT 1;") or die(mysqli_error($dblink));
-            if ($story = mysqli_fetch_assoc($result)) {
-                $path[] = htmlspecialchars($story['titulo']);
-                $current_id = (int)$story['id_superior'];
-            } else {
-                break;
-            }
-        }
-        return implode(' > ', array_reverse($path));
-    }
-
-    // Função para formatar data a partir de time_value
-    function formatTimeValue($id_time_system, $time_value, $dia, $mes, $ano, $dblink) {
-        if (!$id_time_system || $time_value === null) {
-            return '';
-        }
-        $units = [];
-        $result = mysqli_query($dblink, "SELECT u.id, u.nome, u.duracao, c.id_unidade_ref, c.quantidade 
-            FROM time_units u 
-            LEFT JOIN time_cycles c ON c.id_unidade = u.id 
-            WHERE u.id_time_system = $id_time_system 
-            ORDER BY u.duracao DESC;") or die(mysqli_error($dblink));
-        while ($u = mysqli_fetch_assoc($result)) {
-            $units[$u['id']] = [
-                'nome' => $u['nome'],
-                'duracao' => $u['duracao'],
-                'ref' => $u['id_unidade_ref'],
-                'quantidade' => $u['quantidade'] ?: 1
-            ];
-        }
-        // Simplificação: usar dia, mes, ano armazenados
-        if ($dia !== null && $mes !== null && $ano !== null) {
-            $unit_names = array_column($units, 'nome', 'id');
-            $mes_nome = $unit_names[$mes] ?? 'Mês';
-            return "$dia $mes_nome, $ano";
-        }
-        return ''; // Fallback se não houver dados suficientes
-    }
-
-    // Construir a condição WHERE e JOINs
-    $where = "m.id_realidade = $rid";
-    $joins = "";
-    if ($filterType === 'current') {
-        $where .= " AND m.id_superior = $superior";
-    } elseif ($filterType === 'all') {
-        $all_moment_ids = $superior > 0 ? getAllMomentIds([$superior], $GLOBALS['dblink'], $rid) : [];
-        $all_moment_ids[] = $superior;
-        $where .= $superior > 0 ? " AND m.id IN (" . implode(',', $all_moment_ids) . ")" : "";
-    } elseif ($filterType === 'stories' && !empty($stories)) {
-        $all_story_ids = getAllStoryIds($stories, $GLOBALS['dblink'], $rid);
-        $where .= " AND h2.id IN (" . implode(',', $all_story_ids) . ")";
-        $joins .= " JOIN historias h2 ON h2.id_momento = m.id";
-    } elseif ($filterType === 'moments' && !empty($moments)) {
-        $all_moment_ids = getAllMomentIds($moments, $GLOBALS['dblink'], $rid);
-        $where .= " AND m.id IN (" . implode(',', $all_moment_ids) . ")";
-    } elseif ($filterType === 'entities' && !empty($entities)) {
-        $where .= " AND he.id_entidade IN (" . implode(',', $entities) . ")";
-        $joins .= " JOIN historias h3 ON h3.id_momento = m.id JOIN historias_entidades he ON he.id_historia = h3.id";
-        if ($entitiesScope === 'current') {
-            $where .= " AND m.id_superior = $superior";
-        }
-    }
-
-    // Query para buscar momentos
-    $query = "SELECT m.id, m.nome, m.descricao, m.ordem, m.id_time_system, 
-        m.time_value, m.dia, m.mes, m.ano,
-        (SELECT COUNT(*) FROM momentos sub WHERE sub.id_superior = m.id) as numSubs,
-        h.titulo as historia_titulo, h.id as historia_id, mp.nome as momento_pai_nome
-        FROM momentos m
-        LEFT JOIN historias h ON h.id_momento = m.id AND h.id_realidade = $rid
-        LEFT JOIN momentos mp ON mp.id = m.id_superior AND mp.id_realidade = $rid
-        $joins
-        WHERE $where
-        ORDER BY COALESCE(m.time_value, m.ordem) ASC;";
-    
-    $result = mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    $momentos = [];
-    while ($m = mysqli_fetch_assoc($result)) {
-        $momentos[] = [
-            'id' => (int)$m['id'],
-            'subs' => (int)$m['numSubs'],
-            'nome' => htmlspecialchars($m['nome']),
-            'descricao' => htmlspecialchars($m['descricao'] ?? ''),
-            'data_calendario' => formatTimeValue($m['id_time_system'], $m['time_value'], $m['dia'], $m['mes'], $m['ano'], $GLOBALS['dblink']),
-            'ordem' => (float)$m['ordem'],
-            'historia_titulo' => htmlspecialchars($m['historia_titulo'] ?? ''),
-            'historia_id' => (int)$m['historia_id'],
-            'historia_caminho' => $m['historia_id'] > 0 ? getStoryPath($m['historia_id'], $GLOBALS['dblink'], $rid) : '',
-            'momento_pai_nome' => htmlspecialchars($m['momento_pai_nome'] ?? '')
-        ];
-    }
-    
-    echo json_encode($momentos);
     die();
 }
 
@@ -13278,39 +12669,6 @@ if ($_GET['action'] == 'carregarMomento') {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Gravar Associações de Estatísticas com Tipo de Entidade
-
-
-
-
-
-
-
-
-
-
-
-
 // Action para gravar ou atualizar um sistema de tempo
 if ($_GET['action'] == 'ajaxGravarTimeSystem') {
   if ($_GET['tid'] > 0) {
@@ -13385,9 +12743,9 @@ if ($_GET['action'] == 'ajaxListEntityTypes') {
   $result = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, descricao, id_superior FROM entidades_tipos WHERE id_realidade = " . (int)$_GET['rid'] . ";") or die(mysqli_error($GLOBALS['dblink']));
   $html = '';
   while ($row = mysqli_fetch_assoc($result)) {
-      $html .= '<div id="row_' . $row['id'] . '" class="list-group-item" onclick="abrirTipo(' . $row['id'] . ')">';
+      $html .= '<div id="row_' . $row['id'] . '" class="list-group-item" onclick="abrirTipo(\'' . $row['id'] . '\')">';
       $html .= '<div class="row"><div class="col">' . htmlspecialchars($row['nome']) . '</div>';
-      $html .= '<div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delTipo(' . $row['id'] . ')">Del</a></div></div>';
+      $html .= '<div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delTipo(\'' . $row['id'] . '\')">Del</a></div></div>';
       $html .= '</div>';
   }
   echo $html;
@@ -14818,4 +14176,63 @@ if ($_GET['action'] == 'importarIdioma') {
     die();
 }
 
+
+/**
+ * Gera lista de links para troca de idioma, excluindo o idioma atual.
+ * @param int $idioma_atual ID do idioma atual da sessão
+ * @param bool $use_js Se true, usa onclick="setLang(id)"; se false, usa href com URL
+ * @return string HTML com links de idiomas
+ */
+function gerarLinksIdiomas($idioma_atual, $use_js = true) {
+    global $idiomas_sistema;
+    $html = '';
+    foreach ($idiomas_sistema as $id => $nome) {
+        if ($id != $idioma_atual) {
+            if ($use_js) {
+                $html .= '<li class="list-inline-item"><a onclick="setLang(' . $id . ')" class="link-secondary">' . htmlspecialchars($nome) . '</a></li>';
+            } else {
+                $url = str_replace('&lang=', '&nus=', $_SERVER['REQUEST_URI']) . '&lang=' . $id;
+                $html .= '<li class="list-inline-item"><a href="' . htmlspecialchars($url) . '" class="link-secondary">' . htmlspecialchars($nome) . '</a></li>';
+            }
+        }
+    }
+    return $html;
+}
+
+/**
+ * Obtém a descrição traduzida do idioma com base no ID.
+ * @param int $id_idioma ID do idioma
+ * @return string Nome traduzido do idioma
+ */
+function getDescricaoIdioma($id_idioma) {
+    global $idiomas_sistema;
+    if (isset($idiomas_sistema[$id_idioma])) {
+        return _t($idiomas_sistema[$id_idioma]);
+    }
+    return '';
+}
+
+/**
+ * Gera select HTML para idiomas.
+ * @param string $id_select ID do elemento select
+ * @param int $idioma_selecionado ID do idioma selecionado
+ * @param string $onchange Função JavaScript para onchange
+ * @param bool $use_translation Se true, usa _t() para nomes; se false, usa nomes diretos
+ * @return string HTML do select
+ */
+function gerarSelectIdiomas($id_select, $idioma_selecionado, $onchange = '', $use_translation = true) {
+    global $idiomas_sistema;
+    $html = '<select id="' . htmlspecialchars($id_select) . '" name="' . htmlspecialchars($id_select) . '" class="chosen-select form-control"';
+    if ($onchange) {
+        $html .= ' onchange="' . htmlspecialchars($onchange) . '"';
+    }
+    $html .= '>';
+    foreach ($idiomas_sistema as $id => $nome) {
+        $nome_exibido = $use_translation ? _t($nome) : $nome;
+        $selected = ($id == $idioma_selecionado) ? ' selected' : '';
+        $html .= '<option value="' . $id . '"' . $selected . '>' . htmlspecialchars($nome_exibido) . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+}
 ?>

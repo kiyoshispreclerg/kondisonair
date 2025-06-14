@@ -193,7 +193,7 @@ function salvarArtigo(){
         p: $('#publico').val(),
         ap: $('#art_pai').val(),
         //l: $('#links').val(),
-        iid: <?=$iid?>,
+        iid: '<?=$iid?>',
         t: tinymce.get('editor').getContent()// $('#texto').summernote('code')
     }, function (data){
         if($.trim(data)>0){

@@ -62,7 +62,15 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
                             <input type="text" class="form-control" id="descricao" onchange="showGravarReferente()">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label"><?=_t('Descrição em Português')?></label>
+                            <label class="form-label"><?=_t('Descrição em português')?></label>
+                            <input type="text" class="form-control" id="descricaoPort" onchange="showGravarReferente()">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><?=_t('Descrição em esperanto')?></label>
+                            <input type="text" class="form-control" id="descricaoPort" onchange="showGravarReferente()">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><?=_t('Descrição em japonês')?></label>
                             <input type="text" class="form-control" id="descricaoPort" onchange="showGravarReferente()">
                         </div>
                         <div class="mb-3">
@@ -85,6 +93,8 @@ function gravarReferente(){
     {
         descricao: $('#descricao').val(),
         descricaoPort: $('#descricaoPort').val(),
+        descricaoEo: $('#descricaoPort').val(),
+        descricaoJp: $('#descricaoPort').val(),
         detalhes: $('#detalhes').val()
     }, function(data){
         if ($.trim(data) > 0){
@@ -105,6 +115,8 @@ function abrirReferente(rid){
         $.each(data, function(key, val){
             $('#descricao').val(data[0].descricao); 
             $('#descricaoPort').val(data[0].descricaoPort); 
+            $('#descricaoEo').val(data[0].descricaoEo); 
+            $('#descricaoJp').val(data[0].descricaoJp); 
             $('#detalhes').val(data[0].detalhes); 
             $('#btnSalvar').hide();
         });
@@ -120,6 +132,8 @@ function novoReferente(){
     $('#idReferente').val(0); 
     $('#descricao').val(''); 
     $('#descricaoPort').val(''); 
+    $('#descricaoEo').val(''); 
+    $('#descricaoJp').val(''); 
     $('#detalhes').val(''); 
     $('#btnSalvar').hide(); 
     $("#referentesTable").load("?action=listReferentes&iid=<?=$id_idioma?>");

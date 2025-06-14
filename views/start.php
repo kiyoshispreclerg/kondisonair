@@ -328,12 +328,9 @@
                         </div>
                         <div class="mb-3 col-md-6">
                               <label class="form-label"><?=_t('Idioma padrão do sistema')?></label>
-                              <select id="def_lang" class="chosen-select form-control" onchange="gravarOpsons('def_lang')">
-                                  <option value="1" <?php if ($op['def_lang']==1) echo 'selected'; ?> >Português brasileiro</option>
-                                  <option value="5" <?php if ($op['def_lang']==5) echo 'selected'; ?> >English</option>
-                                  <option value="4" <?php if ($op['def_lang']==4) echo 'selected'; ?> >日本語</option>
-                                  <option value="6" <?php if ($op['def_lang']==6) echo 'selected'; ?> >Esperanto</option>
-                              </select>
+                              <?php
+                                echo gerarSelectIdiomas('def_lang', $op['def_lang'], 'gravarOpsons(\'def_lang\')', false);
+                              ?>
                         </div>
                       </div>
                       <div class="card-body">

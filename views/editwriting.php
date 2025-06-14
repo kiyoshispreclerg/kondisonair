@@ -1,9 +1,5 @@
-
-
 <!-- PANEL START -->
 <?php 
-
-// ALTER TABLE `escritas` ADD `id_idioma` INT NOT NULL AFTER `id_nativo`, ADD `padrao` TINYINT NOT NULL AFTER `id_idioma`; 
 
     $id_idioma = $_GET['iid'];
     $idioma = array();   
@@ -30,32 +26,22 @@
                     LEFT JOIN fontes f ON f.id = e.id_fonte
                     WHERE e.id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 
-    while($e = mysqli_fetch_assoc($escritas)){ // createTablerSelect("fonte'.$e['id'].'");
+    while($e = mysqli_fetch_assoc($escritas)){ 
 
-        if ($e['padrao']==1) {
+        if ($e['padrao']==3) {
           $fonte = $e['id_fonte'];
           $tamanho = $e['tamanho'];
         }
         
         $script .= 'carregarTabelaEscrita("'.$e['id'].'");carregarTabelaAlfabeto("'.$e['id'].'");
-        selectNativo('.$e['id'].',"'.$e['id_nativo'].'"); '; // $("#btnSalvar'.$e['id'].'").hide();
-        /*$fonts .= "@font-face { font-family: CustomFont".$e['fonte']."; src: url('fonts/".$e['fonte']."'); } 
-          .custom-font-".$e['id']." { font-family: CustomFont".$e['fonte']."; font-size: ".$e['tamanho']."px !important; }";*/
-
-        /*
-        $header .= '<li class="'.($e['epadrao']==1?'active':'').'" >
-                        <a  href="#tab_'.$e['id'].'" data-toggle="tab" class="bg-primary bg-primary dk lter r-l" id="tab'.$e['id'].'"  >'.
-                        $e['nome']." <span class='custom-font-".$e['id']."' >".($e['nativo'])."</span>"
-                        .($e['padrao']==1?' (Padrão)':'').'</a>
-                    </li>';
-                    */
+        selectNativo("'.$e['id'].'","'.$e['id_nativo'].'"); '; 
 
         $contents .= '<div class="col-12">
                     <div class="card">
                       <div class="card-header">
                         <div class="card-title" onclick="window.history.replaceState({}, \'\', \'index.php?page=editwriting&iid='.$id_idioma.'&eid='.$e['id'].'\');$(\'.cb_'.$e['id'].'\').toggle()">'.$e['nome'].($e['padrao']==1?' ('._t('Padrão').')':'').'</div>
                         <div class="card-actions btn-actions">
-                          <a href="#" onclick="apagarEscrita('.$e['id'].','.$e['np'].')" class="btn btn-danger">'._t('Apagar').'</a>
+                          <a href="#" onclick="apagarEscrita(\''.$e['id'].'\',\''.$e['np'].'\')" class="btn btn-danger">'._t('Apagar').'</a>
                           <a href="#" onclick="execSalvarEscrita(\''.$e['id'].'\')" id="btnSalvar'.$e['id'].'" class="btn btn-primary">'._t('Salvar').'</a>
                         </div>
                       </div>
@@ -85,7 +71,7 @@
                                 <div class="col-6">
                                     <label class="form-label">'._t('Tamanho da fonte').'</label>
                                     <select type="text" class="form-select" id="tamanho'.$e['id'].'" value="'.$e['tamanho'].'" onchange="salvarEscrita(\''.$e['id'].'\')">';
-                    if ($e['id_fonte']<0){
+                    if ($e['id_fonte']==3){
                         $contents .= '<option value="unset" '.($e['tamanho']=='unset'?'selected':'').'>'._t('Padrão').'</option>
                                   <option value="sm" '.($e['tamanho']=='sm'?'selected':'').'>'._t('Pequena').'</option>
                                   <option value="md" '.($e['tamanho']=='md'?'selected':'').'>'._t('Média').'</option>
@@ -132,32 +118,14 @@
                             <div class="mb-3">
                               <label class="form-label">'._t('Nome nativo').'</label>
                               <select type="text" class="form-select" value="" id="id_nativo'.$e['id'].'" onchange="salvarEscrita(\''.$e['id'].'\')">
-                                '; // <option value="0" data-nativa="" selected >-</option>
-                          
-                                /*
-                                $pals = mysqli_query($GLOBALS['dblink'],"SELECT p.*,
-                                    (SELECT pn.palavra from palavrasNativas pn where pn.id_palavra = p.id and id_escrita = ".$e['id']." limit 1) as nativo
-                                    FROM palavras p WHERE p.id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
-                                    
-                                while ($pal = mysqli_fetch_assoc($pals)){
-                                    $contents .=  '<option value="'.$pal['id'].'"';
-                                    if ($e['id_nativo'] == $pal['id']) $contents .=     ' selected ';
-                                    $contents .=  ' data-eid="custom-font-'.$e['id'].'" data-nativa="'.$pal['nativo'].'" > &nbsp; '.$pal['romanizacao'].'</option>';
-                                }
-                                */
-
-                                /*
-                                  Se $e['id_fonte'] < 0, é fonte personalizada: div dos caracteres terá desenhos em vez de fonte
-                                */
+                                ';
 
                               $contents .= '</select>
                             </div>';
 
-                            if($e['id_fonte'] < 0){
-                              $editChar = 'drawCaractere(';
+                            if($e['id_fonte'] == 3){
+                              $editChar = 'drawCaractere(\'';
                               $editSubs = 'addSubstituicaoDraw';
-
-                                // é fonte desenhada
 
                             }else{
                               $editChar = 'addCaractere(\'';
@@ -167,7 +135,8 @@
 
                                   <div class="col-6">
                                     <label class="form-label">'._t('Fonte').'</label>
-                                    <select id="fonte'.$e['id'].'" class="form-select" type="text" onchange="salvarEscrita('.$e['id'].')" >';
+                                    <select id="fonte'.$e['id'].'" class="form-select" type="text" onchange="salvarEscrita(\''.$e['id'].'\')" >
+                                    <option value="3" selected>'._t('Desenhada').'</option>';
                                     $fts = mysqli_query($GLOBALS['dblink'],"SELECT * FROM fontes WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." OR publica = 1;") or die(mysqli_error($GLOBALS['dblink']));
                                         while ($tf = mysqli_fetch_assoc($fts)){
                                             $contents .=  '<option value="'.$tf['id'].'" title="'.$tf['nome'].'"';
@@ -179,7 +148,7 @@
                                   </div>
                                   <div class="col-6">
                                     <div class="form-label">'._t('Carregar fonte').'</div>
-                                    <input type="file" class="form-control" />
+                                    <input type="file" id="loadfont'.$e['id'].'" class="form-control" />
                                   </div>
                                 </div>
                               </div>';
@@ -190,19 +159,19 @@
                               <div class="row">
                                 <div class="col-6">
                                   <label class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="substituicao'.$e['id'].'" '.($e['substituicao']==1?'checked':'').' onchange="salvarEscrita('.$e['id'].')">
+                                    <input class="form-check-input" type="checkbox" id="substituicao'.$e['id'].'" '.($e['substituicao']==1?'checked':'').' onchange="salvarEscrita(\''.$e['id'].'\')">
                                     <span class="form-check-label">'._t('Autosubstituição').'</span>
                                   </label>
                                 </div>
                                 <div class="col-6">
                                   <label class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="checar_glifos'.$e['id'].'" '.($e['checar_glifos']==1?'checked':'').' onchange="salvarEscrita('.$e['id'].')">
+                                    <input class="form-check-input" type="checkbox" id="checar_glifos'.$e['id'].'" '.($e['checar_glifos']==1?'checked':'').' onchange="salvarEscrita(\''.$e['id'].'\')">
                                     <span class="form-check-label">'._t('Autochecar glifos').'</span>
                                   </label>
                                 </div>
                                 <div class="col-12">
                                   <label class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="bin'.$e['id'].'" '.($e['binario']==1?'checked':'').' onchange="salvarEscrita('.$e['id'].')">
+                                    <input class="form-check-input" type="checkbox" id="bin'.$e['id'].'" '.($e['binario']==1?'checked':'').' onchange="salvarEscrita(\''.$e['id'].'\')">
                                     <span class="form-check-label">'._t('Diferenciar maiúsculas').'</span>
                                   </label>
                                 </div>
@@ -213,19 +182,19 @@
 
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que separam palavras').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="separadores'.$e['id'].'" value=\''.$e['separadores'].'\' onchange="checarNativo(this,'.$e['id'].')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="separadores'.$e['id'].'" value=\''.$e['separadores'].'\' onchange="checarNativo(this,\''.$e['id'].'\')">
                             </div>
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que iniciam palavras').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="iniciadores'.$e['id'].'" value="'.$e['iniciadores'].'" onchange="checarNativo(this,'.$e['id'].')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="iniciadores'.$e['id'].'" value="'.$e['iniciadores'].'" onchange="checarNativo(this,\''.$e['id'].'\')">
                             </div>
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que separam sentenças').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="sep_sentencas'.$e['id'].'" value=\''.$e['sep_sentencas'].'\' onchange="checarNativo(this,'.$e['id'].')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="sep_sentencas'.$e['id'].'" value=\''.$e['sep_sentencas'].'\' onchange="checarNativo(this,\''.$e['id'].'\')">
                             </div>
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que iniciam sentenças').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="inic_sentencas'.$e['id'].'" value="'.$e['inic_sentencas'].'" onchange="checarNativo(this,'.$e['id'].')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="inic_sentencas'.$e['id'].'" value="'.$e['inic_sentencas'].'" onchange="checarNativo(this,\''.$e['id'].'\')">
                             </div>
 
                         </div>
@@ -234,6 +203,7 @@
 
                             <div class="mb-3">
                               <label class="form-label">'._t('Caracteres/diacríticos e ordem').'</label>
+                              <input type="text" class="form-control" id="searchAlfabeto' . $e['id'] . '" placeholder="' . _t('Buscar por glifo, descrição ou variantes') . '">
                             </div>
 
                             <div class="mb-3 overflow-auto" style="max-height: 45rem">
@@ -255,6 +225,7 @@
 
                             <div class="mb-3">
                               <label class="form-label">'._t('Substituição automática').'</label>
+                              <input type="text" class="form-control" id="searchAutoSubstituicao' . $e['id'] . '" placeholder="' . _t('Buscar por tecla, IPA ou glifos') . '">
                             </div>
                             <div class="mb-3 overflow-auto" style="max-height: 45rem">
 
@@ -327,9 +298,173 @@
 
 
 <script>
-$(document).ready(function(){
-    <?php echo $script; ?>
-});
+
+  let autosubstitutionData = {};
+  let alfabetoData = {};
+
+  function renderAutosubstitutionList(id, items) {
+      const $container = $('#autoSubstituicao' + id);
+      $container.html(''); // Clear existing content
+
+      items.forEach(item => {
+          const teclaEscaped = item.tecla.replace(/'/g, "*");
+          let html = `
+              <div class="list-group-item">
+                  <div class="row align-items-center">
+                      <div class="col-auto" onclick="${
+                          item.fonte == 3 
+                          ? `addSubstituicaoDraw('${id}', '${item.id}', '${teclaEscaped}', '${item.glifos}')`
+                          : `addSubstituicao('${id}', '${item.id}', '${teclaEscaped}', '${item.glifos.replace(/'/g, "*")}')`
+                      }">
+                          ${item.tecla} /${item.ipa}/ → `;
+          
+          if (item.fonte == 3) {
+              html += `<span class="drawchar drawchar-${item.tamanho}" style="background-image: url(./writing/${id}/${item.cid}.png?${item.ultima})"></span>`;
+          } else {
+              html += `<span class="custom-font-${id}">${item.glifos}</span>`;
+          }
+
+          html += `
+                      </div>
+                      <div class="col text-end">
+                          <div class="text-secondary text-truncate mt-n1">
+                              <a class="btn btn-danger btn-sm" onClick="remAutosubs('${item.id}', '${id}')">X</a>
+                          </div>
+                      </div>
+                  </div>
+              </div>`;
+          
+          $container.append(html);
+      });
+  }
+
+  function carregarTabelaEscrita(id) {
+      $.post("api.php?action=ajaxLoadAutosubstitutionData&eid=" + id, function (data) {
+          const $container = $('#autoSubstituicao' + id);
+          $container.html(''); // Clear existing content
+
+          if (data.error) {
+              $container.html('<div class="alert alert-danger">' + data.error + '</div>');
+              return;
+          }
+
+          // Store data for filtering
+          autosubstitutionData[id] = {
+              fonte: data.fonte,
+              tamanho: data.tamanho,
+              items: data.autosubstitutions.map(item => ({
+                  ...item,
+                  fonte: data.fonte,
+                  tamanho: data.tamanho
+              }))
+          };
+
+          // Render initial list
+          renderAutosubstitutionList(id, autosubstitutionData[id].items);
+
+          // Add search handler
+          $('#searchAutoSubstituicao' + id).off('input').on('input', function () {
+              const searchTerm = $(this).val().toLowerCase();
+              const filteredItems = autosubstitutionData[id].items.filter(item =>
+                  item.tecla.toLowerCase().includes(searchTerm) ||
+                  item.ipa.toLowerCase().includes(searchTerm) ||
+                  item.glifos.toLowerCase().includes(searchTerm)
+              );
+              renderAutosubstitutionList(id, filteredItems);
+          });
+      }, 'json').fail(function(jqXHR, textStatus, errorThrown) {
+          $('#autoSubstituicao' + id).html('<div class="alert alert-danger">Error loading data: ' + textStatus + '</div>');
+      });
+  }
+
+  function renderAlfabetoList(id, items) {
+      const $container = $('#alfabeto' + id);
+      $container.html(''); // Clear existing content
+
+      items.forEach(item => {
+          let glifoHtml = '';
+          if (item.fonte == 3) {
+              glifoHtml = `<span class="drawchar drawchar-${item.tamanho}" style="background-image: url(./writing/${id}/${item.id}.png?${item.ultima})"></span> ${item.descricao}`;
+          } else {
+              glifoHtml = `<span class="custom-font-${item.id_escrita}">${item.glifo}</span>`;
+              if (item.descricao !== '') {
+                  glifoHtml += ` (${item.descricao})`;
+              }
+              if (item.variantes !== '' && item.variantes !== null) {
+                  glifoHtml += `<br><span class="text-secondary text-truncate custom-font-${item.id_escrita}"><small>${item.variantes}</small></span>`;
+              }
+          }
+
+          const glifoEscaped = item.glifo.replace(/'/g, "*");
+          const variantesEscaped = item.variantes ? item.variantes.replace(/'/g, "*") : '';
+          const vetorEscaped = item.vetor ? `\`${item.vetor}\`` : '[]';
+
+          const html = `
+              <div class="list-group-item">
+                  <div class="row align-items-center">
+                      <div class="col-auto" onclick="${
+                          item.fonte == 3 
+                          ? `drawCaractere('${item.id_escrita}', '${item.descricao}', '${item.id}', '${glifoEscaped}', '${variantesEscaped}', ${vetorEscaped})`
+                          : `addCaractere('${item.id_escrita}', '${item.descricao}', '${item.id}', '${glifoEscaped}', '${variantesEscaped}')`
+                      }">
+                          ${glifoHtml}
+                      </div>
+                      <div class="col text-end">
+                          <div class="text-secondary text-truncate mt-n1">
+                              <a class="btn btn-danger btn-sm" onClick="apagarGlifo('${item.id}', '${id}')">X</a>
+                              <a class="btn btn-primary btn-sm" onClick="moverAbaixo('${item.id}', '${id}')">v</a>
+                              <a class="btn btn-primary btn-sm" onClick="moverAcima('${item.id}', '${id}')">^</a>
+                          </div>
+                      </div>
+                  </div>
+              </div>`;
+          
+          $container.append(html);
+      });
+  }
+
+  function carregarTabelaAlfabeto(id) {
+      $.post("api.php?action=ajaxLoadAlphabetData&eid=" + id, function (data) {
+          const $container = $('#alfabeto' + id);
+          $container.html(''); // Clear existing content
+
+          if (data.error) {
+              $container.html('<div class="alert alert-danger">' + data.error + '</div>');
+              return;
+          }
+
+          // Store data for filtering
+          alfabetoData[id] = {
+              fonte: data.fonte,
+              tamanho: data.tamanho,
+              items: data.glyphs.map(item => ({
+                  ...item,
+                  fonte: data.fonte,
+                  tamanho: data.tamanho
+              }))
+          };
+
+          // Render initial list
+          renderAlfabetoList(id, alfabetoData[id].items);
+
+          // Add search handler
+          $('#searchAlfabeto' + id).off('input').on('input', function () {
+              const searchTerm = $(this).val().toLowerCase();
+              const filteredItems = alfabetoData[id].items.filter(item =>
+                  item.glifo.toLowerCase().includes(searchTerm) ||
+                  (item.descricao && item.descricao.toLowerCase().includes(searchTerm)) ||
+                  (item.variantes && item.variantes.toLowerCase().includes(searchTerm))
+              );
+              renderAlfabetoList(id, filteredItems);
+          });
+      }, 'json').fail(function(jqXHR, textStatus, errorThrown) {
+          $('#alfabeto' + id).html('<div class="alert alert-danger">Error loading data: ' + textStatus + '</div>');
+      });
+  }
+
+  $(document).ready(function(){
+      <?php echo $script; ?>
+  });
 
   function upload(){ alert('to do'); return;
       $.confirm({
@@ -459,6 +594,7 @@ $(document).ready(function(){
   };
 
   function checarAutoIPA(el = 'teclaauto', dest = 'autoipa'){
+      // let data = getChecarPronuncia('<?=$id_idioma?>', $("#"+el).val(), 1);
       $.post('api.php?action=getChecarPronuncia&iid=<?=$id_idioma?>',{
         p: $("#"+el).val()
       }, function (data){
@@ -506,20 +642,6 @@ $(document).ready(function(){
   function salvarSubstituicao(eid){
       alert('a fazer salvar substituicao automatica');
       // add na tbl
-  };
-
-  function carregarTabelaEscrita(id){
-    //$("#autoSubstituicao"+id).html('<div class="loaderSpin"></div>');
-      $.post("api.php?action=ajaxLoadAutosubstitution&eid="+id, function (data){
-      $('#autoSubstituicao'+id).html(data);
-    });
-  };
-
-  function carregarTabelaAlfabeto(id){
-    //$("#alfabeto"+id).html('<div class="loaderSpin"></div>');
-      $.post("api.php?action=ajaxLoadAlphabet&eid="+id, function (data){
-      $('#alfabeto'+id).html(data);
-    });
   };
 
   function moverAcima(id,eid){
@@ -582,12 +704,15 @@ $(document).ready(function(){
   function novoSistema(){ 
     var fonte = $('#fonteid').val();
     var enome = $('#enome').val();
-    if(!fonte>0){
-        $.alert('Erro!');
+    if(enome==''){
+        alert('<?=_t('Nome vazio!')?>');
         return false;
     };
-    if(enome==''){
-        $.alert('Erro!');
+    if(fonte < 1){
+        alert('<?=_t('Selecione uma opção de fonte!')?>');
+        return false;
+    };
+    if(fonte == '3' && !confirm('<?=_t('Usando esta opção (fonte desenhada), você deve desenhar os caracteres diretamente na tela.')?>') ){
         return false;
     };
     $.get("api.php?action=ajaxNovaEscrita&iid=<?=$id_idioma?>&f="+fonte+"&n="+enome, function (data){
@@ -608,14 +733,14 @@ $(document).ready(function(){
 
                 localStorage.setItem("k_opwords_<?=$id_idioma?>", lex);
                 localStorage.setItem("k_opwords_<?=$id_idioma?>_updated", data);
-                createTablerSelectNativeWords("id_nativo"+id,<?=$fonte?>,'<?=$tamanho?>');
+                createTablerSelectNativeWords("id_nativo"+id,'<?=$fonte?>','<?=$tamanho?>');
                 updateTablerSelect("id_nativo"+id,selected);
                 $("#btnSalvar"+id).hide();
             });
         }else{
             console.log('local words load');
             $("#id_nativo"+id).html( localStorage.getItem("k_opwords_<?=$id_idioma?>") );
-            createTablerSelectNativeWords("id_nativo"+id,<?=$fonte?>,'<?=$tamanho?>');
+            createTablerSelectNativeWords("id_nativo"+id,'<?=$fonte?>','<?=$tamanho?>');
             updateTablerSelect("id_nativo"+id,selected);
             $("#btnSalvar"+id).hide();
         };
@@ -720,7 +845,7 @@ $(document).ready(function(){
           <label class="form-label"><?=_t('Fonte')?></label>
           <select class="form-select" id="fonteid">
             <option value="0" selected><?=_t('Selecione a fonte')?>...</option>
-            <option value="-1"><?=_t('Criar')?>!</option>
+            <option value="3"><?=_t('Desenhada')?></option>
             <?php 
               $refs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM fontes;");
               while($r = mysqli_fetch_assoc($refs)) {

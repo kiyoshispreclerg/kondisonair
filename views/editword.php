@@ -16,8 +16,11 @@
 					FROM idiomas i
 					WHERE id = '".$id_idioma."';") or die(mysqli_error($GLOBALS['dblink']));
 	while($r = mysqli_fetch_assoc($result)) { 
-	$idioma  = $r;
+		$idioma  = $r;
 	};
+	if ($idioma['id_idioma_descricao'] < 10000){
+		$idioma['desc_idioma'] = getDescricaoIdioma($idioma['id_idioma_descricao']);
+	}
 	$romanizacao = $idioma['romanizacao'];  
 	if ($idioma['binario']>0) $bin = ' BINARY ';
 
@@ -37,7 +40,7 @@
 	
 	$inseridorDrawchar = ''; // novidade, pra drawchar
 
-	$escritaPadrao = 1; $fonte = 0;
+	$escritaPadrao = 1; $fonte = 0; $autoloader = '';
 
 	$langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
 		LEFT JOIN fontes f ON f.id = e.id_fonte
@@ -45,42 +48,24 @@
 	while ($e = mysqli_fetch_assoc($langs)){
 		$scriptSalvarNativo .= 'salvarNativo(\''.$e['id'].'\');';
 		$autoon = '';
+		$autoloader .= 'loadAutoSubstituicoes(\''.$e['id'].'\', true);';
 		if ($e['padrao']==1) {
 			$escritaPadrao = $e['id'];
 			$fonte = $e['id_fonte'];
 			$tamanho = $e['tamanho'];
 		}
 	
-		if($e['id_fonte']<0){
-
-			//xxxxx NOVO! aqui deve deixar esse input oculto e apresentar um de divs só com os draws, e um btn pra editar por clique abrindo painel à direita com chars
+		if($e['id_fonte']== 3){
 
 			if($e['substituicao']==1){
-
-				//xxxxx aqui no JS deve pegar retorno (ids separados por virgulas), salvar em campo oculto e colocar divs/spans com draws na tela
-				/*
-				$scriptAutoSubstituicao .= '$.post("api.php?action=getAutoSubstituicao&eid='.$e['id'].'",{ p: data }, function (data2){
-					if(data2=="-1") exibirNativa('.$e['id'].',"",'.$e['id_fonte'].',"'.$e['tamanho'].'");
-					else { if(data2.length > 0) exibirNativa('.$e['id'].',data2,'.$e['id_fonte'].',"'.$e['tamanho'].'");}
-				});';
-				*/
-
 				$autoon = ' ('._t('Automático').')';
 			}
 			
-			/*$inputsNativos .= '<div class="mb-3"><input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$e['id'].'" />
-					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd"  onclick="loadCharDiv('.$e['id'].',\'drawcharlist'.$e['id'].'\',false,'.$e['id_fonte'].')">'._t('Inserir caractere').'</a></label>
-					<div class="mb-3" id="drawchar_'.$e['id'].'"></div></div>';
-					*/
 			$inputsNativos .= '<div class="mb-3">
 					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv(\''.$e['id'].'\',\'drawcharlist'.$e['id'].'\',false,\''.$e['id_fonte'].'\')">'._t('Inserir caractere').'</a></label>
 					<input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$e['id'].'" />
 					<div class="form-control editable-drawchar" id="drawchar_editable_'.$e['id'].'" contenteditable="true" data-eid="'.$e['id'].'" data-fonte="'.$e['id_fonte'].'" data-tamanho="'.$e['tamanho'].'"></div>
 				</div>';
-					
-			//if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,'.$e['id'].')"'; else // não checa glifos pq só pode add existentes mesmo
-			//$inputsNativos .= ' onchange="editarPalavra()"';
-			//$inputsNativos .= ' placeholder=""></div>';
 
 			$inseridorDrawchar .= '<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDrawchar" aria-labelledby="offcanvasEndLabel">
 					<div class="offcanvas-header">
@@ -92,17 +77,15 @@
 						<div>
 						</div>
 					</div>
-				</div>'; //<script>loadSideDrawchars('.$e['id'].')</script>
+				</div>';
 
 		}else{
 
 			if($e['substituicao']==1){
 
-				//xxxxx aqui no JS deve pegar retorno (ids separados por virgulas), salvar em campo oculto e colocar divs/spans com draws na tela
-				$scriptAutoSubstituicao .= '$.post("api.php?action=getAutoSubstituicao&eid='.$e['id'].'",{ p: data }, function (data2){
-					if(data2=="-1") exibirNativa('.$e['id'].',"",'.$e['id_fonte'].',"'.$e['tamanho'].'"); /*$("#escrita_nativa_'.$e['id'].'").val( "" );*/
-					else { if(data2.length > 0) exibirNativa('.$e['id'].',data2,'.$e['id_fonte'].',"'.$e['tamanho'].'"); /*$("#escrita_nativa_'.$e['id'].'").val( data2 );*/}
-				});';
+				$scriptAutoSubstituicao .= 'let data2 = getAutoSubstituicao("'.$e['id'].'",data);
+					if (data2 == "-1") exibirNativa("'.$e['id'].'","","'.$e['id_fonte'].'","'.$e['tamanho'].'");
+					else if(data2.length > 0) exibirNativa("'.$e['id'].'",data2,"'.$e['id_fonte'].'","'.$e['tamanho'].'");';
 
 				$autoon = ' ('._t('Automático').')';
 			}
@@ -221,9 +204,9 @@
 										}
 										?>
 										<option disabled><?=_t('Outros tipos de palavras')?></option>
-										<option value="-2"><?=_t('Contração')?></option>
-										<option value="-1" title="Partes de palavras não usadas como palavras soltas"><?=_t('Morfema')?></option>
-										<option value="-3" title="Expressões em que as palavras possuem significado diferente ou mais específico do que quando isoladas"><?=_t('Expressão')?></option>
+										<option value="2"><?=_t('Contração')?></option>
+										<option value="1" title="Partes de palavras não usadas como palavras soltas"><?=_t('Morfema')?></option>
+										<option value="3" title="Expressões em que as palavras possuem significado diferente ou mais específico do que quando isoladas"><?=_t('Expressão')?></option>
 									</select>
 								</div>
 							</div>
@@ -444,7 +427,7 @@
 		}; $("#romanizacao").removeClass( 'is-invalid' );
 		<?php } ?>
 		
-		if ($('#id_forma_dicionario').val()=='-2' && $('#id_origens').val()=='') {
+		if ($('#id_forma_dicionario').val()=='2' && $('#id_origens').val()=='') {
 			alert('Palavras do tipo contração devem especificar suas origens!'); 
 			return;
 		};
@@ -555,10 +538,10 @@
 				$("#saveBtn").hide();
 			}, 800);
 			setTimeout(() => {
-				createTablerSelectNativeWords('id_forma_dicionario',<?=$fonte?>,'<?=$tamanho?>');
+				createTablerSelectNativeWords('id_forma_dicionario','<?=$fonte?>','<?=$tamanho?>');
 			}, 1000);
 			setTimeout(() => {
-				createTablerSelectNativeWords('id_derivadora',<?=$fonte?>,'<?=$tamanho?>');
+				createTablerSelectNativeWords('id_derivadora','<?=$fonte?>','<?=$tamanho?>');
 			}, 1200);
 
 			<?php  if (strlen($_GET['new'])>0) {
@@ -672,11 +655,11 @@
 						}, 600);
 
 						setTimeout(() => {
-							createTablerSelectNativeWords('id_derivadora',<?=$fonte?>,'<?=$tamanho?>');
+							createTablerSelectNativeWords('id_derivadora','<?=$fonte?>','<?=$tamanho?>');
 						}, 800);
 
 						setTimeout(() => {
-							createTablerSelectNativeWords('id_forma_dicionario',<?=$fonte?>,'<?=$tamanho?>');
+							createTablerSelectNativeWords('id_forma_dicionario','<?=$fonte?>','<?=$tamanho?>');
 						}, 1000);
 				}); 
 			});
@@ -738,12 +721,12 @@
 					$("#"+destDiv).html(lex);
 					localStorage.setItem("k_chars"+eid, lex);
 					localStorage.setItem("k_chars"+eid+"_updated", data);
-					if(fonte < 0) addNatDraw(''); else $('#tempNat').addClass('custom-font-'+eid);
+					if(fonte == 3) addNatDraw(''); else { $('#tempNat').removeClass();$('#tempNat').addClass('form-control custom-font-'+eid);}
 				})
 			}else{
 				console.log('local chars load');
 				$("#"+destDiv).html( localStorage.getItem("k_chars"+eid) );
-				if(fonte < 0) addNatDraw(''); else $('#tempNat').addClass('custom-font-'+eid);
+				if(fonte == 3) addNatDraw(''); else { $('#tempNat').removeClass();$('#tempNat').addClass('form-control custom-font-'+eid);}
 			}
 		});
 
@@ -799,20 +782,15 @@
 		editarPalavra();
 		$(este).removeClass( 'is-invalid' );
 		var tmpPron = $(este).val();
-		$.post('api.php?action=getChecarPronuncia&iid='+idioma,{
-			p: tmpPron	
-		}, function (data){
-			if(data=='-1'){ 
-				//$(este).val( '*' );
-				//alert('Pronúncia inválida!');
-				$(este).addClass( 'is-invalid' );
-			}else{
-				$(este).val( data );
-				data = tmpPron; // pra substituir pelas teclas de entrada em vez da pronuncia final
-				<?php if ($romanizacao) echo '$("#romanizacao").val(tmpPron);'; ?>  //xxxxx ad a pron no romanizacao caso tenha?
-				<?=$scriptAutoSubstituicao?>
-			};
-		} ); 
+		let data = getChecarPronuncia(idioma, tmpPron, 1);
+		if(data=='-1'){ 
+			$(este).addClass( 'is-invalid' );
+		}else{
+			$(este).val( data );
+			data = tmpPron;
+			<?php if ($romanizacao) echo '$("#romanizacao").val(tmpPron);'; ?>
+			<?=$scriptAutoSubstituicao?>
+		};
 	};
 	<?php }else{
 		echo 'function checarPronuncia(este,idioma){$("#pronuncia").removeClass("is-invalid");editarPalavra();}';
@@ -953,9 +931,9 @@
 					localStorage.setItem("k_dici_<?=$id_idioma?>_updated", data);
 					if (ja) // reloadBases();
 						setTimeout(() => {
-							createTablerSelectNativeWords('id_forma_dicionario',<?=$fonte?>,'<?=$tamanho?>');
+							createTablerSelectNativeWords('id_forma_dicionario','<?=$fonte?>','<?=$tamanho?>');
 							document.querySelector('#id_forma_dicionario').tomselect.setValue(tv);
-							createTablerSelectNativeWords('id_derivadora',<?=$fonte?>,'<?=$tamanho?>');
+							createTablerSelectNativeWords('id_derivadora','<?=$fonte?>','<?=$tamanho?>');
 							document.querySelector('#id_derivadora').tomselect.setValue(tv2);
 						}, 1000);
 				})
@@ -1010,6 +988,8 @@
 		tinyMCE.init(options);
 	});
 
+loadPronuncias('<?=$id_idioma?>',true);
+<?php echo $autoloader; ?>
 </script>
 <style>#fleksonsPalavr div:not(:first-child) h3 {
   margin-top: 30px;

@@ -145,7 +145,7 @@ require('api.php');
                           <?=_t('Textos')?>
                         </a>
                         <a class="dropdown-item" href="?page=wordbanks">
-                        <?=_t('Bancos e gerador de palavras')?>
+                        <?=_t('Bancos de palavras')?>
                         </a>
                         <?php } ?>
                         <!--a class="dropdown-item" href="?page=courses">
@@ -153,6 +153,9 @@ require('api.php');
                         </a-->
                         <a class="dropdown-item" href="?page=changer">
                         <?=_t('Alterador sonoro')?>
+                        </a>
+                        <a class="dropdown-item" href="?page=wordgen">
+                        <?=_t('Gerador de palavras')?>
                         </a>
                       </div>
                     </div>
@@ -182,10 +185,7 @@ require('api.php');
               <div class="col-lg-auto ms-lg-auto">
                 <ul class="list-inline list-inline-dots mb-0">
                   <?php
-                  if ($_SESSION['KondisonairUzatorDiom']!=5) echo '<li class="list-inline-item"><a onclick="setLang(5)" class="link-secondary">English</a></li>';
-                  if ($_SESSION['KondisonairUzatorDiom']!=1) echo '<li class="list-inline-item"><a onclick="setLang(1)" class="link-secondary">Português brasileiro</a></li>';
-                  if ($_SESSION['KondisonairUzatorDiom']!=6) echo '<li class="list-inline-item"><a onclick="setLang(6)" class="link-secondary">Esperanto</a></li>';
-                  if ($_SESSION['KondisonairUzatorDiom']!=4) echo '<li class="list-inline-item"><a onclick="setLang(4)" class="link-secondary">日本語</a></li>';
+                  echo gerarLinksIdiomas($_SESSION['KondisonairUzatorDiom'], true);
                   ?>
                 </ul>
               </div>

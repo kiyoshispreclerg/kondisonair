@@ -42,7 +42,7 @@ CREATE TABLE `autosubstituicoes` (
   `tecla` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `ipa` varchar(25) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `id_escrita` bigint(20) UNSIGNED NOT NULL,
-  `glifos` varchar(15) NOT NULL,
+  `glifos` varchar(150) NOT NULL,
   `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
@@ -123,7 +123,7 @@ CREATE TABLE `drawChars` (
   `descricao` text NOT NULL,
   `ordem` int(11) NOT NULL,
   `input` varchar(8) NOT NULL DEFAULT '',
-  `id_principal` bigint(20) UNSIGNED NOT NULL,
+  `id_principal` bigint(20) UNSIGNED NOT NULL DEFAULT 0,
   `vetor` mediumtext NOT NULL,
   `data_modificado` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -736,7 +736,8 @@ CREATE TABLE `usuarios` (
   `email` varchar(250) NOT NULL,
   `confirmacao` varchar(250) NOT NULL,
   `acesso` tinyint(4) NOT NULL DEFAULT 0,
-  `publico` tinyint(4) NOT NULL DEFAULT 0
+  `publico` tinyint(4) NOT NULL DEFAULT 0,
+  `token` varchar(255) DEFAULT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `wordbanks` (

@@ -1,8 +1,8 @@
 <?php
+require('config.php');
+require(DB_CONFIG);
 
-define('CONFIG_PATH', 'db.php');
-
-if (file_exists(CONFIG_PATH)) {
+if (file_exists(DB_CONFIG)) {
     header('Location: index.php');
     exit;
 }
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $config .= "\$mysql_db   = '$dbname';\n";
                 $config .= "\n";
                 
-                if (file_put_contents(CONFIG_PATH, $config) === false) {
+                if (file_put_contents(DB_CONFIG, $config) === false) {
                     throw new Exception("Falha ao criar o arquivo de configuração.");
                 }
 
@@ -178,10 +178,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="col-md-6">
                                     <div class="form-label">Idioma padrão</div>
                                     <select name="def_lang" class="chosen-select form-control">
-                                        <option value="1" <?php if ($op['def_lang']==1) echo 'selected'; ?> >Português brasileiro</option>
-                                        <option value="5" <?php if ($op['def_lang']==5) echo 'selected'; ?> >English</option>
-                                        <option value="4" <?php if ($op['def_lang']==4) echo 'selected'; ?> >日本語</option>
-                                        <option value="6" <?php if ($op['def_lang']==6) echo 'selected'; ?> >Esperanto</option>
+                                        <?php 
+                                        foreach ($idiomas_sistema as $id => $nome_exibido) {
+                                            $html .= '<option value="' . $id . '">' . htmlspecialchars($nome_exibido) . '</option>';
+                                        }
+                                        ?>
                                     </select>
                                 </div>
                             </div>

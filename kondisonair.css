@@ -329,7 +329,7 @@
 .cm-rule-class-dynamic { color: #ce93d8; }
 .cm-rule-category { color: #00cccc; }
 
-textarea {
+.nowrap {
   text-wrap: nowrap;
 }
 

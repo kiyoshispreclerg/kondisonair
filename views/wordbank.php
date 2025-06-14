@@ -36,17 +36,16 @@ $tamanho = $idioma['tamanho'];
 
     $escritaPadrao = 1; $fonte = 0;
 
-	//while ($e = mysqli_fetch_assoc($langs)){
     $scriptSalvarNativo .= 'salvarNativo('.$escrita.');';
     $autoon = '';
 
-    if($fonte<0){
+    if($fonte==3){
 
         if($idioma['substituicao']==1){
 
             $scriptAutoSubstituicao .= '$.post("api.php?action=getAutoSubstituicao&eid='.$escrita.'",{ p: data }, function (data2){
-                if(data2=="-1") exibirNativa(id,"",'.$fonte.',"'.$tamanho.'");/*$("#escrita_nativa_'.$escrita.'").val( "" );*/
-                else { if(data2.length > 0) exibirNativa(id,data2,'.$fonte.',"'.$tamanho.'");/*$("#escrita_nativa_'.$escrita.'").val( data2 );*/}
+                if(data2=="-1") exibirNativa(id,"",'.$fonte.',"'.$tamanho.'");
+                else { if(data2.length > 0) exibirNativa(id,data2,'.$fonte.',"'.$tamanho.'");}
             });';
 
             $autoon = ' ('._t('Automático').')';
@@ -56,10 +55,9 @@ $tamanho = $idioma['tamanho'];
 
         if($idioma['substituicao']==1){
 
-            $scriptAutoSubstituicao .= '$.post("api.php?action=getAutoSubstituicao&eid='.$escrita.'",{ p: data }, function (data2){
-                if(data2=="-1") exibirNativa(id,"",'.$fonte.',"'.$tamanho.'"); /*$("#escrita_nativa_'.$escrita.'").val( "" );*/
-                else { if(data2.length > 0) exibirNativa(id,data2,'.$fonte.',"'.$tamanho.'"); /*$("#escrita_nativa_'.$escrita.'").val( data2 );*/}
-            });';
+            $scriptAutoSubstituicao .= 'let data2 = getAutoSubstituicao("'.$escrita.'",data);
+                if (data2 == "-1") exibirNativa(id,"","'.$fonte.'","'.$tamanho.'");
+                else if(data2.length > 0) exibirNativa(id,data2,"'.$fonte.'","'.$tamanho.'");';
 
             $autoon = ' ('._t('Automático').')';
         }
@@ -95,14 +93,16 @@ $tamanho = $idioma['tamanho'];
                     <div class="card-header">
                       <h3 class="card-title"><?=_t('Gerar palavras')?></h3>
                       <div class="card-actions">
+                        <?php if ($_GET['iid']>0){ ?>
                         <a href="#" class="btn btn-primary" onclick="aplicarGerar()">
                           <?=_t('Gerar')?>
                         </a>
+                        <?php } ?>
                       </div>
                     </div>
                     <div class="card-body">
 
-                        <div class="mb-3 row" id="divnp">
+                        <div class="row">
                             <div class="col-6">
                                 <label class="form-label"><?=_t('Idioma')?></label>
                                 <select class="form-select" id="idsig" onchange="window.location.href='?page=wordbank&id=<?=$_GET['id']?>&iid='+$('#idsig').val()"><option value="0" selected><?=_t('Selecionar meu idioma...')?></option><?php 
@@ -115,13 +115,17 @@ $tamanho = $idioma['tamanho'];
                                     };
                                     ?>
                                 </select>
-                                <label class="form-label text-secondary"><?=_t('As classes, sílabas e pesos devem ser configurados na tela Sílabas.')?></label>
                             </div>
                             
                             <div class="col-6">
                                 <label class="form-label"><?=_t('Quantidade de palavras')?></label>
                                 <input type="text" class="form-control" name="example-text-input" id="num_palavras" value="100">
                             </div>
+                        </div>
+                    </div>
+                    <div class="card-body" style="overflow-y: auto;max-height: 60vh;">
+                        <div class="mr-0 row" id="divnp">
+                                <label class="form-label text-secondary"><?=_t('As classes, sílabas e pesos devem ser configurados na tela Sílabas.')?></label>
                         </div>
                     </div>
                   </div>
@@ -223,7 +227,7 @@ $tamanho = $idioma['tamanho'];
                                 }
 
                                 if ($escrita>-1){
-                                    if($fonte<0){
+                                    if($fonte==3){
                                         // echo input oculto e div visual e btn de add lateral
                                     }else{
                                         echo '<div class="input-group mb-2">
@@ -273,18 +277,16 @@ $tamanho = $idioma['tamanho'];
 		editarPalavra(id);
 		var tmpPron = $("#pron"+id).val();
 		$("#pron"+id).removeClass( 'is-invalid' );
-		$.post('api.php?action=getChecarPronuncia&iid='+idioma,{
-			p: $("#pron"+id).val()
-		}, function (data){
-			if(data=='-1'){ 
-				$("#pron"+id).addClass( 'is-invalid' );
-			}else{
-				$("#pron"+id).val( data );
-                $("#rom"+id).val( tmpPron );
-                data = tmpPron;
-				<?=$scriptAutoSubstituicao?>
-			};
-		} ); 
+        let data = getChecarPronuncia(idioma, tmpPron, 1);
+        console.log('pron: '+data);
+        if(data=='-1'){ 
+            $("#pron"+id).addClass( 'is-invalid' );
+        }else{
+            $("#pron"+id).val( data );
+            $("#rom"+id).val( tmpPron );
+            data = tmpPron;
+            <?=$scriptAutoSubstituicao?>
+        };
 	};
 	<?php }else{
 		echo 'function checarPronuncia(id,idioma){editarPalavra(id);}';
@@ -363,4 +365,6 @@ function dropHandler(ev) {
     }
 }
 formatarTablerSelect('idsig',null);
+loadPronuncias('<?=$id_idioma?>',true);
+loadAutoSubstituicoes('<?=$escrita?>', true);
 </script>

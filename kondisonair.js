@@ -59,7 +59,7 @@ function createTablerSelect(campo, parent = 'body', create = false){
   // @formatter:on
 };
 
-function createTablerSelectNativeWords(campo,fonte = 0, tamanho = ''){
+function createTablerSelectNativeWords(campo,fonte = '0', tamanho = ''){
   // @formatter:off
       var el;
     new TomSelect(el = document.getElementById(campo), {
@@ -71,24 +71,24 @@ function createTablerSelectNativeWords(campo,fonte = 0, tamanho = ''){
                   /*if( data.customProperties ){
                       return '<div><span class="dropdown-item-indicator">' + data.customProperties + '</span>' + escape(data.text) + '</div>';
                   }*/
-                  if (fonte < 0) {
+                  if (fonte == 3) {
                     var tmp = '';
                     data.nativa.split(",").forEach(function(t){
                         tmp += '<span class="drawchar drawchar-'+tamanho+'" style="background-image: url(./writing/'+data.eid+'/'+t+'.png)"></span>';
                     });
                     return '<div>' + tmp + escape(data.text) + '</div>';
                   }else
-                    return '<div><span class="'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
+                    return '<div><span class="custom-font-'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
               },
               option: function(data,escape){
-                  if (fonte < 0) {
+                  if (fonte == 3) {
                     var tmp = '';
                     data.nativa.split(",").forEach(function(t){
                         tmp += '<span class="drawchar drawchar-'+tamanho+'" style="background-image: url(./writing/'+data.eid+'/'+t+'.png)"></span>';
                     });
                     return '<div>' + tmp + escape(data.text) + '</div>';
                   }else
-                  return '<div><span class="'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
+                  return '<div><span class="custom-font-'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
               },
           },
       });
@@ -137,79 +137,27 @@ function updateTablerSelect(campo,val){
 
 async function sonalMdason(mdasonList, palavrList, mtor, elment, iid, defCats = ""){
     if (palavrList == '') return '';
+        
+    const formData = new FormData();
+    formData.append('palavras', palavrList);
+    formData.append('regras', mdasonList);
+    //formData.append('categorias', defCats);
+    formData.append('v', 0);
+    formData.append('classes', defCats);
+    // formData.append('substituicoes', document.getElementById('check_rewrites').checked ? document.getElementById('text_rewrites').value : 0);
 
-    // var saida = document.getElementById(elment.substring(1))? .innerHTML ?; ?
-
-    if(mtor=='lexurgy'){
-
-        return 'Lexurgy ainda não integrado';
+    const response = await fetch(`?action=getKSC&iid=`+iid, {
+        method: 'POST',
+        body: formData
+    });
     
+    const data = await response.json();
 
-    }else if(mtor == 'sca2'){
-    if (mdasonList.indexOf('#soundChanges{') > 0){ // tem tudo no mesmo texto
-        mdasonList = mdasonList.replaceAll(" ",'');
-        var cats = mdasonList.substring( mdasonList.indexOf('#categories{')+13 );
-        cats = cats.substring( 0, cats.indexOf('}')-1 );
-        var mdasons = mdasonList.substring( mdasonList.indexOf('#soundChanges{')+15 );
-        mdasons = mdasons.substring( 0, mdasons.indexOf('}')-1 );
-        var rules = mdasonList.substring( mdasonList.indexOf('#rewriteRules{')+15 );
-        rules = rules.substring( 0, rules.indexOf('}')-1 );
-        return processSCA2(cats, mdasons, rules, palavrList, elment.substring(1));
-    }else{ // tem so as mudanças
-        cats = defCats;
-        rules = "";
-        mdasons = mdasonList;
-        /*var r;
-        var res = null;
-        $.get("?action=getSCHeader&motor=sca2&tipo=cats&iid="+iid, function (data){
-            cats = $.trim(data);
-            r = processSCA2(cats, mdasons, rules, palavrList, elment.substring(1));
-        });*/
-        return processSCA2(cats, mdasons, rules, palavrList, elment.substring(1));
+    if (data.errors && Array.isArray(data.errors)) {
+        alert(data.errors.join('\n').trim());
     }
-    console.log('usando sca2');
-
-    }else if(mtor == 'trisca'){
-    if (mdasonList.indexOf('=') > 0){
-        // tem aqui tudo, só vai
-        mdasonList = mdasonList.replaceAll(" ",'');
-        return applyClickedTSCA(mdasonList, palavrList, elment.substring(1));
-    }else{
-        // aqui emendar
-        if (defCats != "") mdasonList = defCats + "\n" + mdasonList.replaceAll(" ",'');
-        else mdasonList = mdasonList.replaceAll(" ",'');
-        return applyClickedTSCA(mdasonList, palavrList, elment.substring(1));
-    }
-    console.log('usando trisca');
-
-    }else if(mtor == 'regex'){
-
-        alert('Em desenvolvimento');
-
-    }else if(mtor == 'ksc'){
-        
-        const formData = new FormData();
-        formData.append('palavras', palavrList);
-        formData.append('regras', mdasonList);
-        //formData.append('categorias', defCats);
-        formData.append('v', 0);
-        formData.append('classes', defCats);
-        // formData.append('substituicoes', document.getElementById('check_rewrites').checked ? document.getElementById('text_rewrites').value : 0);
-
-        const response = await fetch(`?action=getKSC&iid=`+iid, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-
-        if (data.errors && Array.isArray(data.errors)) {
-            alert(data.errors.join('\n').trim());
-        }
-        
-        return Array.isArray(data.words) ? data.words.join('\n').trim() : ''; // data.trim();
-
-    }
+    
+    return Array.isArray(data.words) ? data.words.join('\n').trim() : ''; // data.trim();
 
 };
 
@@ -971,7 +919,7 @@ function exibirNativa(eid, palavra, fonte = 0, tamanho = '') {
 	// Clear current content
 	$editableDiv.html('');
 	
-	if (fonte < 0 && palavra) {
+	if (fonte == 3 && palavra) {
 		// Display drawchar spans for each ID
 		palavra.split(',').forEach(function(id) {
 			if (id) {
@@ -1039,7 +987,7 @@ function showSubstitutionOptions(eid, results, $div, fonte, tamanho, $hiddenInpu
             $button.append($number);
         }
         
-        if (fonte < 0) {
+        if (fonte == 3) {
             const $span = $('<span>')
                 .addClass('drawchar drawchar-' + tamanho + ' rounded papapapa')
                 .css('background-image', 'url(./writing/' + eid + '/' + result.id + '.png?2025)')
@@ -1109,7 +1057,7 @@ $(document).on('input', '.editable-drawchar', function(e) {
     });
     
     // If text is present, call substitution API
-    if (text && fonte < 0) {
+    if (text && fonte == 3) {
         $.post('api.php?action=getAutoSubstituicao&eid=' + eid, { p: text }, function(data2) {
             if (data2 == '-1') {
                 exibirNativa(eid, $hiddenInput.val(), fonte, tamanho);
@@ -1189,8 +1137,251 @@ $(document).on('click', function(e) {
 
 function limparCacheLocal() {
     if (confirm("Tem certeza?")) {
-        localStorage.clear();
-        alert('Cache do site limpo com sucesso!');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('k_')) {
+                localStorage.removeItem(key);
+            }
+        }
         window.location.reload();
     }
+}
+
+function loadAutoSubstituicoes(eid, force = false) {
+    $.get("api.php?action=getAllAutoSubstituicoes&eid=" + eid, function(data) {
+        const response = JSON.parse(data);
+        const storageKey = "k_autosubs_" + eid;
+        const updatedKey = "k_autosubs_updated_" + eid;
+        
+        if (force || !localStorage.getItem(updatedKey)) {
+            console.log('Autosubstitutions outdated or not found > update');
+            localStorage.setItem(storageKey, JSON.stringify(response));
+            localStorage.setItem(updatedKey, Date.now());
+        }
+    });
+}
+
+function getAutoSubstituicao(eid, input) {
+    const storageKey = `k_autosubs_${eid}`;
+    const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    
+    if (!data || !data.fonte || !data.autosubs) {
+        console.log(`No autosubstitution data found for eid: ${eid}`);
+        return '';
+    }
+    
+    const fonte = data.fonte;
+    const autosubs = data.autosubs;
+    
+    if (fonte == 3) {
+        let matches = [];
+        
+        autosubs.forEach(r => {
+            // Case-sensitive matching with IPA support
+            if (r.tecla && input.startsWith(r.tecla)) {
+                matches.push({
+                    id: r.glifos,
+                    desc: r.tecla,
+                    tam: r.tam
+                });
+            }
+        });
+        
+        if (matches.length === 0) {
+            return '-1';
+        }
+        
+        matches.sort((a, b) => {
+            const a_exact = a.desc === input;
+            const b_exact = b.desc === input;
+            
+            if (a_exact && !b_exact) return -1;
+            if (!a_exact && b_exact) return 1;
+            if (a.tam === b.tam) return a.id.localeCompare(b.id);
+            return b.tam - a.tam;
+        });
+        
+        return JSON.stringify(matches);
+    } else {
+        let palavra = '';
+        // Use Array.from for proper Unicode/IPA character splitting
+        const chars = Array.from(input);
+        let i = 0;
+        
+        while (i < chars.length) {
+            let found = '*';
+            for (let r of autosubs) {
+                // Construct substring with exact character count (tam)
+                const substr = chars.slice(i, i + parseInt(r.tam)).join('');
+                if (substr === r.tecla) {
+                    found = r.glifos;
+                    i += parseInt(r.tam);
+                    break;
+                }
+            }
+            palavra += found;
+            if (found === '*') i++;
+        }
+        
+        return palavra.indexOf('*') === -1 ? palavra : '';
+    }
+}
+
+function loadPronuncias(iid, force = false) {
+    const storageKey = "k_pronuncias_" + iid;
+    const updatedKey = "k_pronuncias_updated_" + iid;
+    
+    $.get("api.php?action=getAllPronuncias&iid=" + iid, function(data) {
+        const pronuncias = JSON.parse(data);
+        
+        if (force || !localStorage.getItem(updatedKey)) {
+            console.log('Pronunciation data outdated or not found > update');
+            localStorage.setItem(storageKey, JSON.stringify(pronuncias));
+            localStorage.setItem(updatedKey, Date.now());
+        }
+    });
+}
+
+function getChecarPronuncia(iid, input, checar = '1') {
+    const storageKey = `k_pronuncias_${iid}`;
+    const pronuncias = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    
+    if (!pronuncias.length) {
+        console.log(`No pronunciation data found for iid: ${iid}`);
+        return '-1';
+    }
+    
+    let palavra = '';
+    // Use Array.from to properly split Unicode characters, including IPA
+    const chars = Array.from(input);
+    
+    for (let i = 0; i < chars.length; i++) {
+        let found = false;
+        
+        // Check double character
+        if (i < chars.length - 1) {
+            const doublechar = chars[i] + chars[i + 1];
+            // Case-sensitive matching
+            const match = pronuncias.find(p => 
+                (p.tecla && p.tecla === doublechar) || 
+                (p.ipa && p.ipa === doublechar) || 
+                (p.ipa2 && p.ipa2 === doublechar)
+            );
+            
+            if (match) {
+                if (match.ipa) palavra += match.ipa;
+                else if (match.ipa2) palavra += match.ipa2;
+                else palavra += '+';
+                i++; // Skip next character
+                found = true;
+                continue;
+            }
+        }
+        
+        // Check single character
+        const char = chars[i];
+        const match = pronuncias.find(p => 
+            (p.tecla && p.tecla === char) || 
+            (p.ipa && p.ipa === char) || 
+            (p.ipa2 && p.ipa2 === char)
+        );
+        
+        if (match) {
+            if (match.ipa) palavra += match.ipa;
+            else if (match.ipa2) palavra += match.ipa2;
+            else palavra += '=';
+            found = true;
+        } else {
+            // Check if char exists in IPA inventory
+            const ipaMatch = pronuncias.find(p => p.ipa && p.ipa === char);
+            if (!ipaMatch) {
+                palavra += '%';
+                return '-1';
+            } else {
+                palavra += char;
+            }
+        }
+    }
+    
+    return checar === '0' ? input : palavra;
+}
+
+function checarDigitacao(iid, ipaInput) {
+    const storageKey = `k_pronuncias_${iid}`;
+    const pronuncias = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    
+    if (!pronuncias.length) {
+        console.log(`No pronunciation data found for iid: ${iid}`);
+        return [ipaInput]; // Return input as-is if no data
+    }
+    
+    // Split IPA input into Unicode characters
+    const chars = Array.from(ipaInput);
+    
+    // Store possible tecla sequences with their current state
+    let possibilities = [{ tecla: '', index: 0 }];
+    let finalResults = [];
+    
+    while (possibilities.length > 0) {
+        let newPossibilities = [];
+        
+        for (let p of possibilities) {
+            const i = p.index;
+            if (i >= chars.length) {
+                finalResults.push(p.tecla);
+                continue;
+            }
+            
+            // Check double-character IPA first
+            let found = false;
+            if (i < chars.length - 1) {
+                const doublechar = chars[i] + chars[i + 1];
+                const matches = pronuncias.filter(p => 
+                    (p.ipa && p.ipa === doublechar) || 
+                    (p.ipa2 && p.ipa2 === doublechar)
+                ).sort((a, b) => a.ordem - b.ordem);
+                
+                for (let match of matches) {
+                    if (match.tecla) {
+                        newPossibilities.push({
+                            tecla: p.tecla + match.tecla,
+                            index: i + 2
+                        });
+                        found = true;
+                    }
+                }
+            }
+            
+            // Check single-character IPA
+            const char = chars[i];
+            const matches = pronuncias.filter(p => 
+                (p.ipa && p.ipa === char) || 
+                (p.ipa2 && p.ipa2 === char)
+            ).sort((a, b) => a.ordem - b.ordem);
+            
+            for (let match of matches) {
+                if (match.tecla) {
+                    newPossibilities.push({
+                        tecla: p.tecla + match.tecla,
+                        index: i + 1
+                    });
+                    found = true;
+                }
+            }
+            
+            // If no tecla found, use the original IPA character
+            if (!found) {
+                newPossibilities.push({
+                    tecla: p.tecla + char,
+                    index: i + 1
+                });
+            }
+        }
+        
+        possibilities = newPossibilities;
+    }
+    
+    // Remove duplicates and return results
+    const uniqueResults = [...new Set(finalResults)];
+    return uniqueResults.length > 0 ? uniqueResults : [ipaInput];
 }

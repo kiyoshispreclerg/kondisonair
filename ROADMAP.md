@@ -4,7 +4,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 
 ## Para o futuro próximo
 - Adicionar fones alternativos a um fonema (alofonia)
-- Tabelas de sons personalizadas
 - Adicionar áudio em palavras (pronúncia)
 - Adicionar mais de uma escrita nativa por palavra
 - Importar lista de palavras base (de csv)
@@ -27,6 +26,7 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - KSC: ignorar linhas terminadas com dois pontos
 
 ## Em consideração
+- Tabelas de sons personalizadas
 - Criação de fonte a partir dos caracteres desenhados
 - Adicionar áudio em textos
 - Exportar todos os dados de um idioma
@@ -38,6 +38,8 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Repetição espaçada para decorar caracteres, palavras ou frases
 - KTH (Kondisonair Translation Helper): Auxiliar de tradução simples via referentes e regras
 - Novo algoritmo para separar palavras usando apenas o léxico, independente de espaços
+- KSC: Mudanças sonoras ligadas a momentos (para idiomas ligados a uma realidade)
+- API pública para o KSC
 
 ## Para o modo História
 - Gerar "livro" em PDF
@@ -47,4 +49,5 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Modo de exibição de linhas do tempo paralelas por mais de uma entidade
 - Mostrar relações entre entidades como árvores
 - Exportar o texto de histórias específicas ou de certo nível como um texto longo em capítulos
+- Imagens de entidades, com marcações por momentos e outras entidades (ex.: mapas, atlas, deslocamentos, etc)
 

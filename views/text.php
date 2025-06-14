@@ -322,7 +322,7 @@ function cpk(pids = '', st = 9, aid, pal = '', ps = '0',este){
 	$(".pstud").removeClass('palSelected');
 	if (ps != '0') $(".pstud-"+ps).addClass('palSelected');
 
-	<?php if ($fonte<0){ ?>
+	<?php if ($fonte==3){ ?>
 	$("#painelStud").html(`<div class="mb-3"><div class="form-group"><div >`+$(este).html()+`</div></div></div>`);
 	<?php }else{ ?>
 	$("#painelStud").html(`<div class="mb-3"><div class="form-group"><div class="custom-font-<?=$eid?>">`+pal+`</div></div></div>`);

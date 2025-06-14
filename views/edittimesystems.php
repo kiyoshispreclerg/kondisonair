@@ -66,7 +66,7 @@ while ($s = mysqli_fetch_assoc($sistemas)) {
                         </div>
                         <div class="mb-3 overflow-auto" style="max-height: 45rem">
                             <div class="col-12">
-                                <a class="btn btn-primary" onclick="addUnidade('.$s['id'].')">+</a>
+                                <a class="btn btn-primary" onclick="addUnidade(\''.$s['id'].'\')">+</a>
                             </div>
                             <div id="unidades'.$s['id'].'" class="list-group list-group-flush list-group-hoverable">
                                 <a class="btn btn-primary" onClick="carregarTabelaUnidades(\''.$s['id'].'\')"><i class="fa fa-refresh"></i>'._t('Carregar').'</a>
@@ -144,7 +144,7 @@ function execSalvarSistema(id) {
         descricao: $('#descricao'+id).val(),
         data_padrao: $('#data_padrao'+id).val(),
         publico: document.getElementById('publico'+id).checked ? 1 : 0,
-        rid: <?=$id_realidade?>
+        rid: '<?=$id_realidade?>'
     }, function(data) {
         if ($.trim(data) > 0) {
             $('#btnSalvar'+id).hide();
@@ -628,7 +628,7 @@ function carregarCalendario(sid) {
         sid, 0, 0,
         'time-value'+sid,
         null,
-        <?=$id_realidade?>
+        '<?=$id_realidade?>'
     );
 }
 

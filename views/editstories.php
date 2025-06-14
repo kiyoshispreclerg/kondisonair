@@ -223,7 +223,7 @@ function gravarHistoria() {
     $.post("?action=ajaxGravarHistoria&hid=" + $('#idHistoria').val() + "&update=1&rid=<?=$id_realidade?>", {
         titulo: $('#titulo').val(),
         status: $('#status').val(),
-        id_superior: <?=$superior?>,
+        id_superior: '<?=$superior?>',
         id_tipo: $('#id_tipo').val(),
         id_momento: $('#id_momento').val(),
         descricao: $('#descricao').val(),
