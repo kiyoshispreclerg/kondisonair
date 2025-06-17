@@ -190,7 +190,7 @@ function listFormat(json){
                 else $nativo = "<span class='text-secondary' >/".$r['pronuncia']."/</span> ";
             }
             */
-
+           
             sub = val.romanizacao + ' /' + val.pronuncia + '/';
             if (val.nativo.length > 0) {
                 palavra = val.nativo;
@@ -213,7 +213,7 @@ function listFormat(json){
               </div>
               <div class="col text-truncate">
                 <a href="?page=editword&iid=<?=$id_idioma?>&pid=`+val.id+`" class="text-body d-block">` + val.significado + `</a>
-                <div class="text-secondary text-truncate">` + val.classe + ( val.rels > 0 ? ' - <?=_t('Formas')?>: '+val.rels : '' ) + `</div>
+                <div class="text-secondary text-truncate">` + ( val.classe ? val.classe : '' ) + ( val.rels > 0 ? ' - <?=_t('Formas')?>: '+val.rels : '' ) + `</div>
               </div>
               <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord(\'`+val.id+`\',\'` + val.id_forma_dicionario + `\')">Del</a></div>
           </div></div>`;
@@ -226,22 +226,21 @@ function loadPalavras(index = 0, forceReload = false){
     $("#filtro").val('dici');
     //updateTablerSelect('filtro', 'dici');
     $("#filter-div").show();
-    
-    $.get("api.php?action=getLastChange&data=lexicon&iid=<?=$id_idioma?>", function (data){
-        if (forceReload || data > localStorage.getItem("k_lexicon_<?=$id_idioma?>_updated")){
-            console.log('local lexicon outdated > update');
-            $.get("api.php?action=listWords&id=<?=$id_idioma?>&t=dici&o="+$("#ordem").val()+"&to="+$("#tipo_ordem").val()+"&i="+index, function (lex){
-                $("#wordTable").html(listFormat(lex));
-                localStorage.setItem("k_lexicon_<?=$id_idioma?>", lex);
-                localStorage.setItem("k_lexicon_<?=$id_idioma?>_updated", data);
-                $('[data-bs-toggle="tooltip"]').tooltip();
-            })
-        }else{
-            console.log('local lexicon load');
-            $("#wordTable").html( listFormat(localStorage.getItem("k_lexicon_<?=$id_idioma?>")) );
+
+    let data = <?=getLastChange('lexicon',$id_idioma)?>;
+    if (forceReload || data > localStorage.getItem("k_lexicon_<?=$id_idioma?>_updated")){
+        console.log('local lexicon outdated > update');
+        $.get("api.php?action=listWords&id=<?=$id_idioma?>&t=dici&o="+$("#ordem").val()+"&to="+$("#tipo_ordem").val()+"&i="+index, function (lex){
+            $("#wordTable").html(listFormat(lex));
+            localStorage.setItem("k_lexicon_<?=$id_idioma?>", lex);
+            localStorage.setItem("k_lexicon_<?=$id_idioma?>_updated", data);
             $('[data-bs-toggle="tooltip"]').tooltip();
-        }
-    });
+        })
+    }else{
+        console.log('local lexicon load');
+        $("#wordTable").html( listFormat(localStorage.getItem("k_lexicon_<?=$id_idioma?>")) );
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    }
 };
 
 function filtrarPalavras(reset = false){

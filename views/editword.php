@@ -48,7 +48,8 @@
 	while ($e = mysqli_fetch_assoc($langs)){
 		$scriptSalvarNativo .= 'salvarNativo(\''.$e['id'].'\');';
 		$autoon = '';
-		$autoloader .= 'loadAutoSubstituicoes(\''.$e['id'].'\', true);';
+		$changed = getLastChange('autosubstituicoes',$e['id']);
+		$autoloader .= 'if('.$changed.' > localStorage.getItem("k_autosubs_updated_'.$e['id'].'") ) loadAutoSubstituicoes(\''.$e['id'].'\', '.$changed.', true);';
 		if ($e['padrao']==1) {
 			$escritaPadrao = $e['id'];
 			$fonte = $e['id_fonte'];
@@ -329,6 +330,7 @@
 						</div>
 					</div>
 					<div class="card-body" id="detalhesGramaticais"> 
+						<?=_t('Salve a palavra para ver as opções')?>
 					</div>
 				</div>
 				<?php if ($romanizacao || $inputsNativos != ''){ ?>
@@ -695,19 +697,18 @@
 	function loadPronDiv(forceReload = false){
 		$('#tempPron').val($('#pronuncia').val());
 
-		$.get("api.php?action=getLastChange&data=sounds&iid=<?=$id_idioma?>", function (data){
-			if (forceReload || data > localStorage.getItem("k_sounds<?=$id_idioma?>_updated")){
-				console.log('local sounds outdated > update');
-				$.get("api.php?action=ajaxGetDivLateralSons&iid=<?=$id_idioma?>", function (lex){
-					$("#divInserirSons").html(lex);
-					localStorage.setItem("k_sounds<?=$id_idioma?>", lex);
-					localStorage.setItem("k_sounds<?=$id_idioma?>_updated", data);
-				})
-			}else{
-				console.log('local sounds load');
-				$("#divInserirSons").html( localStorage.getItem("k_sounds<?=$id_idioma?>") );
-			}
-		});
+		let data = <?=getLastChange('sounds',$id_idioma)?>;
+		if (forceReload || data > localStorage.getItem("k_sounds<?=$id_idioma?>_updated")){
+			console.log('local sounds outdated > update');
+			$.get("api.php?action=ajaxGetDivLateralSons&iid=<?=$id_idioma?>", function (lex){
+				$("#divInserirSons").html(lex);
+				localStorage.setItem("k_sounds<?=$id_idioma?>", lex);
+				localStorage.setItem("k_sounds<?=$id_idioma?>_updated", data);
+			})
+		}else{
+			console.log('local sounds load');
+			$("#divInserirSons").html( localStorage.getItem("k_sounds<?=$id_idioma?>") );
+		}
 	}
 
 	function loadCharDiv(eid,destDiv = "divInserirChars", forceReload = false, fonte = 0){
@@ -858,29 +859,28 @@
 			tv = document.querySelector('#id_origens').tomselect.getValue();
 			document.querySelector('#id_origens').tomselect.destroy();
 		}
-		$.get("api.php?action=getLastChange&data=origens", function (data){
-			if (forceReload || ja || data > localStorage.getItem("k_origens_updated")){
-				console.log('local origens outdated > update');
-				$.get("api.php?action=getOptionsOrigens", function (lex){
-					$("#id_origens").html(lex);
-					localStorage.setItem("k_origens", lex);
-					localStorage.setItem("k_origens_updated", data);
-					if (ja) // reloadBases();
-						setTimeout(() => {
-							createTablerSelectAllNativeWords('id_origens');//createTablerSelect('id_origens');
-							document.querySelector('#id_origens').tomselect.setValue(tv);
-						}, 1000);
-				})
-			}else{
-				console.log('local origens load');
-				$("#id_origens").html( localStorage.getItem("k_origens") );
+		let data = <?=getLastChange('origens')?>;
+		if (forceReload || ja || data > localStorage.getItem("k_origens_updated")){
+			console.log('local origens outdated > update');
+			$.get("api.php?action=getOptionsOrigens", function (lex){
+				$("#id_origens").html(lex);
+				localStorage.setItem("k_origens", lex);
+				localStorage.setItem("k_origens_updated", data);
 				if (ja) // reloadBases();
 					setTimeout(() => {
 						createTablerSelectAllNativeWords('id_origens');//createTablerSelect('id_origens');
 						document.querySelector('#id_origens').tomselect.setValue(tv);
 					}, 1000);
-			}
-		});
+			})
+		}else{
+			console.log('local origens load');
+			$("#id_origens").html( localStorage.getItem("k_origens") );
+			if (ja) // reloadBases();
+				setTimeout(() => {
+					createTablerSelectAllNativeWords('id_origens');//createTablerSelect('id_origens');
+					document.querySelector('#id_origens').tomselect.setValue(tv);
+				}, 1000);
+		}
 	};
 	function loadReferentes(forceReload = false, ja = false){
 		var tv;
@@ -888,29 +888,28 @@
 			tv = document.querySelector('#id_referentes').tomselect.getValue();
 			document.querySelector('#id_referentes').tomselect.destroy();
 		}
-		$.get("api.php?action=getLastChange&data=ref&iid=<?=$id_idioma?>", function (data){
-			if (forceReload || ja || data > localStorage.getItem("k_ref_updated")){
-				console.log('local ref outdated > update');
-				$.get("api.php?action=getOptionsReferentes", function (lex){
-					$("#id_referentes").html(lex);
-					localStorage.setItem("k_ref", lex);
-					localStorage.setItem("k_ref_updated", data);
-					if (ja) // reloadBases();
-						setTimeout(() => {
-							createTablerSelect('id_referentes');
-							document.querySelector('#id_referentes').tomselect.setValue(tv);
-						}, 1000);
-				})
-			}else{
-				console.log('local ref load');
-				$("#id_referentes").html( localStorage.getItem("k_ref") );
+		let data = <?=getLastChange('ref',$id_idioma)?>;
+		if (forceReload || ja || data > localStorage.getItem("k_ref_updated")){
+			console.log('local ref outdated > update');
+			$.get("api.php?action=getOptionsReferentes", function (lex){
+				$("#id_referentes").html(lex);
+				localStorage.setItem("k_ref", lex);
+				localStorage.setItem("k_ref_updated", data);
 				if (ja) // reloadBases();
 					setTimeout(() => {
 						createTablerSelect('id_referentes');
 						document.querySelector('#id_referentes').tomselect.setValue(tv);
 					}, 1000);
-			}
-		});
+			})
+		}else{
+			console.log('local ref load');
+			$("#id_referentes").html( localStorage.getItem("k_ref") );
+			if (ja) // reloadBases();
+				setTimeout(() => {
+					createTablerSelect('id_referentes');
+					document.querySelector('#id_referentes').tomselect.setValue(tv);
+				}, 1000);
+		}
 	};
 	function loadDicionario(forceReload = false, ja = false){ 
 		var tv, tv2;
@@ -920,30 +919,29 @@
 			document.querySelector('#id_forma_dicionario').tomselect.destroy();
 			document.querySelector('#id_derivadora').tomselect.destroy();
 		}
-		$.get("api.php?action=getLastChange&data=lexicon&iid=<?=$id_idioma?>", function (data){
-			if (forceReload || data > localStorage.getItem("k_dici_<?=$id_idioma?>_updated")){
-				console.log('local dici outdated > update');
+		let data = <?=getLastChange('lexicon',$id_idioma)?>;
+		if (forceReload || data > localStorage.getItem("k_dici_<?=$id_idioma?>_updated")){
+			console.log('local dici outdated > update');
 
-				$.get("api.php?action=getOptionsDicionario&iid=<?=$id_idioma?>&eid=<?=$id_idioma?>", function (lex){
-					$("#id_forma_dicionario").html(lex);
-					$("#id_derivadora").html(lex);
-					localStorage.setItem("k_dici_<?=$id_idioma?>", lex);
-					localStorage.setItem("k_dici_<?=$id_idioma?>_updated", data);
-					if (ja) // reloadBases();
-						setTimeout(() => {
-							createTablerSelectNativeWords('id_forma_dicionario','<?=$fonte?>','<?=$tamanho?>');
-							document.querySelector('#id_forma_dicionario').tomselect.setValue(tv);
-							createTablerSelectNativeWords('id_derivadora','<?=$fonte?>','<?=$tamanho?>');
-							document.querySelector('#id_derivadora').tomselect.setValue(tv2);
-						}, 1000);
-				})
+			$.get("api.php?action=getOptionsDicionario&iid=<?=$id_idioma?>&eid=<?=$id_idioma?>", function (lex){
+				$("#id_forma_dicionario").html(lex);
+				$("#id_derivadora").html(lex);
+				localStorage.setItem("k_dici_<?=$id_idioma?>", lex);
+				localStorage.setItem("k_dici_<?=$id_idioma?>_updated", data);
+				if (ja) // reloadBases();
+					setTimeout(() => {
+						createTablerSelectNativeWords('id_forma_dicionario','<?=$fonte?>','<?=$tamanho?>');
+						document.querySelector('#id_forma_dicionario').tomselect.setValue(tv);
+						createTablerSelectNativeWords('id_derivadora','<?=$fonte?>','<?=$tamanho?>');
+						document.querySelector('#id_derivadora').tomselect.setValue(tv2);
+					}, 1000);
+			})
 
-			}else{
-				console.log('local dici load');
-				$("#id_forma_dicionario").html( localStorage.getItem("k_dici_<?=$id_idioma?>") );
-				$("#id_derivadora").html( localStorage.getItem("k_dici_<?=$id_idioma?>") );
-			}
-		});
+		}else{
+			console.log('local dici load');
+			$("#id_forma_dicionario").html( localStorage.getItem("k_dici_<?=$id_idioma?>") );
+			$("#id_derivadora").html( localStorage.getItem("k_dici_<?=$id_idioma?>") );
+		}
 	};
 
 	$(document).ready(function(){
@@ -988,7 +986,8 @@
 		tinyMCE.init(options);
 	});
 
-loadPronuncias('<?=$id_idioma?>',true);
+let soundsChanged = <?=getLastChange('sounds',$id_idioma)?>;
+if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>") ) loadPronuncias('<?=$id_idioma?>', soundsChanged, true);
 <?php echo $autoloader; ?>
 </script>
 <style>#fleksonsPalavr div:not(:first-child) h3 {

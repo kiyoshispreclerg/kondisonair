@@ -365,6 +365,8 @@ function dropHandler(ev) {
     }
 }
 formatarTablerSelect('idsig',null);
-loadPronuncias('<?=$id_idioma?>',true);
-loadAutoSubstituicoes('<?=$escrita?>', true);
+let soundsChanged = <?=getLastChange('sounds',$id_idioma)?>;
+if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>") ) loadPronuncias('<?=$id_idioma?>',soundsChanged, true);
+soundsChanged = <?=getLastChange('autosubstituicoes',$escrita)?>;
+if ( soundsChanged > localStorage.getItem("k_autosubs_updated_<?=$escrita?>") ) loadAutoSubstituicoes('<?=$escrita?>', soundsChanged, true);
 </script>

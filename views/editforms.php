@@ -20,8 +20,6 @@ if ($_GET['pid']>0) {
     if ($palavraa['id_forma_dicionario']>0)  $_GET['pid'] = $palavraa['id_forma_dicionario'];
 }
 
-$scriptAutoSubstituicao = '';
-
 if($_GET['d']>0) $id_depende = $_GET['d'] ; // apenas para criação na primeira vez
 $id_subclasse = $_GET['c']; //esse é o id
 
@@ -65,12 +63,14 @@ if ($idioma['nome_legivel']=='' || ( $idioma['id_usuario'] != $_SESSION['Kondiso
 $inputsNativos = '';
 $escrita = 0;
 $scriptAutoSubstituicao = '';
+$autoSubsLoadScript = '';
 $fonte = 'notosans';
 $langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, e.padrao as padr, f.arquivo as fonte FROM escritas e 
     LEFT JOIN fontes f ON f.id = e.id_fonte
     WHERE id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 while($e = mysqli_fetch_assoc($langs)){
     $autoon = '';
+    $autoSubsLoadScript .= 'soundsChanged= '.getLastChange('autosubstituicoes',$e['id']).';if ( soundsChanged > localStorage.getItem("k_autosubs_updated_'.$e['id'].'") ) loadAutoSubstituicoes(\''.$e['id'].'\',soundsChanged, true);';
     if($e['id_fonte']== 3){
 
         if($e['substituicao']==1){
@@ -351,13 +351,7 @@ if (mysqli_num_rows($result)>2) {
 }
 </style>
 <script> 
-var defCats = "";
-
-function loadDefCats(){
-    $.get("?action=getSCHeader&iid=<?=$id_idioma?>&tipo=cats", function (data){
-        defCats = data;
-	  });
-}
+var defCats = `<?=getSCHeader('ksc',$id_idioma,'cats')?>`;
 
 function reloadDimensoes(l,este){ alert('to do reload dimensoes'); return;
 
@@ -395,6 +389,9 @@ function gravarPalavra(){
     if ($('#significado').val()==''){
         $("#significado").addClass( 'is-invalid' ); return;
     };
+    if ($('#pronuncia').val().includes("'") || $('#romanizacao').val().includes("'")) {
+        alert('Caractere inválido!'); return;
+    }
 
 	var nativos = [];
 	$('.escrita_nativa').each( function() {
@@ -526,16 +523,11 @@ async function processarFlexoes(regras, raiz, motor, idIdioma, defCats, tb) {
                     idIdioma,
                     defCats
                 );
-                //console.log('TMP:', tmp);
                 let result = tmp === undefined || tmp === null ? raiz : tmp;
-                //result = '<span class="custom-font-<?=$escrita?>">ww</span><br>'+result;
-                //result = 
                 let teclas = checarDigitacao(idIdioma, result);
-                //let nativo = getSpanNativo('<?=$escrita?>',teclas)
-                console.log( teclas +': ' + getAutoSubstituicao('<?=$escrita?>', checarDigitacao(idIdioma, result)[0] ) )
-                // mudar função que traz nativo ou pron pra pegar pela pronuncia ipa tbm, não só pela digitação !!!!
-                
                 tb = tb.replaceAll(`%%${key}%%`, result);
+                tb = tb.replaceAll(`%%r${key}%%`, teclas + ' /' + result + '/');
+                tb = tb.replaceAll(`%%an${key}%%`, getAutoSubstituicao('<?=$escrita?>',teclas[0]) ?? '');
             });
 
             await Promise.all(promises);
@@ -629,19 +621,18 @@ function loadCharDiv(eid,destDiv = "divInserirChars", forceReload = false, fonte
 function loadPronDiv(forceReload = false){
     $('#tempPron').val($('#pronuncia').val());
 
-    $.get("api.php?action=getLastChange&data=sounds&iid=<?=$id_idioma?>", function (data){
-        if (forceReload || data > localStorage.getItem("k_sounds<?=$id_idioma?>_updated")){
-            console.log('local sounds outdated > update');
-            $.get("api.php?action=ajaxGetDivLateralSons&iid=<?=$id_idioma?>", function (lex){
-                $("#divInserirSons").html(lex);
-                localStorage.setItem("k_sounds<?=$id_idioma?>", lex);
-                localStorage.setItem("k_sounds<?=$id_idioma?>_updated", data);
-            })
-        }else{
-            console.log('local sounds load');
-            $("#divInserirSons").html( localStorage.getItem("k_sounds<?=$id_idioma?>") );
-        }
-    });
+    let data = <?=getLastChange('sounds',$id_idioma)?>;
+    if (forceReload || data > localStorage.getItem("k_sounds<?=$id_idioma?>_updated")){
+        console.log('local sounds outdated > update');
+        $.get("api.php?action=ajaxGetDivLateralSons&iid=<?=$id_idioma?>", function (lex){
+            $("#divInserirSons").html(lex);
+            localStorage.setItem("k_sounds<?=$id_idioma?>", lex);
+            localStorage.setItem("k_sounds<?=$id_idioma?>_updated", data);
+        })
+    }else{
+        console.log('local sounds load');
+        $("#divInserirSons").html( localStorage.getItem("k_sounds<?=$id_idioma?>") );
+    }
 }
 
 <?php if($_GET['pid']>0){ ?>
@@ -705,10 +696,13 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
                         exibirNativa(e['id'],e['palavra'],e['fonte'],e['tamanho']);
                     })
                 }else{
-                    $('#romanizacao').val(""); 
+                    $('#romanizacao').val( checarDigitacao('<?=$id_idioma?>', autogen) );  // ""
                     $('#pronuncia').val(autogen); 
 
-                    $('.escrita_nativa').val(''); 
+                    $('.escrita_nativa')/*.val(''); */.each(function(e){
+                        let eid = $(this).attr('id').replace('escrita_nativa_','');
+                        $(this).val( getAutoSubstituicao(eid, $('#romanizacao').val() ) );
+                    })
                 }
                 $('#idFormaDicionario').val(dic);
                 $('#irregular').val('0'); 
@@ -742,7 +736,9 @@ function checarPronuncia(este = "#pronuncia",idioma=<?=$id_idioma?>,checar = 1){
         $(este).addClass( 'is-invalid' );
     }else{
         $(este).val( data );
-        <?=$scriptAutoSubstituicao?>
+		<?php if ($romanizacao) echo '$("#romanizacao").val(tmpPron);'; ?>
+        data = tmpPron; // checarDigitacao('<?=$id_idioma?>', data);
+        <?=$scriptAutoSubstituicao?> // data deve ser a escrita
     };
 };
 <?php }else{
@@ -769,16 +765,10 @@ function checarNativo(este,eid){
 };
 
 $(document).ready(function(){
-    carregaTabela();
-    loadDefCats();
-    
+    carregaTabela();    
     if (localStorage.getItem("k_forms_long") == "1"){
 		$("#lpc").attr("checked",true); $('#tabelaFlexoes').removeClass('listaLonga');
-    }
-
-
-loadPronuncias('<?=$id_idioma?>',true);
-    
+    }    
 });
 
 function toggleListaLonga(){
@@ -852,8 +842,9 @@ function dropHandler(ev) {
     });
 }
 
-loadPronuncias('<?=$id_idioma?>',true);
-loadAutoSubstituicoes('<?=$escrita?>', true);
+let soundsChanged = <?=getLastChange('sounds',$id_idioma)?>;
+if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>")) loadPronuncias('<?=$id_idioma?>',soundsChanged,true);
+<?=$autoSubsLoadScript?>;
 </script>
 
 <style>

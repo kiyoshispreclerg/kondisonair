@@ -98,14 +98,6 @@ if ($id_idioma>0){
                                 <div class="row">
                                     <div class="col-4">
                                         <div class="mb-3">
-                                            <label class="form-label"><?=_t('Nome nativo')?></label>
-                                            <!-- USAR CACHE -->
-                                            <select type="text" class="form-select" id="id_nome_nativo" value="" onchange="showGravarDados()">
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="mb-3">
                                             <label class="form-label"><?=_t('Ascendente')?></label>
                                             <select type="text" class="form-select" id="id_ascendente" value="" onchange="showGravarDados()">
                                                 <option value="0" selected><?=_t('Nenhuma')?></option>
@@ -137,11 +129,40 @@ if ($id_idioma>0){
                                             </select>
                                         </div>
                                     </div>
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label"><?=_t('Momento/Realidade')?></label>
+                                            <select type="text" class="form-select" id="id_momento" value="" onchange="showGravarDados()">
+                                                <option value="0" selected><?=_t('Não especificado')?></option>
+                                                <?php
+                                                $momentos = mysqli_query($GLOBALS['dblink'], 
+                                                    "SELECT m.id, m.nome, m.time_value, m.data_calendario, r.titulo as realidade 
+                                                    FROM momentos m 
+                                                        LEFT JOIN realidades r ON r.id = m.id_realidade
+                                                    WHERE r.id_usuario = ".$_SESSION['KondisonairUzatorIDX']."
+                                                        OR m.id_usuario = ".$_SESSION['KondisonairUzatorIDX']."
+                                                    ORDER BY m.time_value, m.ordem;") or die(mysqli_error($GLOBALS['dblink']));
+                                                while ($m = mysqli_fetch_assoc($momentos)) {
+                                                    echo '<option value="'.$m['id'].'" data-date="'.$m['realidade'].' - '.$m['data_calendario'].'" '.(
+                                                        $m['id']==$idioma['id_momento']?'selected':''
+                                                    ).'>'.$m['nome'].'</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="row">
-
-                                    <div class="col-3">
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label"><?=_t('Nome nativo')?></label>
+                                            <!-- USAR CACHE -->
+                                            <select type="text" class="form-select" id="id_nome_nativo" value="" onchange="showGravarDados()">
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-2">
                                         <div class="mb-3">
                                             <div class="form-label"><?=_t('Visibilidade')?></div>
                                             <label class="form-check form-switch">
@@ -151,7 +172,7 @@ if ($id_idioma>0){
                                         </div>
                                     </div>
 
-                                    <div class="col-3">
+                                    <div class="col-2">
                                         <div class="mb-3">
                                             <div class="form-label"><?=_t('Checar pronúncia')?></div>
                                             <label class="form-check form-switch">
@@ -378,7 +399,8 @@ function gravarDados(){
             sigla:$('#sigla').val(),
             idioma_desc:$('#idioma_descricao').val(),
             collabs:$('#collabs').val(),
-            id_ascendente:$('#id_ascendente').val()
+            id_ascendente:$('#id_ascendente').val(),
+            id_momento:$('#id_momento').val()
         }, function (data){
         if ($.trim(data) > 0){
             if ( $('#codigo').val() == 0 ) window.location = "?page=editlanguage&iid="+$.trim(data);
@@ -420,31 +442,26 @@ function selectFamilia(){ alert('A fazer'); return;
 }
 
 function loadNativeWords(){
-    $.get("api.php?action=getLastChange&data=lexicon&iid=<?=$id_idioma?>", function (data){
-        if (data > localStorage.getItem("k_opwords_<?=$id_idioma?>_updated")){
-            console.log('local words outdated > update');
-            $.get("api.php?action=getOptionsListWords&iid=<?=$id_idioma?>&eid=<?=$idioma['eid']?>&selected=<?=$idioma['id_nome_nativo']?>", function (lex){
+    let data = <?=getLastChange('lexicon',$id_idioma)?>;
+    if (data > localStorage.getItem("k_opwords_<?=$id_idioma?>_updated")){
+        console.log('local words outdated > update');
+        $.get("api.php?action=getOptionsListWords&iid=<?=$id_idioma?>&eid=<?=$idioma['eid']?>&selected=<?=$idioma['id_nome_nativo']?>", function (lex){
 
-                $("#id_nome_nativo").html(lex);
+            $("#id_nome_nativo").html(lex);
 
-                localStorage.setItem("k_opwords_<?=$id_idioma?>", lex);
-                localStorage.setItem("k_opwords_<?=$id_idioma?>_updated", data);
-                //createTablerSelectDrawcharWords
-                createTablerSelectNativeWords('id_nome_nativo','<?=$idioma['id_fonte']?>','<?=$idioma['tamanho']?>');
-                updateTablerSelect("id_nome_nativo",'<?=$idioma['id_nome_nativo']?>');
-            });
-        }else{
-            console.log('local words load');
-            $("#id_nome_nativo").html( localStorage.getItem("k_opwords_<?=$id_idioma?>") );
+            localStorage.setItem("k_opwords_<?=$id_idioma?>", lex);
+            localStorage.setItem("k_opwords_<?=$id_idioma?>_updated", data);
             //createTablerSelectDrawcharWords
             createTablerSelectNativeWords('id_nome_nativo','<?=$idioma['id_fonte']?>','<?=$idioma['tamanho']?>');
             updateTablerSelect("id_nome_nativo",'<?=$idioma['id_nome_nativo']?>');
-        }
-    });
-    // load id_nome_nativo do cache ou get
-    // dps o createSelect
-    //
-    // createTablerSelectNativeWords('id_nome_nativo');
+        });
+    }else{
+        console.log('local words load');
+        $("#id_nome_nativo").html( localStorage.getItem("k_opwords_<?=$id_idioma?>") );
+        //createTablerSelectDrawcharWords
+        createTablerSelectNativeWords('id_nome_nativo','<?=$idioma['id_fonte']?>','<?=$idioma['tamanho']?>');
+        updateTablerSelect("id_nome_nativo",'<?=$idioma['id_nome_nativo']?>');
+    }
 }
 
 $(document).ready(function(){
@@ -455,6 +472,7 @@ $(document).ready(function(){
 
 formatarTablerSelect('id_ascendente');
 formatarTablerSelect('id_familia');
+formatarTablerMomentsSelect('id_momento');
 formatarTablerSelect('idioma_descricao');
 formatarTablerSelect('status'); 
 formatarTablerSelect('collabs','body',true); 

@@ -83,7 +83,7 @@ $tamanho = $idioma['tamanho'];
                                     <label class="form-check form-switch">
                                       <span class="form-check-label"><?=_t('Formas de sílabas')?></span>
                                     </label>
-                                    <textarea class="form-control nowrap" id="text_silabas" spellcheck="false" style="height: 6rem !important;"><?="V\nCV\nCCV"?></textarea>
+                                    <textarea class="form-control nowrap" id="text_silabas" spellcheck="false" style="height: 6rem !important;"><?="V\nCV"?></textarea>
                                   </div>
                                   
                             </div>
@@ -111,10 +111,15 @@ $tamanho = $idioma['tamanho'];
                   <div class="card sticky-top">
                     <div class="card-header">
                       <h3 class="card-title"><?=_t('Resultado')?></h3>
+                      <div class="card-actions">
+                        <a href="#" class="btn btn-primary" onclick="paraAlterador()">
+                          <?=_t('Simular alterações')?>
+                        </a>
+                      </div>
                     </div>
                     <div class="card-body">
 
-                        <div class="mb-3 row" id="divnp">
+                        <div class="mb-3  " id="divnp">
                             
                         </div>
                     </div>
@@ -128,7 +133,10 @@ $tamanho = $idioma['tamanho'];
 
 <script>
 
+var words;
+
 function aplicarGerar(){
+    words = '';
     $('.genPal').remove();
 
     $.post("?action=getKWG&iid=<?=$id_idioma?>&count="+$("#num_palavras").val(), {
@@ -137,11 +145,18 @@ function aplicarGerar(){
         silabas: document.getElementById('text_silabas').value
         <?php } ?>
     }, function (data){
+        words = data;
         $.trim(data).split("\n").forEach(el => {
-            $("#divnp").after('<span class="genPal btn" id="'+el+'" draggable="true" ondragstart="dragstartHandler(event)">'+el+'</span>');
+            $("#divnp").append('<span class="genPal btn" id="'+el+'" draggable="true" ondragstart="dragstartHandler(event)">'+el+'</span>');
         });
 	});
 };
 
 formatarTablerSelect('idsig',null);
+
+function paraAlterador(){
+    let classes = document.getElementById('text_classes').value;
+    let rewrites = '';
+    window.location.replace("index.php?page=changer&words=" + btoa(words) + "&classes=" + btoa(classes) + "&rewrites=" + btoa(rewrites) );
+}
 </script>

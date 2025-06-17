@@ -150,31 +150,7 @@
                                 </div>
                               </div>
                             </div>'; 
-                            /*
-
-                          echo '<div class="col-md-6 col-lg-4">
-                              <div class="card">
-                                <!--div class="card-status-top bg-red"></div-->
-                                <div class="card-body">
-                                  <a href="?page=editlanguage&iid='.$r['id'].'"><h3 class="card-title">'.$nat.$r['nome_legivel'].'</h3></a>
-                                  <p class="text-secondary">'.getStatus($r['status']).' - '.$r['num_palavras'].' '._t('palavras').' </p>
-                                  </div>
-                                  <!--div class="progress progress-sm card-progress">
-                                    <div class="progress-bar" style="width: 38%" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="38% Complete">
-                                      <span class="visually-hidden">38% Complete</span>
-                                    </div>
-                                  </div-->
-                                </div>
-                              </div>'; 
-                              */
                         };
-                        echo '<div class="col-md-6 col-lg-4">
-                              <div class="card">
-                                <div class="card-body">
-                                  <a href="?page=editlanguage&iid=0"><h3 class="card-title">'._t('Novo idioma').'</h3></a>
-                                </div>
-                              </div>
-                            </div>'; 
                       ?>
 
 
@@ -235,21 +211,6 @@
                                   </div>
                                 </div>
                               </div>';
-                              /*
-                              echo '<div>
-                                <div class="row">
-                                  <div class="col">
-                                    <div class="text-truncate">
-                                      <strong><a href="?page=profile&user='.$linkData['uname'].'">'.$linkData['uname'].'</a></strong> '.$linkData['text'].' <strong>'.$linkData['ltitle'].'</strong>.
-                                    </div>
-                                    <div class="text-secondary">'.$linkData['date'].'</div>
-                                  </div>
-                                  <!--div class="col-auto align-self-center">
-                                    <div class="badge bg-primary"></div>
-                                  </div-->
-                                </div>
-                              </div>';
-                              */
                             };
                           }else{
                             echo _t('Nenhuma atividade para mostrar.');

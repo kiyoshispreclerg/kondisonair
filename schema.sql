@@ -346,7 +346,9 @@ CREATE TABLE `idiomas` (
   `id_familia` bigint(20) UNSIGNED NOT NULL,
   `data_modificacao` timestamp NOT NULL DEFAULT current_timestamp(),
   `motor` varchar(15) NOT NULL DEFAULT '',
-  `silabas` tinyint(4) NOT NULL DEFAULT 0
+  `silabas` tinyint(4) NOT NULL DEFAULT 0,
+  `id_realidade` bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+  `id_momento` bigint(20) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `inventarios` (
@@ -449,7 +451,7 @@ CREATE TABLE `palavras` (
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
   `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
-  `id_derivadora` bigint(20) UNSIGNED NOT NULL
+  `id_derivadora` bigint(20) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `palavrasNativas` (

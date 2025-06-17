@@ -248,22 +248,20 @@ $.post("?action=ajaxBuscaGeral&t="+ $('#inputBusca').val(), function (data){
 });
 }
 
-function globalFonts(force = false){ 
+function globalFonts(data, force = false){ 
     var style = document.createElement('style');
     style.type = 'text/css';
-    $.get("api.php?action=getLastChange&data=fonts", function (data){
-        if (force || data > localStorage.getItem("k_fonts_updated")){
-            console.log('local fonts outdated > update');
-            $.get("api.php?action=getGlobalFonts", function (lex){
-                localStorage.setItem("k_fonts", lex);
-                localStorage.setItem("k_fonts_updated", lex);
-                style.innerHTML = lex; document.getElementsByTagName('head')[0].appendChild(style);
-            });
-        }else{
-            console.log('local fonts load');
-            style.innerHTML = localStorage.getItem("k_fonts"); document.getElementsByTagName('head')[0].appendChild(style);
-        }
-    });
+    if (force || data > localStorage.getItem("k_fonts_updated")){
+        console.log('local fonts outdated > update');
+        $.get("api.php?action=getGlobalFonts", function (lex){
+            localStorage.setItem("k_fonts", lex);
+            localStorage.setItem("k_fonts_updated", lex);
+            style.innerHTML = lex; document.getElementsByTagName('head')[0].appendChild(style);
+        });
+    }else{
+        console.log('local fonts load');
+        style.innerHTML = localStorage.getItem("k_fonts"); document.getElementsByTagName('head')[0].appendChild(style);
+    }
 }
 
 function abrirSig(pid){
@@ -275,7 +273,7 @@ function appLoad(done = true){
   else{ $(".appLoad").hide(); $(".appholder").show(); }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+function loadThemePanel() {
   var themeConfig = {
     theme: "light",
     "theme-base": "green",
@@ -323,8 +321,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.history.pushState({}, "", url);
   });
   checkItems();
-  globalFonts();
-});
+};
 
 async function loadCalendar(containerId, yearSelectId, monthSelectId, daysId, bodyId, warningsId, calId = 1, startYear = 0, startMonth = 0, timeValueId, timeNameId, rid) {
 
@@ -1143,11 +1140,21 @@ function limparCacheLocal() {
                 localStorage.removeItem(key);
             }
         }
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                cacheNames.forEach(cacheName => {
+                    caches.delete(cacheName);
+                });
+                console.log('Todos os caches do Service Worker foram limpos.');
+            }).catch(error => {
+                console.error('Erro ao limpar caches:', error);
+            });
+        }
         window.location.reload();
     }
 }
 
-function loadAutoSubstituicoes(eid, force = false) {
+function loadAutoSubstituicoes(eid, changed = 0, force = false) {
     $.get("api.php?action=getAllAutoSubstituicoes&eid=" + eid, function(data) {
         const response = JSON.parse(data);
         const storageKey = "k_autosubs_" + eid;
@@ -1156,7 +1163,7 @@ function loadAutoSubstituicoes(eid, force = false) {
         if (force || !localStorage.getItem(updatedKey)) {
             console.log('Autosubstitutions outdated or not found > update');
             localStorage.setItem(storageKey, JSON.stringify(response));
-            localStorage.setItem(updatedKey, Date.now());
+            localStorage.setItem(updatedKey, changed);
         }
     });
 }
@@ -1227,7 +1234,7 @@ function getAutoSubstituicao(eid, input) {
     }
 }
 
-function loadPronuncias(iid, force = false) {
+function loadPronuncias(iid, changed = 0, force = false) {
     const storageKey = "k_pronuncias_" + iid;
     const updatedKey = "k_pronuncias_updated_" + iid;
     
@@ -1237,9 +1244,13 @@ function loadPronuncias(iid, force = false) {
         if (force || !localStorage.getItem(updatedKey)) {
             console.log('Pronunciation data outdated or not found > update');
             localStorage.setItem(storageKey, JSON.stringify(pronuncias));
-            localStorage.setItem(updatedKey, Date.now());
+            localStorage.setItem(updatedKey, changed);
         }
     });
+}
+
+function loadExtraPanel(page){
+    $("#offcanvasSettings").load("index.php?panel="+page);
 }
 
 function getChecarPronuncia(iid, input, checar = '1') {
@@ -1304,6 +1315,18 @@ function getChecarPronuncia(iid, input, checar = '1') {
     }
     
     return checar === '0' ? input : palavra;
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(registration => {
+          console.log('Service Worker registrado com sucesso:', registration.scope);
+        })
+        .catch(error => {
+          console.error('Erro ao registrar o Service Worker:', error);
+        });
+    });
 }
 
 function checarDigitacao(iid, ipaInput) {

@@ -224,7 +224,7 @@
                         <div class="col-xl-4" >
 
                             <div class="mb-3">
-                              <label class="form-label">'._t('Substituição automática').'</label>
+                              <label class="form-label">'._t('Substituição automática').' <span class="text-secondary">'._t('a partir da digitação em Pronúncia').'</span></label>
                               <input type="text" class="form-control" id="searchAutoSubstituicao' . $e['id'] . '" placeholder="' . _t('Buscar por tecla, IPA ou glifos') . '">
                             </div>
                             <div class="mb-3 overflow-auto" style="max-height: 45rem">
@@ -724,27 +724,26 @@
   
   function selectNativo(id,selected = '0'){
 
-    $.get("api.php?action=getLastChange&data=lexicon&iid=<?=$id_idioma?>", function (data){
-        if (data > localStorage.getItem("k_opwords_<?=$id_idioma?>_updated")){
-            console.log('local words outdated > update');
-            $.get("api.php?action=getOptionsListWords&iid=<?=$id_idioma?>&eid="+id+"&selected="+selected, function (lex){
+      let data = <?=getLastChange('lexicon',$id_idioma)?>;
+      if (data > localStorage.getItem("k_opwords_<?=$id_idioma?>_updated")){
+          console.log('local words outdated > update');
+          $.get("api.php?action=getOptionsListWords&iid=<?=$id_idioma?>&eid="+id+"&selected="+selected, function (lex){
 
-                $("#id_nativo"+id).html(lex);
+              $("#id_nativo"+id).html(lex);
 
-                localStorage.setItem("k_opwords_<?=$id_idioma?>", lex);
-                localStorage.setItem("k_opwords_<?=$id_idioma?>_updated", data);
-                createTablerSelectNativeWords("id_nativo"+id,'<?=$fonte?>','<?=$tamanho?>');
-                updateTablerSelect("id_nativo"+id,selected);
-                $("#btnSalvar"+id).hide();
-            });
-        }else{
-            console.log('local words load');
-            $("#id_nativo"+id).html( localStorage.getItem("k_opwords_<?=$id_idioma?>") );
-            createTablerSelectNativeWords("id_nativo"+id,'<?=$fonte?>','<?=$tamanho?>');
-            updateTablerSelect("id_nativo"+id,selected);
-            $("#btnSalvar"+id).hide();
-        };
-    });
+              localStorage.setItem("k_opwords_<?=$id_idioma?>", lex);
+              localStorage.setItem("k_opwords_<?=$id_idioma?>_updated", data);
+              createTablerSelectNativeWords("id_nativo"+id,'<?=$fonte?>','<?=$tamanho?>');
+              updateTablerSelect("id_nativo"+id,selected);
+              $("#btnSalvar"+id).hide();
+          });
+      }else{
+          console.log('local words load');
+          $("#id_nativo"+id).html( localStorage.getItem("k_opwords_<?=$id_idioma?>") );
+          createTablerSelectNativeWords("id_nativo"+id,'<?=$fonte?>','<?=$tamanho?>');
+          updateTablerSelect("id_nativo"+id,selected);
+          $("#btnSalvar"+id).hide();
+      };
 
   };
 

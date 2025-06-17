@@ -234,21 +234,20 @@ function listFormat(json){
 }
 function loadWords(){
 
-    $.get("api.php?action=getLastChange&data=lexicon&iid=<?=$id_idioma?>", function (data){
-        if (data > localStorage.getItem("k_words_<?=$id_idioma?>_updated")){
-            console.log('local words outdated > update');
-            $.get("api.php?action=simpleListWords&iid=<?=$id_idioma?>&eid=<?=$idioma['eid']?>", function (lex){
-                $("#words").html( listFormat(lex) );
-                localStorage.setItem("k_words_<?=$id_idioma?>", lex);
-                localStorage.setItem("k_words_<?=$id_idioma?>_updated", data);
-                $('[data-bs-toggle="tooltip"]').tooltip();
-            })
-        }else{
-            console.log('local words load');
-            $("#words").html( listFormat(localStorage.getItem("k_words_<?=$id_idioma?>")) );
+    let data = <?=getLastChange('lexicon',$id_idioma)?>;
+    if (data > localStorage.getItem("k_words_<?=$id_idioma?>_updated")){
+        console.log('local words outdated > update');
+        $.get("api.php?action=simpleListWords&iid=<?=$id_idioma?>&eid=<?=$idioma['eid']?>", function (lex){
+            $("#words").html( listFormat(lex) );
+            localStorage.setItem("k_words_<?=$id_idioma?>", lex);
+            localStorage.setItem("k_words_<?=$id_idioma?>_updated", data);
             $('[data-bs-toggle="tooltip"]').tooltip();
-        }
-    });
+        })
+    }else{
+        console.log('local words load');
+        $("#words").html( listFormat(localStorage.getItem("k_words_<?=$id_idioma?>")) );
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    }
 }
 loadWords();
 </script>

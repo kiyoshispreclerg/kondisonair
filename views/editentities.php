@@ -155,7 +155,7 @@ function listFormat(json) {
                 <a href="?page=editentity&rid=<?=$id_realidade?>&et=<?=$rule?>&eid=` + val.id + `" class="text-body d-block">` + val.descricao + `</a>
                 <div class="text-secondary text-truncate">` + val.tipo_nome + `</div>
               </div>
-              <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delEntity(` + val.id + `)">Del</a></div>
+              <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delEntity('` + val.id + `')">Del</a></div>
           </div></div>`;
     });
     return html;
@@ -165,22 +165,20 @@ function loadEntidades(index = 0, forceReload = false) {
     $("#testFilter").val('');
     $("#filtro").val('all');
     $("#filter-div").show();
-    
-    $.get("api.php?action=getLastChange&data=<?=$ruleGet?>&rid=<?=$id_realidade?>", function(data) {
-        if (forceReload || data > localStorage.getItem("k_<?=$ruleGet?>_<?=$id_realidade?>_updated")) {
-            console.log('local <?=$ruleGet?> outdated > update');
-            $.get("api.php?action=listEntities&et=<?=$rule?>&rid=<?=$id_realidade?>&t=all&i=" + index, function(entities) {
-                $("#entityTable").html(listFormat(entities));
-                localStorage.setItem("k_<?=$ruleGet?>_<?=$id_realidade?>", entities);
-                localStorage.setItem("k_<?=$ruleGet?>_<?=$id_realidade?>_updated", data);
-                $('[data-bs-toggle="tooltip"]').tooltip();
-            });
-        } else {
-            console.log('local <?=$ruleGet?> load');
-            $("#entityTable").html(listFormat(localStorage.getItem("k_<?=$ruleGet?>_<?=$id_realidade?>")));
+    let data = <?=getLastChange($ruleGet,$id_realidade)?>;
+    if (forceReload || data > localStorage.getItem("k_<?=$ruleGet?>_<?=$id_realidade?>_updated")) {
+        console.log('local <?=$ruleGet?> outdated > update');
+        $.get("api.php?action=listEntities&et=<?=$rule?>&rid=<?=$id_realidade?>&t=all&i=" + index, function(entities) {
+            $("#entityTable").html(listFormat(entities));
+            localStorage.setItem("k_<?=$ruleGet?>_<?=$id_realidade?>", entities);
+            localStorage.setItem("k_<?=$ruleGet?>_<?=$id_realidade?>_updated", data);
             $('[data-bs-toggle="tooltip"]').tooltip();
-        }
-    });
+        });
+    } else {
+        console.log('local <?=$ruleGet?> load');
+        $("#entityTable").html(listFormat(localStorage.getItem("k_<?=$ruleGet?>_<?=$id_realidade?>")));
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    }
 }
 
 function filtrarEntidades(reset = false) {

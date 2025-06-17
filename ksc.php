@@ -1074,7 +1074,7 @@ function checkContexts($context, $classes, $capturedValues, $word, $i, $srcLen, 
         $isLimitBefore = true;
     }
     if (mb_strpos($after, '#') !== false) {
-        $word = $word.'#';
+        //$word = $word.'#';
         $after = mb_substr($after, 0, mb_strpos($after, '#'));
         $isLimitAfter = true;
     }

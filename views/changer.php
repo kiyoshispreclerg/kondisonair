@@ -21,6 +21,12 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
   exit;
 }
 
+// // alterar changer pra receber dados de classes, palavras etc via GET (inclusive serve pra apis depois)
+$getRegras = $_GET['rules'] ? base64_decode($_GET['rules']) : '';
+$getPalavras = $_GET['words'] ? base64_decode($_GET['words']) : '';
+$getClasses = $_GET['classes'] ? base64_decode($_GET['classes']) : getSCHeader('ksc',$id_idioma,'cats');
+$getSubstituicoes = $_GET['rewrites'] ?? '';
+
 ?>
 
 <link rel="stylesheet" href="codemirror.css">
@@ -48,8 +54,9 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
               <!-- Page title actions -->
 
               <div class="col-auto ms-auto d-print-none">
-                <div class="btn-list" id="btnAplicar">
-                  <a onclick="aplicarMudancas()" class="btn btn-primary d-none d-sm-inline-block">
+                <div class="btn-list">
+                  <a class="nav-link" href="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings" onclick="loadExtraPanel('ksc')"><?=_t('Ajuda')?></a>
+                  <a onclick="aplicarMudancas()" class="btn btn-primary d-none d-sm-inline-block" id="btnAplicar">
                     <?=_t('Aplicar')?>
                   </a>
                 </div>
@@ -90,7 +97,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                         </label>
                         <?php if ($id_idioma > 0){?><div class="text_classes"><?php echo formatCategoriesAsButtons(getSCHeader('ksc',$id_idioma,'cats')); ?></div><?php } ?>
                         <textarea class="form-control text_classes nowrap" id="text_classes" spellcheck="false" onchange="updateDeclaredClasses('')" style="height: 12rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?php 
-                        echo getSCHeader('ksc',$id_idioma,'cats'); ?></textarea>
+                         echo $getClasses; ?></textarea>
                       </div>
                       <div class="mb-3">
                         <label class="form-check form-switch">
@@ -98,7 +105,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                           <span class="form-check-label"><?=_t('Editar substituições')?></span>
                         </label>
                         <?php if ($id_idioma > 0){?><div class="text_rewrites"></div><?php } ?>
-                        <textarea class="form-control text_rewrites nowrap" id="text_rewrites" spellcheck="false" style="height: 8rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"></textarea>
+                        <textarea class="form-control text_rewrites nowrap" id="text_rewrites" spellcheck="false" style="height: 8rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?=$getSubstituicoes?></textarea>
                       </div>
                     </div>
                   </div>
@@ -163,7 +170,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                         </div>
                         <div class="card-body row_extras">
                           <div>
-                              <textarea class="form-control ksc" id="schanges" spellcheck="false" style="height: 35rem" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"></textarea>
+                              <textarea class="form-control ksc" id="schanges" spellcheck="false" style="height: 35rem" onkeyup="$('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();"><?=$getRegras?></textarea>
                           </div>
                         </div>
                       </div>
@@ -219,7 +226,7 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
                           <div class="card-body">
                             <div>
                               <textarea class="form-control ksc nowrap" id="entrada" onkeyup="setInputPersonalizado()" spellcheck="false" style="height: 35rem"
-                              onscroll="saida.scrollTop=scrollTop"></textarea>
+                              onscroll="saida.scrollTop=scrollTop"><?=$getPalavras?></textarea>
                             </div>
                           </div>
                         </div>
