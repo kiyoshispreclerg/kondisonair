@@ -158,7 +158,7 @@ if ($hid > 0) {
                                     <div id="entidadesContainer">
                                         <?php
                                         // Query entities with their types and stats
-                                        $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel AS nome, e.id_tipo, et.nome AS tipo_nome
+                                        $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel AS nome, e.id_tipo, e.rule, et.nome AS tipo_nome
                                             FROM entidades e
                                             LEFT JOIN entidades_tipos et ON et.id = e.id_tipo AND et.id_realidade = $id_realidade
                                             WHERE e.id_realidade = $id_realidade
@@ -168,8 +168,8 @@ if ($hid > 0) {
                                         // Group entities by type
                                         $entidades_por_tipo = [];
                                         while ($e = mysqli_fetch_assoc($entidades)) {
-                                            $tipo = $e['tipo_nome'] ?: _t('Sem Tipo'); // Fallback for entities with no type
-                                            $entidades_por_tipo[$tipo][] = $e;
+                                            $tipo = $e['tipo_nome'] ? $e['tipo_nome'] : _t('Sem tipo'); // Fallback for entities with no type
+                                            $entidades_por_tipo[$tipo.' ('._t($e['rule']).')'][] = $e;
                                         }
 
                                         // Render entities grouped by type
@@ -303,7 +303,18 @@ function delHistoria(hid) {
 
 $(document).ready(function() {
 
-    loadDefaultTimeSystem();
+    <?php 
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, data_padrao 
+        FROM time_systems 
+        WHERE id_realidade = $id_realidade AND padrao = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    if ($sys = mysqli_fetch_assoc($result)) {
+        echo "$('#id_time_system').val('".$sys['id']."');
+            carregarCalendario('".$sys['id']."','".getLastChange('calendar',$sys['id'])."');";
+    }else{
+        echo "$('#time-value').val('<?=_t('Nenhum sistema de tempo padrão definido.')?>');
+            $('#dateInputs').html('<p><?=_t('Nenhum sistema de tempo padrão definido.')?></p>');";
+    }
+    ?>
 
     <?php if ($hid > 0) echo "abrirHistoria($hid);"; else echo "novaHistoria();"; ?>
     
@@ -340,24 +351,7 @@ function filterEntidades() {
     });
 }
 
-
-
-
-
-
-function loadDefaultTimeSystem() {
-    $.getJSON(`?action=getDefaultTimeSystem&rid=<?=$id_realidade?>`, function(system) {
-        if (system.id) {
-            //$('#id_time_system').val(system.id);
-            carregarCalendario(system.id)
-        } else {
-            $('#time-value').val('<?=_t('Nenhum sistema de tempo padrão definido.')?>');
-            $('#dateInputs').html('<p><?=_t('Nenhum sistema de tempo padrão definido.')?></p>');
-        }
-    });
-}
-
-function carregarCalendario(sid) {
+function carregarCalendario(sid, changed) {
     let html = `<div class="d-flex mb-3 align-items-center">
             <div class="input-group me-2">
                 <button class="btn btn-icon btn-outline-secondary" onclick="decrementYear('')">-</button>
@@ -391,7 +385,7 @@ function carregarCalendario(sid) {
         null,
         sid, 0, 0,
         'time-value',
-        'data-calendario', '<?=$id_realidade?>'
+        'data-calendario', '<?=$id_realidade?>', changed
     );
 }
 

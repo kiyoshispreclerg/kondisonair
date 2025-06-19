@@ -8739,7 +8739,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
       // geral
       return '1';
 
-  }else if($tipo=='entities'){
+  }else if($tipo=='entities'){ //xxxxx falta
 
       $last = mysqli_query($GLOBALS['dblink'],
         "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
@@ -8749,7 +8749,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
       return $l['d'] ? $l['d'] : 0;
 
 
-  }else if($tipo=='characters'){
+  }else if($tipo=='characters'){ //xxxxx falta
 
       $last = mysqli_query($GLOBALS['dblink'],
         "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
@@ -8759,7 +8759,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
       return $l['d'] ? $l['d'] : 0;
 
 
-  }else if($tipo=='items'){
+  }else if($tipo=='items'){ //xxxxx falta
 
       $last = mysqli_query($GLOBALS['dblink'],
         "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
@@ -8769,7 +8769,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
       return $l['d'] ? $l['d'] : 0;
 
 
-  }else if($tipo=='places'){
+  }else if($tipo=='places'){ //xxxxx falta
 
       $last = mysqli_query($GLOBALS['dblink'],
         "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
@@ -8786,7 +8786,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
             ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
       $l = mysqli_fetch_assoc($last);
       return $l['d'] ? $l['d'] : 0;
-  }else if($tipo=='moments'){
+  }else if($tipo=='moments'){ //xxxxx falta
 
         $rid = (int)$id;
         // Buscar timestamp da última alteração na tabela momentos
@@ -8826,14 +8826,14 @@ function getLastChange($tipo,$id = null) { // lastupdated
       $row = mysqli_fetch_assoc($result);
       return $row['id'] ? $row['id'] : 0;
 
-  }else if($tipo=='sounds'){
+  }else if($tipo=='sounds'){  //xxxxx falta em editsounds ???
       $last = mysqli_query($GLOBALS['dblink'],
       "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
             FROM inventarios WHERE id_idioma = ".$id." 
           ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
       $l = mysqli_fetch_assoc($last);
       return $l['d'] ? $l['d'] : 0;
-  }else if($tipo=='writing'){
+  }else if($tipo=='writing'){ //xxxxx falta ?
       $last = mysqli_query($GLOBALS['dblink'],
       "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
             FROM escritas WHERE id = ".$id."
@@ -11771,7 +11771,7 @@ if ($_GET['action'] == 'getDetalhesHistoria') {
             'id_momento' => (int)$h['id_momento'],
             'descricao' => htmlspecialchars($h['descricao'] ?: ''),
             //'texto' => $h['texto'] ?: '',
-            'entidades' => $h['entidades'] ? array_map('intval', explode(',', $h['entidades'])) : []
+            'entidades' => $h['entidades'] ? explode(',', $h['entidades']) : []
         ];
     }
     
@@ -12994,7 +12994,7 @@ if ($_GET['action'] == 'getDadosCalendario') {
                 'id' => $time_system['id'],
                 'nome' => $time_system['nome'],
                 'data_padrao' => $time_system['data_padrao'] ? gmdate('c', strtotime($time_system['data_padrao'])) : null,
-                'padrao' => (int)$time_system['padrao']
+                'padrao' => $time_system['padrao']
             ],
             'units' => [],
             'cycles' => [],
@@ -13011,9 +13011,9 @@ if ($_GET['action'] == 'getDadosCalendario') {
         
         while ($unit = mysqli_fetch_assoc($result_units)) {
             $response['units'][] = [
-                'id' => (int)$unit['id'],
+                'id' => $unit['id'],
                 'nome' => $unit['nome'],
-                'duracao' => (int)$unit['duracao'],
+                'duracao' => $unit['duracao'],
                 'equivalente' => $unit['equivalente']
             ];
         }
@@ -13027,8 +13027,8 @@ if ($_GET['action'] == 'getDadosCalendario') {
         
         while ($cycle = mysqli_fetch_assoc($result_cycles)) {
             $response['cycles'][] = [
-                'id_unidade' => (int)$cycle['id_unidade'],
-                'id_unidade_ref' => (int)$cycle['id_unidade_ref'],
+                'id_unidade' => $cycle['id_unidade'],
+                'id_unidade_ref' => $cycle['id_unidade_ref'],
                 'nome_unidade_ref' => $cycle['referencia'],
                 'quantidade' => (int)$cycle['quantidade']
             ];
@@ -13042,7 +13042,7 @@ if ($_GET['action'] == 'getDadosCalendario') {
         
         if ($day = mysqli_fetch_assoc($result_days)) {
             // Assumindo que a unidade 'semana' tem um ciclo que define os dias
-            $week_id = (int)mysqli_fetch_assoc(mysqli_query($GLOBALS['dblink'], "SELECT id 
+            $week_id = mysqli_fetch_assoc(mysqli_query($GLOBALS['dblink'], "SELECT id 
                 FROM time_units 
                 WHERE id_time_system = $id_time_system AND equivalente = 'semana' LIMIT 1;"))['id'];
             $result_day_cycle = mysqli_query($GLOBALS['dblink'], "SELECT u.nome 
@@ -13076,8 +13076,8 @@ if ($_GET['action'] == 'getDadosCalendario') {
             (SELECT id FROM time_units WHERE id_time_system = $id_time_system AND equivalente = 'ano' LIMIT 1) as id_ano;") or die(mysqli_error($GLOBALS['dblink']));
 
         if ($month = mysqli_fetch_assoc($month_id_result)) {
-            $month_id = (int)$month['id_mes'];
-            $year_id = (int)$month['id_ano'];
+            $month_id = $month['id_mes'];
+            $year_id = $month['id_ano'];
             $month_name = $month['nome_mes'];
             
             // Buscar número de meses por ano (ciclo ano -> mês)
@@ -13129,10 +13129,10 @@ if ($_GET['action'] == 'getDadosCalendario') {
         
         while ($leap = mysqli_fetch_assoc($result_leaps)) {
             $response['leap_rules'][] = [
-                'id_unidade' => (int)$leap['affected_unit_id'],
+                'id_unidade' => $leap['affected_unit_id'],
                 'condition' => $leap['condition'],
                 'add_units' => (int)$leap['adjustment_value'],
-                'target_unidade' => (int)$leap['target_unit_id']
+                'target_unidade' => $leap['target_unit_id']
             ];
         }
         

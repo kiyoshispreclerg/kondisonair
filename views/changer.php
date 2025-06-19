@@ -1,8 +1,12 @@
 
 <!-- PANEL START -->
 <?php 
+$compactMode = false;
 $id_idioma = $_GET['iid'];
-if (!$id_idioma>0) $id_idioma = 0;
+if (!$id_idioma>0) {
+  $id_idioma = 0;
+  $compactMode = true;
+}
 $rowsh = 20;
 $idioma = array(); 
 $idioma['nome_legivel'] = '';  
@@ -26,6 +30,7 @@ $getRegras = $_GET['rules'] ? base64_decode($_GET['rules']) : '';
 $getPalavras = $_GET['words'] ? base64_decode($_GET['words']) : '';
 $getClasses = $_GET['classes'] ? base64_decode($_GET['classes']) : getSCHeader('ksc',$id_idioma,'cats');
 $getSubstituicoes = $_GET['rewrites'] ?? '';
+
 
 ?>
 
@@ -80,7 +85,7 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                           <span class="form-check-label"><?=_t('Mostrar regras')?></span>
                         </label>
                         <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" onchange="$('.row_palavras').toggle()">
+                          <input class="form-check-input" type="checkbox" <?=$compactMode?'checked':''?> onchange="toggleCompactMode(this)" id="compactModeCheckbox">
                           <span class="form-check-label"><?=_t('Mostrar entrada e saída ao lado')?></span>
                         </label>
                         <label class="form-check form-switch intermediate-toggle"  onchange="$('.input_intermediate').toggle()">
@@ -468,6 +473,11 @@ document.addEventListener("DOMContentLoaded", function () {
     tinyMCE.init(options);
 
     loadDefCats();
+
+    const compactModeCheckbox = document.getElementById('compactModeCheckbox');
+    if (compactModeCheckbox.checked) {
+        toggleCompactMode(compactModeCheckbox);
+    }
 })
 
 // Armazena as classes declaradas
@@ -581,9 +591,8 @@ editor.on("change", function(cm) {
 
 });
 
-// Modifica a função do switch "Mostrar entrada e saída"
-document.querySelector('input[onchange="$(\'.row_palavras\').toggle()"]').addEventListener('change', function() {
-  const isChecked = this.checked;
+function toggleCompactMode(checkbox) {
+  const isChecked = checkbox.checked;
   const rulesContainer = document.querySelector('.rules-container');
   const annotationsContainer = document.querySelector('.annotations-container');
   const inputContainer = document.querySelector('.input-container');
@@ -619,7 +628,7 @@ document.querySelector('input[onchange="$(\'.row_palavras\').toggle()"]').addEve
     intermediateContainer.classList.add('col-12');
     outputContainer.classList.add('col-6');
   }
-});
+};
 // Sincronização de scroll entre entrada e saída
 document.getElementById('entrada').addEventListener('scroll', function() {
     document.getElementById('saida').scrollTop = this.scrollTop;

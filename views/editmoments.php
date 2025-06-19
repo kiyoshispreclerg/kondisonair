@@ -11,7 +11,7 @@ while ($r = mysqli_fetch_assoc($result)) {
 }
 
 if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['KondisonairUzatorIDX'] && !$realidade['collab'] > 0)) {
-    echo '<script>window.location = "dash.php";</script>';
+    echo '<script>window.location = "index.php";</script>';
     exit;
 }
 ?>
@@ -108,7 +108,7 @@ if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['Kondis
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Data no Calendário')?>*</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="data_calendario" readonly placeholder="<?=_t('Nenhuma data selecionada')?>">
+                                <input type="text" class="form-control" id="data_calendario" placeholder="<?=_t('Nenhuma data selecionada')?>">
                                 <input type="hidden" id="id_time_system">
                                 <input type="hidden" id="time_value">
                                 <input type="hidden" id="unit_values" value="{}">
@@ -353,7 +353,18 @@ $(document).ready(function() {
         });
     });
 
-    loadDefaultTimeSystem();
+    <?php 
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, data_padrao 
+        FROM time_systems 
+        WHERE id_realidade = $id_realidade AND padrao = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    if ($sys = mysqli_fetch_assoc($result)) {
+        echo "$('#id_time_system').val('".$sys['id']."');
+            carregarCalendario('".$sys['id']."','".getLastChange('calendar',$sys['id'])."');";
+    }else{
+        echo "$('#time-value').val('<?=_t('Nenhum sistema de tempo padrão definido.')?>');
+            $('#dateInputs').html('<p><?=_t('Nenhum sistema de tempo padrão definido.')?></p>');";
+    }
+    ?>
 
     // Habilitar tooltips
     $('[data-bs-toggle="tooltip"]').tooltip();
@@ -524,7 +535,7 @@ function editarMomento(mid = '0', nome = '', descricao = '', data_calendario = '
     $('#btnExcluir').show();
 
     console.log("Timevalue: "+time_value)
-    setCalendarToTimeValue(time_value, 'c-year', 'c-month', 'time-value', 'data-calendario');
+    setCalendarToTimeValue($('#id_time_system').val(), time_value, 'c-year', 'c-month', 'time-value', 'data-calendario');
 
     carregarEstatisticas(mid);
 }
@@ -577,21 +588,7 @@ function delMomento(mid) {
     }
 }
 
-function carregarCalendario(sid) {
-    let htsml = `<div class="d-flex mb-3">
-        <input type="number" class="form-control me-2" id="c-year" value="0" placeholder="Ano" min="-1000000" max="1000000">
-        <input type="hidden" id="time-value">
-        <select class="form-select" id="c-month"></select>
-        </div>
-        <div class="table-responsive">
-        <table class="table table-bordered" id="c-calendar-table">
-            <thead>
-            <tr id="c-calendar-days"></tr>
-            </thead>
-            <tbody id="c-calendar-body"></tbody>
-        </table>
-        <div id="c-calendar-warnings"></div>
-        </div>`;
+function carregarCalendario(sid,changed) {
     let html = `<div class="d-flex mb-3 align-items-center">
             <div class="input-group me-2">
                 <button class="btn btn-icon btn-outline-secondary" onclick="decrementYear('')">-</button>
@@ -625,7 +622,7 @@ function carregarCalendario(sid) {
         null,
         sid, 0, 0,
         'time-value',
-        'data-calendario', '<?=$id_realidade?>'
+        'data-calendario', '<?=$id_realidade?>', changed
     );
 }
 
@@ -659,19 +656,4 @@ function saveDateSelection() {
         return;
     }
 }
-
-function loadDefaultTimeSystem() {
-    $.getJSON(`?action=getDefaultTimeSystem&rid=<?=$id_realidade?>`, function(system) {
-        if (system.id) {
-            //$('#id_time_system').val(system.id);
-            carregarCalendario(system.id)
-        } else {
-            $('#time-value').val('<?=_t('Nenhum sistema de tempo padrão definido.')?>');
-            $('#dateInputs').html('<p><?=_t('Nenhum sistema de tempo padrão definido.')?></p>');
-        }
-    });
-}
-
-
-
 </script>

@@ -19,7 +19,7 @@ $script = '';
 
 $sistemas = mysqli_query($GLOBALS['dblink'], "SELECT * FROM time_systems WHERE id_realidade = ".$id_realidade." ORDER BY padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 while ($s = mysqli_fetch_assoc($sistemas)) {
-    $script .= 'carregarTabelaUnidades(\''.$s['id'].'\');carregarCalendario(\''.$s['id'].'\');';
+    $script .= 'carregarTabelaUnidades(\''.$s['id'].'\');carregarCalendario(\''.$s['id'].'\'); changed[\''.$s['id'].'\'] = \''.getLastChange('calendar',$s['id']).'\';';
 
     $contents .= '<div class="col-12">
         <div class="card">
@@ -130,6 +130,7 @@ while ($s = mysqli_fetch_assoc($sistemas)) {
 </div>
 
 <script>
+var changed = {};
 $(document).ready(function(){
     <?php echo $script; ?>
 });
@@ -579,22 +580,6 @@ function execAddUnidade() {
 }
 
 function carregarCalendario(sid) {
-    /*
-    let html = `<div class="d-flex mb-3">
-        <input type="number" class="form-control me-2" id="c-year${sid}" value="0" placeholder="Ano" min="-1000000" max="1000000">
-        <input type="hidden" id="time-value${sid}">
-        <select class="form-select" id="c-month${sid}"></select>
-        </div>
-        <div class="table-responsive">
-        <table class="table table-bordered" id="c-calendar-table${sid}">
-            <thead>
-            <tr id="c-calendar-days${sid}"></tr>
-            </thead>
-            <tbody id="c-calendar-body${sid}"></tbody>
-        </table>
-        <div id="c-calendar-warnings${sid}"></div>
-        </div>`;
-        */
     let html = `<div class="d-flex mb-3 align-items-center">
             <div class="input-group me-2">
                 <button class="btn btn-icon btn-outline-secondary" onclick="decrementYear('${sid}')">-</button>
@@ -628,7 +613,7 @@ function carregarCalendario(sid) {
         sid, 0, 0,
         'time-value'+sid,
         null,
-        '<?=$id_realidade?>'
+        '<?=$id_realidade?>', changed[sid]
     );
 }
 

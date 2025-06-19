@@ -323,319 +323,333 @@ function loadThemePanel() {
   checkItems();
 };
 
-async function loadCalendar(containerId, yearSelectId, monthSelectId, daysId, bodyId, warningsId, calId = 1, startYear = 0, startMonth = 0, timeValueId, timeNameId, rid) {
+async function getLastChange(data, id) {
+    const response = await fetch(`?action=getLastChange&data=${data}&${data === 'calendar' ? 'cid' : 'rid'}=${id}`);
+    const timestamp = await response.text();
+    return parseInt(timestamp) || 0;
+}
 
-  // Chaves para localStorage
-  const calendarCacheKey = `k_calendar_${calId}`;
-  const calendarUpdatedKey = `k_calendar_${calId}_updated`;
-  const momentsCacheKey = `k_momentos_${rid}`;
-  const momentsUpdatedKey = `k_momentos_${rid}_updated`;
+async function fetchCalendarData(calId) {
+    const calendarCacheKey = `k_calendar_${calId}`;
+    const calendarUpdatedKey = `k_calendar_${calId}_updated`;
 
-  // Função para buscar timestamp de última alteração
-  async function getLastChange(data, id) {
-      const response = await fetch(`?action=getLastChange&data=${data}&${data === 'calendar' ? 'cid' : 'rid'}=${id}`);
-      const timestamp = await response.text();
-      return parseInt(timestamp) || 0;
-  }
+    const response = await fetch(`?action=getDadosCalendario&id=${calId}`);
+    const calendarData = await response.json();
 
-  // Função para buscar dados do calendário
-  async function fetchCalendarData() {
-      const response = await fetch(`?action=getDadosCalendario&id=${calId}`);
-      return await response.json();
-  }
+    if (!calendarData.error) {
+        localStorage.setItem(calendarCacheKey, JSON.stringify(calendarData));
+        const lastChange = await getLastChange('calendar', calId);
+        localStorage.setItem(calendarUpdatedKey, lastChange.toString());
+    }
 
-  // Função para buscar dados de momentos
-  async function fetchMomentsData() {
-      const response = await fetch(`?action=getMomentos&rid=${rid}`);
-      return await response.json();
-  }
+    return calendarData;
+}
 
-  let calendarData, momentsData;
-  const forceReload = false;
+async function fetchMomentsData(rid) {
+    const momentsCacheKey = `k_momentos_${rid}`;
+    const momentsUpdatedKey = `k_momentos_${rid}_updated`;
 
-  try {
-      // --- Cache do Calendário ---
-      const calendarLastChange = await getLastChange('calendar', calId);
-      const calendarCachedUpdated = parseInt(localStorage.getItem(calendarUpdatedKey)) || 0;
+    const response = await fetch(`?action=getMomentos&rid=${rid}`);
+    const momentsData = await response.json();
 
-      if (!forceReload && calendarLastChange <= calendarCachedUpdated && localStorage.getItem(calendarCacheKey)) {
-          console.log('Local calendar load');
-          calendarData = JSON.parse(localStorage.getItem(calendarCacheKey));
-      } else {
-          console.log('Local calendar outdated > update');
-          calendarData = await fetchCalendarData();
-          if (!calendarData.error) {
-              localStorage.setItem(calendarCacheKey, JSON.stringify(calendarData));
-              localStorage.setItem(calendarUpdatedKey, calendarLastChange.toString());
-          }
-      }
+    if (!momentsData.error) {
+        localStorage.setItem(momentsCacheKey, JSON.stringify(momentsData));
+        const lastChange = await getLastChange('moments', rid);
+        localStorage.setItem(momentsUpdatedKey, lastChange.toString());
+    }
 
-      if (calendarData.error) {
-          console.error(calendarData.error);
-          return;
-      }
+    return momentsData;
+}
 
-      // --- Cache dos Momentos ---
-      const momentsLastChange = await getLastChange('moments', rid);
-      const momentsCachedUpdated = parseInt(localStorage.getItem(momentsUpdatedKey)) || 0;
+async function loadCalendar(
+    containerId, 
+    yearSelectId, 
+    monthSelectId, 
+    daysId, 
+    bodyId, 
+    warningsId, 
+    calId = 1, 
+    startYear = 0, 
+    startMonth = 0, 
+    timeValueId, 
+    timeNameId, 
+    rid, changed
+) {
+    // Chaves para localStorage
+    const calendarCacheKey = `k_calendar_${calId}`;
+    const momentsCacheKey = `k_momentos_${rid}`;
 
-      if (!forceReload && momentsLastChange <= momentsCachedUpdated && localStorage.getItem(momentsCacheKey)) {
-          console.log('Local moments load');
-          momentsData = JSON.parse(localStorage.getItem(momentsCacheKey));
-      } else {
-          console.log('Local moments outdated > update');
-          momentsData = await fetchMomentsData();
-          if (!momentsData.error) {
-              localStorage.setItem(momentsCacheKey, JSON.stringify(momentsData));
-              localStorage.setItem(momentsUpdatedKey, momentsLastChange.toString());
-          }
-      }
+    let calendarData, momentsData;
 
-      if (momentsData.error) {
-          console.warn('Erro ao carregar momentos:', momentsData.error);
-          momentsData = { momentos: [] }; // Fallback para lista vazia
-      }
+    // changed checar aqui!!!
 
-      const { time_system, units, cycles, days, months, leap_rules, warnings } = calendarData;
-      const momentos = momentsData.momentos || [];
-
-      // Exibir avisos
-      const warningsPanel = document.getElementById(warningsId);
-      if (warningsPanel && warnings.length > 0) {
-        warningsPanel.innerHTML = warnings.map(w => `
-          <div class="alert alert-warning alert-dismissable">${w.mensagem}<a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a></div>
-        `).join('');
-      }
-
-      // Encontrar durações
-      const momentsByDate = {};
-      const dayUnit = units.find(u => u.equivalente === 'dia');
-      const monthUnit = units.find(u => u.equivalente === 'mes');
-      const yearUnit = units.find(u => u.equivalente === 'ano');
-      const weekUnit = units.find(u => u.equivalente === 'semana');
-      const daysPerMonthCycle = cycles.find(c => c.id_unidade === monthUnit.id && c.id_unidade_ref === dayUnit.id);
-      const monthsPerYearCycle = cycles.find(c => c.id_unidade === yearUnit.id && c.id_unidade_ref === monthUnit.id);
-      const daysPerWeekCycle = cycles.find(c => c.id_unidade === weekUnit.id && c.id_unidade_ref === dayUnit.id);
-      const daysPerMonth = daysPerMonthCycle ? daysPerMonthCycle.quantidade : 30;
-      const monthsPerYear = monthsPerYearCycle ? monthsPerYearCycle.quantidade : 12;
-
-      momentos.forEach(momento => {
-          const totalSeconds = momento.time_value;
-          const secondsPerDay = dayUnit.duracao;
-          const secondsPerMonth = secondsPerDay * daysPerMonth;
-          const secondsPerYear = secondsPerMonth * monthsPerYear;
-
-          const year = Math.floor(totalSeconds / secondsPerYear);
-          const remainingAfterYear = totalSeconds % secondsPerYear;
-          const monthIndex = Math.floor(remainingAfterYear / secondsPerMonth);
-          const remainingAfterMonth = remainingAfterYear % secondsPerMonth;
-          const day = Math.floor(remainingAfterMonth / secondsPerDay) + 1;
-
-          const dateKey = `${year}/${monthIndex}/${day}`;
-          if (!momentsByDate[dateKey]) {
-              momentsByDate[dateKey] = [];
-          }
-          momentsByDate[dateKey].push(momento);
-      });
-
-      // Preencher dropdown de meses
-      const monthSelect = document.getElementById(monthSelectId);
-      months.forEach((month, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = month.nome;
-        monthSelect.appendChild(option);
-      });
-
-      // Configurar input de ano
-      const yearInput = document.getElementById(yearSelectId);
-      yearInput.value = 0; // Ano inicial
-
-      // Preencher dias da semana
-      const daysRow = document.getElementById(daysId);
-      days.forEach(day => {
-        const th = document.createElement('th');
-        th.textContent = day;
-        daysRow.appendChild(th);
-      });
-
-      // Função para aplicar regras de leaps
-      function applyLeapRules(year, monthIndex) {
-        let extraDays = 0;
-        leap_rules.forEach(rule => {
-          if (rule.id_unidade === yearUnit.id && eval(rule.condition.replace('year', year))) { // Substituir eval em produção
-            const targetUnit = units.find(u => u.id === rule.target_unidade);
-            if (targetUnit.equivalente === 'dia') {
-              extraDays += rule.add_units;
+    try {
+        // --- Carregar dados do calendário do localStorage ---
+        let cachedCalendar = localStorage.getItem(calendarCacheKey);
+        if (!cachedCalendar) {
+            console.log('No cached calendar data, fetching from server');
+            calendarData = await fetchCalendarData(calId);
+            if (calendarData.error) {
+                throw new Error(`Failed to fetch calendar data: ${calendarData.error}`);
             }
-          }
+            // Dados já salvos no localStorage pelo fetchCalendarData
+            cachedCalendar = localStorage.getItem(calendarCacheKey);
+            if (!cachedCalendar) {
+                throw new Error('Failed to cache calendar data');
+            }
+        } else {
+            console.log('Loading calendar from localStorage');
+        }
+        calendarData = JSON.parse(cachedCalendar);
+        if (calendarData.error) {
+            throw new Error(calendarData.error);
+        }
+
+        // --- Carregar momentos ---
+        let cachedMoments = localStorage.getItem(momentsCacheKey);
+        if (!cachedMoments) {
+            console.log('No cached moments data, fetching from server');
+            momentsData = await fetchMomentsData(rid);
+            if (momentsData.error) {
+                console.warn('Failed to fetch moments data:', momentsData.error);
+                momentsData = { momentos: [] }; // Fallback para lista vazia
+            }
+            // Dados já salvos no localStorage pelo fetchMomentsData
+            cachedMoments = localStorage.getItem(momentsCacheKey) || JSON.stringify({ momentos: [] });
+        } else {
+            console.log('Loading moments from localStorage');
+        }
+        momentsData = JSON.parse(cachedMoments);
+        if (momentsData.error) {
+            console.warn('Error in cached moments data:', momentsData.error);
+            momentsData = { momentos: [] };
+        }
+
+        const { time_system, units, cycles, days, months, leap_rules, warnings } = calendarData;
+        const momentos = momentsData.momentos || [];
+
+        // Exibir avisos
+        const warningsPanel = document.getElementById(warningsId);
+        if (warningsPanel && warnings.length > 0) {
+            warningsPanel.innerHTML = warnings.map(w => `
+                <div class="alert alert-warning alert-dismissable">${w.mensagem}<a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a></div>
+            `).join('');
+        }
+
+        // Encontrar durações
+        const momentsByDate = {};
+        const dayUnit = units.find(u => u.equivalente === 'dia');
+        const monthUnit = units.find(u => u.equivalente === 'mes');
+        const yearUnit = units.find(u => u.equivalente === 'ano');
+        const weekUnit = units.find(u => u.equivalente === 'semana');
+        const daysPerMonthCycle = cycles.find(c => c.id_unidade === monthUnit.id && c.id_unidade_ref === dayUnit.id);
+        const monthsPerYearCycle = cycles.find(c => c.id_unidade === yearUnit.id && c.id_unidade_ref === monthUnit.id);
+        const daysPerWeekCycle = cycles.find(c => c.id_unidade === weekUnit.id && c.id_unidade_ref === dayUnit.id);
+        const daysPerMonth = daysPerMonthCycle ? daysPerMonthCycle.quantidade : 30;
+        const monthsPerYear = monthsPerYearCycle ? monthsPerYearCycle.quantidade : 12;
+
+        console.log('===== monthUnit.id: '+monthUnit.id+' - yearUnit.id: '+yearUnit.id + ' - monthsPerYear: '+monthsPerYear)
+
+        momentos.forEach(momento => {
+            const totalSeconds = momento.time_value;
+            const secondsPerDay = dayUnit.duracao;
+            const secondsPerMonth = secondsPerDay * daysPerMonth;
+            const secondsPerYear = secondsPerMonth * monthsPerYear;
+
+            const year = Math.floor(totalSeconds / secondsPerYear);
+            const remainingAfterYear = totalSeconds % secondsPerYear;
+            const monthIndex = Math.floor(remainingAfterYear / secondsPerMonth);
+            const remainingAfterMonth = remainingAfterYear % secondsPerMonth;
+            const day = Math.floor(remainingAfterMonth / secondsPerDay) + 1;
+
+            const dateKey = `${year}/${monthIndex}/${day}`;
+            if (!momentsByDate[dateKey]) {
+                momentsByDate[dateKey] = [];
+            }
+            momentsByDate[dateKey].push(momento);
         });
-        return extraDays;
-      }
 
-      // Função para calcular o total de dias até o início do mês
-      function calculateTotalDays(targetYear, targetMonth) {
-        let totalDays = 0;
-        const monthsPerYear = monthsPerYearCycle.quantidade;
-
-        // Calcular dias para anos anteriores
-        if (targetYear > 0) {
-          for (let y = 0; y < targetYear; y++) {
-            for (let m = 0; m < monthsPerYear; m++) {
-              totalDays += parseFloat( typeof months[m] !== 'undefined' ? months[m].days : months[0].days) + applyLeapRules(y, m);
-            }
-          }
-        } else if (targetYear < 0) {
-          for (let y = targetYear; y < 0; y++) {
-            for (let m = 0; m < monthsPerYear; m++) {
-              totalDays -= parseFloat( typeof months[m] !== 'undefined' ? months[m].days : months[0].days) + applyLeapRules(y, m);
-            }
-          }
-        }
-
-        // Calcular dias para meses anteriores no ano atual
-        for (let m = 0; m < targetMonth; m++) {
-          totalDays += parseFloat( typeof months[m] !== 'undefined' ? months[m].days : months[0].days) + applyLeapRules(targetYear, m);
-        }
-        return totalDays;
-      }
-
-      // Função para renderizar os dias do mês
-      function renderMonth(year, monthIndex) {
-        const month = months[monthIndex];
-        let daysInMonth = parseFloat(month.days);
-        daysInMonth += applyLeapRules(year, monthIndex); // Ajustar por leaps
-        const daysPerWeek = daysPerWeekCycle.quantidade;
-        const tbody = document.getElementById(bodyId);
-        tbody.innerHTML = '';
-
-        // Calcular o offset inicial (dia da semana do primeiro dia do mês)
-        const totalDays = calculateTotalDays(year, monthIndex);
-        //const startDayOfWeek = Math.abs(totalDays) % daysPerWeek; // Offset (0 = primeiro dia da semana)
-        const startDayOfWeek = (totalDays % daysPerWeek + daysPerWeek) % daysPerWeek;
-
-        let dayCounter = 1;
-        let currentWeek = 0;
-        const weeks = Math.ceil((startDayOfWeek + daysInMonth) / daysPerWeek);
-
-        console.log(`Year: ${year}, Month: ${monthIndex}, Total Days: ${totalDays}, Start Day: ${startDayOfWeek}, Weeks: ${weeks}`);
-
-        for (let i = 0; i < weeks; i++) {
-          const tr = document.createElement('tr');
-
-          for (let j = 0; j < daysPerWeek; j++) {
-            const td = document.createElement('td');
-            const currentPosition = i * daysPerWeek + j;
-
-            if (currentPosition >= startDayOfWeek && dayCounter <= daysInMonth) {
-              td.textContent = dayCounter;
-              td.classList.add('calendar-day');
-              td.dataset.day = dayCounter;
-              td.dataset.month = monthIndex;
-              td.dataset.year = year;
-
-              // Destacar dias com momentos
-              const dateKey = `${year}/${monthIndex}/${dayCounter}`;
-              if (momentsByDate[dateKey]) {
-                  td.classList.add('has-moments');
-                  td.title = `${momentsByDate[dateKey].length} momento(s)`;
-              }
-
-              td.addEventListener('click', handleDayClick);
-              dayCounter++;
-            } else {
-              td.classList.add('calendar-empty'); // Classe para células vazias
-            }
-
-            tr.appendChild(td);
-          }
-          tbody.appendChild(tr);
-        }
-      }
-
-      // Função para calcular time_value
-      function calculateTimeValue(year, monthIndex, day) {
-        let totalSeconds = 0;
-        const daysPerMonth = daysPerMonthCycle.quantidade;
-        const monthsPerYear = monthsPerYearCycle.quantidade;
-
-        // Calcular segundos para anos anteriores
-        if (year > 0) {
-            // Anos positivos: somar segundos de y = 0 até year - 1
-            for (let y = 0; y < year; y++) {
-                let daysInYear = monthsPerYear * daysPerMonth;
-                daysInYear += applyLeapRules(y, 0);
-                totalSeconds += daysInYear * dayUnit.duracao;
-            }
-        } else if (year < 0) {
-            // Anos negativos: subtrair segundos de y = year até -1
-            for (let y = year; y < 0; y++) {
-                let daysInYear = monthsPerYear * daysPerMonth;
-                daysInYear += applyLeapRules(y, 0);
-                totalSeconds -= daysInYear * dayUnit.duracao;
-            }
-        }
-
-        // Meses anteriores no ano atual
-        totalSeconds += monthIndex * daysPerMonth * dayUnit.duracao;
-
-        // Dias do mês atual
-        totalSeconds += (day - 1) * dayUnit.duracao;
-
-        return totalSeconds;
-      }
-
-      // Lidar com clique em um dia
-      function handleDayClick(event) {
-        const day = parseInt(event.target.dataset.day);
-        const monthIndex = parseInt(event.target.dataset.month);
-        const year = parseInt(event.target.dataset.year);
-        const timeValue = calculateTimeValue(year, monthIndex, day);
-        const dateKey = `${year}/${monthIndex}/${day}`;
-
-        // Remover classe selected-day de todos os dias
-        document.querySelectorAll('.calendar-day').forEach(td => {
-            td.classList.remove('selected-day');
+        // Preencher dropdown de meses
+        const monthSelect = document.getElementById(monthSelectId);
+        months.forEach((month, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = month.nome;
+            monthSelect.appendChild(option);
         });
-        // Adicionar classe selected-day ao dia clicado
-        event.target.classList.add('selected-day');
 
-        let message = `Data selecionada: ${year}/${months[monthIndex].nome || `Mês ${monthIndex + 1}`}/${day}\nTime Value: ${timeValue} segundos`;
-        // Mostrar momentos, se houver
-        if (momentsByDate[dateKey]) {
-            message += `\n\nMomentos neste dia:`;
-            momentsByDate[dateKey].forEach(m => {
-                message += `\n- ${m.nome}: ${m.descricao || 'Sem descrição'}`;
+        // Configurar input de ano
+        const yearInput = document.getElementById(yearSelectId);
+        yearInput.value = 0; // Ano inicial
+
+        // Preencher dias da semana
+        const daysRow = document.getElementById(daysId);
+        days.forEach(day => {
+            const th = document.createElement('th');
+            th.textContent = day;
+            daysRow.appendChild(th);
+        });
+
+        // Função para aplicar regras de leaps
+        function applyLeapRules(year, monthIndex) {
+            let extraDays = 0;
+            leap_rules.forEach(rule => {
+                if (rule.id_unidade === yearUnit.id && eval(rule.condition.replace('year', year))) { // Substituir eval em produção
+                    const targetUnit = units.find(u => u.id === rule.target_unidade);
+                    if (targetUnit.equivalente === 'dia') {
+                        extraDays += rule.add_units;
+                    }
+                }
             });
+            return extraDays;
         }
 
-        const timeValueInput = document.getElementById(timeValueId);
-        if (timeValueInput) {
-          timeValueInput.value = timeValue;
+        // Função para calcular o total de dias até o início do mês
+        function calculateTotalDays(targetYear, targetMonth) {
+            let totalDays = 0;
+            const monthsPerYear = monthsPerYearCycle.quantidade;
+
+            if (targetYear > 0) {
+                for (let y = 0; y < targetYear; y++) {
+                    for (let m = 0; m < monthsPerYear; m++) {
+                        totalDays += parseFloat(typeof months[m] !== 'undefined' ? months[m].days : daysPerMonth/*months[0].days*/) + applyLeapRules(y, m);
+                    }
+                }
+            } else if (targetYear < 0) {
+                for (let y = targetYear; y < 0; y++) {
+                    for (let m = 0; m < monthsPerYear; m++) {
+                        totalDays -= parseFloat(typeof months[m] !== 'undefined' ? months[m].days : daysPerMonth/*months[0].days*/) + applyLeapRules(y, m);
+                    }
+                }
+            }
+
+            for (let m = 0; m < targetMonth; m++) {
+                totalDays += parseFloat(typeof months[m] !== 'undefined' ? months[m].days : daysPerMonth/*months[0].days*/) + applyLeapRules(targetYear, m);
+            }
+            return totalDays;
         }
-        const timeNameInput = document.getElementById(timeNameId);
-        if (timeNameInput) {
-          timeNameInput.value = `${year}/${months[monthIndex].nome}/${day}`;
+
+        // Função para renderizar os dias do mês
+        function renderMonth(year, monthIndex) {
+            const month = months[monthIndex];
+            let daysInMonth = parseFloat(month.days);
+            daysInMonth += applyLeapRules(year, monthIndex);
+            const daysPerWeek = daysPerWeekCycle.quantidade;
+            const tbody = document.getElementById(bodyId);
+            tbody.innerHTML = '';
+
+            const totalDays = calculateTotalDays(year, monthIndex);
+            const startDayOfWeek = (totalDays % daysPerWeek + daysPerWeek) % daysPerWeek;
+
+            let dayCounter = 1;
+            const weeks = Math.ceil((startDayOfWeek + daysInMonth) / daysPerWeek);
+
+            console.log(`Year: ${year}, Month: ${monthIndex}, Total Days: ${totalDays}, Start Day: ${startDayOfWeek}, Weeks: ${weeks}`);
+
+            for (let i = 0; i < weeks; i++) {
+                const tr = document.createElement('tr');
+                for (let j = 0; j < daysPerWeek; j++) {
+                    const td = document.createElement('td');
+                    const currentPosition = i * daysPerWeek + j;
+
+                    if (currentPosition >= startDayOfWeek && dayCounter <= daysInMonth) {
+                        td.textContent = dayCounter;
+                        td.classList.add('calendar-day');
+                        td.dataset.day = dayCounter;
+                        td.dataset.month = monthIndex;
+                        td.dataset.year = year;
+
+                        const dateKey = `${year}/${monthIndex}/${dayCounter}`;
+                        if (momentsByDate[dateKey]) {
+                            td.classList.add('has-moments');
+                            td.title = `${momentsByDate[dateKey].length} momento(s)`;
+                        }
+
+                        td.addEventListener('click', handleDayClick);
+                        dayCounter++;
+                    } else {
+                        td.classList.add('calendar-empty');
+                    }
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
         }
 
-        setDateClicked(timeValue, message);
-      }
+        // Função para calcular time_value
+        function calculateTimeValue(year, monthIndex, day) {
+            let totalSeconds = 0;
+            const daysPerMonth = daysPerMonthCycle.quantidade;
+            const monthsPerYear = monthsPerYearCycle.quantidade;
 
-      // Renderizar mês inicial
-      renderMonth(startYear, startMonth);
+            if (year > 0) {
+                for (let y = 0; y < year; y++) {
+                    let daysInYear = monthsPerYear * daysPerMonth;
+                    daysInYear += applyLeapRules(y, 0);
+                    totalSeconds += daysInYear * dayUnit.duracao;
+                }
+            } else if (year < 0) {
+                for (let y = year; y < 0; y++) {
+                    let daysInYear = monthsPerYear * daysPerMonth;
+                    daysInYear += applyLeapRules(y, 0);
+                    totalSeconds -= daysInYear * dayUnit.duracao;
+                }
+            }
 
-      // Atualizar ao mudar ano ou mês
-      yearInput.addEventListener('input', () => {
-        const year = parseInt(yearInput.value) || 0;
-        renderMonth(year, parseInt(monthSelect.value));
-      });
-      monthSelect.addEventListener('change', () => {
-        const year = parseInt(yearInput.value) || 0;
-        renderMonth(year, parseInt(monthSelect.value));
-      });
+            totalSeconds += monthIndex * daysPerMonth * dayUnit.duracao;
+            totalSeconds += (day - 1) * dayUnit.duracao;
+
+            return totalSeconds;
+        }
+
+        // Lidar com clique em um dia
+        function handleDayClick(event) {
+            const day = parseInt(event.target.dataset.day);
+            const monthIndex = parseInt(event.target.dataset.month);
+            const year = parseInt(event.target.dataset.year);
+            const timeValue = calculateTimeValue(year, monthIndex, day);
+            const dateKey = `${year}/${monthIndex}/${day}`;
+
+            document.querySelectorAll('.calendar-day').forEach(td => {
+                td.classList.remove('selected-day');
+            });
+            event.target.classList.add('selected-day');
+
+            let message = `Data selecionada: ${year}/${months[monthIndex].nome || `Mês ${monthIndex + 1}`}/${day}\nTime Value: ${timeValue} segundos`;
+            if (momentsByDate[dateKey]) {
+                message += `\n\nMomentos neste dia:`;
+                momentsByDate[dateKey].forEach(m => {
+                    message += `\n- ${m.nome}: ${m.descricao || 'Sem descrição'}`;
+                });
+            }
+
+            const timeValueInput = document.getElementById(timeValueId);
+            if (timeValueInput) {
+                timeValueInput.value = timeValue;
+            }
+            const timeNameInput = document.getElementById(timeNameId);
+            if (timeNameInput) {
+                timeNameInput.value = `${year}/${months[monthIndex].nome}/${day}`;
+            }
+
+            setDateClicked(timeValue, message);
+        }
+
+        // Renderizar mês inicial
+        renderMonth(startYear, startMonth);
+
+        // Atualizar ao mudar ano ou mês
+        yearInput.addEventListener('input', () => {
+            const year = parseInt(yearInput.value) || 0;
+            renderMonth(year, parseInt(monthSelect.value));
+        });
+        monthSelect.addEventListener('change', () => {
+            const year = parseInt(yearInput.value) || 0;
+            renderMonth(year, parseInt(monthSelect.value));
+        });
     } catch (error) {
         console.error('Erro ao carregar calendário ou momentos:', error);
-        return;
+        throw error; // Propagar o erro para o chamador
     }
 }
 
@@ -735,10 +749,9 @@ function addMomentTablerSelect(mid,timevalue,name,select){
     //control.addItem('test');
 }
 
-function setCalendarToTimeValue(timeValue, yearSelectId, monthSelectId, timeValueId, timeNameId) {
+function setCalendarToTimeValue(calId, timeValue, yearSelectId, monthSelectId, timeValueId, timeNameId) {
     try {
         // Recuperar dados do calendário do localStorage
-        const calId = 1; // Ajuste conforme necessário, caso calId seja dinâmico
         const calendarCacheKey = `k_calendar_${calId}`;
         const calendarData = JSON.parse(localStorage.getItem(calendarCacheKey));
 
@@ -785,16 +798,24 @@ function setCalendarToTimeValue(timeValue, yearSelectId, monthSelectId, timeValu
             while (Math.abs(remainingSeconds) >= secondsPerDay * defaultDaysPerMonth * monthsPerYear) {
                 let daysInYear = 0;
                 for (let m = 0; m < monthsPerYear; m++) {
-                    const daysInMonth = parseFloat(months[m]?.days || defaultDaysPerMonth) + applyLeapRules(year, m);
+                    const daysInMonth = parseFloat(months[m]?.days || defaultDaysPerMonth) + applyLeapRules(isNegative ? year - 1 : year, m);
                     daysInYear += daysInMonth;
                 }
                 const yearSeconds = daysInYear * secondsPerDay;
                 if (isNegative) {
-                    remainingSeconds += yearSeconds;
-                    year--;
+                    if (remainingSeconds < -yearSeconds) {
+                        remainingSeconds += yearSeconds;
+                        year--;
+                    } else {
+                        break; // Evitar loop infinito se não puder subtrair mais um ano
+                    }
                 } else {
-                    remainingSeconds -= yearSeconds;
-                    year++;
+                    if (remainingSeconds >= yearSeconds) {
+                        remainingSeconds -= yearSeconds;
+                        year++;
+                    } else {
+                        break; // Evitar loop infinito se não puder subtrair mais um ano
+                    }
                 }
             }
 
