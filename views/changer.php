@@ -112,6 +112,18 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                         <?php if ($id_idioma > 0){?><div class="text_rewrites"></div><?php } ?>
                         <textarea class="form-control text_rewrites nowrap" id="text_rewrites" spellcheck="false" style="height: 8rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?=$getSubstituicoes?></textarea>
                       </div>
+
+                      <div class="mt-2">
+                          <button class="btn btn-primary" onclick="openRuleGenerator()">Regras aleatórias</button>
+                          <div id="ruleGeneratorInput" style="display: none; margin-top: 10px;">
+                              <div class="input-group">
+                                  <input type="number" class="form-control" id="numRules" placeholder="Quantidade de regras" min="1" value="5">
+                                  <button class="btn btn-success" onclick="generateRandomRules(document.getElementById('numRules').value)">Gerar</button>
+                              </div>
+                          </div>
+                      </div>
+
+
                     </div>
                   </div>
               </div>
@@ -725,4 +737,516 @@ function showError(erro){
 }
 
 $('[data-toggle="tooltip"]').tooltip();
+</script>
+
+
+<script>
+function openRuleGenerator() {
+    const inputDiv = document.getElementById('ruleGeneratorInput');
+    inputDiv.style.display = inputDiv.style.display === 'none' ? 'block' : 'none';
+    if (inputDiv.style.display === 'block') {
+        document.getElementById('numRules').focus();
+    }
+}
+
+// Listas de consoantes e vogais típicas
+const typicalConsonants = ['p', 'b', 't', 'd', 'k', 'g', 'f', 'v', 's', 'z', 'ʃ', 'ʒ', 'θ', 'ð', 'x', 'ɣ', 'h', 'm', 'n', 'ŋ', 'l', 'r', 'j', 'w', 'ʧ', 'ʤ', 'c', 'ɟ', 'x', 'ɣ', 'β', 'ɾ'];
+const typicalVowels = ['a', 'e', 'i', 'o', 'u', 'æ', 'ɛ', 'ɪ', 'ɔ', 'ʊ', 'ə', 'y', 'ø', 'ã', 'ẽ', 'ĩ', 'õ', 'ũ', 'ö', 'ü'];
+
+// Processos fonológicos com transformações e contextos
+const transformationProcesses = {
+    sonorization: {
+        weight: 0.15,
+        description: "Converte consoantes surdas em sonoras",
+        contexts: ['_V', 'V_', 'V_V', '{m,n,ŋ}_', 'C_V', '#_V', '{C}_V', 'V_{C}', '{C}{D}_', 'V_#'],
+        transformations: {
+            'p': ['b'],
+            't': ['d'],
+            'k': ['g'],
+            'f': ['v'],
+            's': ['z'],
+            'ʃ': ['ʒ'],
+            'θ': ['ð']
+        }
+    },
+    dessonorization: {
+        weight: 0.10,
+        description: "Converte consoantes sonoras em surdas",
+        contexts: ['_#', '_C', 'C_', 'V_C', '#_C', '{C}_#', '{C}_{C}', 'C_{C}', 'V_#', '{C}{D}_'],
+        transformations: {
+            'b': ['p'],
+            'd': ['t'],
+            'g': ['k'],
+            'v': ['f'],
+            'z': ['s'],
+            'ʒ': ['ʃ'],
+            'ð': ['θ']
+        }
+    },
+    lenition: {
+        weight: 0.10,
+        description: "Enfraquece consoantes, geralmente intervocálico",
+        contexts: ['V_V', '{C}_{D}', 'V_{C}', 'C_V', '{C}_V', 'V_#', '{C}{D}_', 'Cr_V', 'V_Cr', '#_{C}'],
+        transformations: {
+            'p': ['f', 'v', 'β'],
+            't': ['θ', 'ð', 's', 'z', 'ɾ'],
+            'k': ['x', 'ɣ'],
+            'b': ['v', 'β'],
+            'd': ['ð', 'ɾ'],
+            'g': ['ɣ'],
+            's': ['h'],
+            'z': ['h']
+        }
+    },
+    fortition: {
+        weight: 0.10,
+        description: "Fortalece consoantes, geralmente em onset",
+        contexts: ['#_', '_V', '_{C}', '#_V', 'C_{C}', '{C}_V', '#_{C}{D}', 'V_{C}', '{C}{D}_', '_#'],
+        transformations: {
+            'v': ['b', 'f'],
+            'ð': ['d', 'θ'],
+            'ɣ': ['g', 'x'],
+            'β': ['b'],
+            'h': ['s', 'ʃ'],
+            'j': ['ʤ'],
+            'w': ['ɡʷ']
+        }
+    },
+    fricativization: {
+        weight: 0.08,
+        description: "Converte consoantes oclusivas em fricativas",
+        contexts: ['V_V', '{C}_{D}', 'V_{C}', 'Cr_V', '{C}_V', 'V_Cr', '{C}{D}_', 'V_#', '_C', 'C_'],
+        transformations: {
+            'p': ['f'],
+            't': ['s', 'θ'],
+            'k': ['x'],
+            'b': ['v'],
+            'd': ['z', 'ð'],
+            'g': ['ɣ']
+        }
+    },
+    palatalization: {
+        weight: 0.08,
+        description: "Desloca consoantes para articulações palatais",
+        contexts: ['_{i}', '_{e}', 'V_i', 'V_e', '{j}_', 'i_V', '#_i', '{C}_i', '{C}{D}_', 'V_{C}i'],
+        transformations: {
+            't': ['tʃ', 'ʃ', 'ʧ', 'ʤ'],
+            'd': ['dʒ', 'ʒ', 'ʤ'],
+            'k': ['tʃ', 'ʃ', 'c', 'ʧ'],
+            'g': ['dʒ', 'ʒ', 'ɟ', 'ʤ'],
+            's': ['ʃ'],
+            'z': ['ʒ']
+        }
+    },
+    depalatalization: {
+        weight: 0.05,
+        description: "Converte consoantes palatais em não palatais",
+        contexts: ['_a', '_o', '_u', 'a_', 'o_', 'u_', '{C}_a', 'V_{C}a', '{C}{D}_', 'V_#'],
+        transformations: {
+            'tʃ': ['t'],
+            'dʒ': ['d'],
+            'ʃ': ['s'],
+            'ʒ': ['z']
+        }
+    },
+    nasal_assimilation: {
+        weight: 0.08,
+        description: "Ajusta nasais ao ponto de articulação do som seguinte",
+        contexts: ['_p', '_b', '_k', '_g', '_C', '{C}_{C}', 'V_{C}', 'C_{C}', '{C}{D}_', '#_C'],
+        transformations: {
+            'n': ['m', 'ŋ'],
+            'm': ['n', 'ŋ'],
+            'ŋ': ['m', 'n']
+        }
+    },
+    place_assimilation: {
+        weight: 0.07,
+        description: "Ajusta o ponto de articulação de consoantes",
+        contexts: ['_p', '_k', '_{tʃ}', 'C_p', 'C_k', '{C}_{tʃ}', '{C}{D}_', 'V_{C}', '#_p', '_#'],
+        transformations: {
+            't': ['p', 'k'],
+            'd': ['b', 'g'],
+            's': ['ʃ']
+        }
+    },
+    rotacism: {
+        weight: 0.05,
+        description: "Converte sons em /r/",
+        contexts: ['V_V', '_V', 'V_', 'C_V', '{C}_V', 'V_{C}', 'Cr_V', 'V_Cr', '{C}{D}_', 'V_#'],
+        transformations: {
+            'l': ['r'],
+            'z': ['r'],
+            's': ['r'],
+            'd': ['r']
+        }
+    },
+    lateralization: {
+        weight: 0.05,
+        description: "Converte sons em /l/",
+        contexts: ['{C}_V', '_#', 'V_V', 'V_{C}', 'C_V', '{C}{D}_', 'V_l', '#_V', 'Cr_V', 'V_#'],
+        transformations: {
+            'r': ['l'],
+            'ð': ['l']
+        }
+    },
+    semivocalization: {
+        weight: 0.05,
+        description: "Converte vogais ou líquidas em semivogais",
+        contexts: ['_V', 'V_', '#_V', 'C_V', '{C}_V', 'V_{C}', '{C}{D}_', 'V_#', 'Cr_V', 'V_Cr'],
+        transformations: {
+            'i': ['j'],
+            'u': ['w'],
+            'l': ['j'],
+            'r': ['j']
+        }
+    },
+    deletion: {
+        weight: 0.10,
+        description: "Remove sons, geralmente em contextos fracos",
+        contexts: ['_#', '#_', '{C}_{D}', '_{C}', 'V_{C}', 'C_{C}', '{C}{D}_', 'V_Cr', 'Cr_V', 'V_#'],
+        transformations: {
+            'p': ['∅'],
+            't': ['∅'],
+            'k': ['∅'],
+            's': ['∅'],
+            'h': ['∅'],
+            'a': ['∅'],
+            'e': ['∅'],
+            'b': ['∅'],
+            'd': ['∅'],
+            'g': ['∅'],
+            'z': ['∅'],
+            'f': ['∅'],
+            'v': ['∅'],
+            'm': ['∅'],
+            'n': ['∅'],
+            'l': ['∅'],
+            'r': ['∅'],
+            'i': ['∅'],
+            'o': ['∅'],
+            'u': ['∅']
+        }
+    },
+    insertion: {
+        weight: 0.07,
+        description: "Insere sons, geralmente entre vogais ou consoantes",
+        contexts: ['V_V', '_{C}', '{C}_{D}', '{C}_#', '#_{C}', '{C}{D}_', 'C_C', 'V_{C}r', 'Cr_V', 'V_{C}'],
+        transformations: {
+            '∅': ['j', 'w', 'h', 'ə']
+        }
+    },
+    vowel_shift: {
+        weight: 0.10,
+        description: "Altera vogais em altura, abertura ou centralização",
+        contexts: ['_{C}', 'C_', '#_', 'V_', '_V', '{C}_V', 'V_{C}', '#_V', '{C}{D}_', 'V_#'],
+        transformations: {
+            'a': ['æ', 'ɛ', 'ə'],
+            'e': ['i', 'ɛ', 'ə'],
+            'i': ['ɪ', 'e'],
+            'o': ['u', 'ɔ', 'ə'],
+            'u': ['ʊ', 'o'],
+            'æ': ['a', 'ɛ'],
+            'ɛ': ['e', 'a'],
+            'ɪ': ['i', 'e'],
+            'ɔ': ['o', 'u'],
+            'ʊ': ['u', 'o']
+        }
+    },
+    vowel_harmony: {
+        weight: 0.05,
+        description: "Ajusta vogais para harmonizar com vogais vizinhas",
+        contexts: ['_i', '_e', 'i_', 'e_', '{C}_i', 'V_{C}i', '{C}{D}_', 'V_V', '#_i', 'V_#'],
+        transformations: {
+            'a': ['e', 'o'],
+            'e': ['a', 'i'],
+            'i': ['e', 'u'],
+            'o': ['a', 'u', 'ö'],
+            'u': ['o', 'i', 'ü']
+        }
+    },
+    metathesis: {
+        weight: 0.03,
+        description: "Troca a ordem de sons adjacentes",
+        contexts: ['V_', '_V', 'Cr_V', 'V_Cr', '{C}{D}_', 'C_{C}', '#_{C}', 'V_{C}r', '{C}_V', 'V_#'],
+        transformations: {
+            'st': ['ts'],
+            'pr': ['rp'],
+            'kr': ['rk']
+        }
+    },
+    cluster_reduction: {
+        weight: 0.05,
+        description: "Simplifica grupos consonantais",
+        contexts: ['_C', 'C_', 'Cr_V', 'V_Cr', '{C}_{C}', '{C}{D}_', '#_{C}', 'V_{C}r', 'C_{C}', 'V_#'],
+        transformations: {
+            'st': ['s', 't'],
+            'kt': ['t'],
+            'mp': ['m']
+        }
+    },
+    epenthesis: {
+        weight: 0.07,
+        description: "Insere sons, geralmente para quebrar grupos consonantais",
+        contexts: ['_C', 'C_', '{C}_{C}', '{C}{D}_', 'Cr_V', 'V_Cr', '#_{C}{D}', 'V_{C}r', 'C_C', '#_C'],
+        transformations: {
+            '∅': ['j', 'w', 'ə', 'i', 'u']
+        }
+    }
+};
+
+// Função para sortear com pesos
+function weightedRandom(items, weights) {
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < items.length; i++) {
+        random -= weights[i];
+        if (random <= 0) return items[i];
+    }
+    return items[items.length - 1];
+}
+
+// Função para extrair classes declaradas
+function getDeclaredClasses() {
+    const classesText = document.getElementById('text_classes').value;
+    const classes = {};
+    const categoryPattern = /^\s*([%\p{Lu}\p{Ll}]*)\s*=\s*(\{[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+)*\s*\}|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+|[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+(?:\s*,\s*[\p{L}\u0250-\u02AF\u1D00-\u1DBF\p{M}]+)*)\s*$/u;
+    
+    classesText.split('\n').forEach(line => {
+        const match = line.match(categoryPattern);
+        if (match) {
+            const className = match[1];
+            let sounds = match[2];
+            if (sounds.startsWith('{') && sounds.endsWith('}')) {
+                sounds = sounds.slice(1, -1).split(',').map(s => s.trim());
+            } else {
+                sounds = sounds.split(',').map(s => s.trim());
+            }
+            // Determinar tipo da classe
+            let vowelCount = 0, consonantCount = 0;
+            sounds.forEach(sound => {
+                if (typicalVowels.includes(sound)) vowelCount++;
+                if (typicalConsonants.includes(sound)) consonantCount++;
+            });
+            const total = sounds.length;
+            const type = total > 0 && vowelCount > total / 2 ? 'vowel' : 
+                        total > 0 && consonantCount > total / 2 ? 'consonant' : 'unknown';
+            classes[className] = { sounds, type };
+        }
+    });
+    return classes;
+}
+
+// Função para extrair classe oculta
+function getHiddenClass() {
+    const words = document.getElementById('entrada').value.split('\n').map(w => w.trim()).filter(w => w);
+    return [...new Set(words.join('').split(''))];
+}
+
+// Verificar se letra pertence a uma classe
+function isInClass(letter, className, classes) {
+    return classes[className]?.sounds.includes(letter);
+}
+
+// Função para gerar regras aleatórias
+// Função auxiliar para determinar o tipo de um som
+// Função auxiliar para determinar o tipo de um som
+function getSoundType(sound) {
+    if (typicalVowels.includes(sound)) return 'vowel';
+    if (typicalConsonants.includes(sound)) return 'consonant';
+    return 'unknown';
+}
+
+// Função para gerar regras aleatórias
+function generateRandomRules(numRules) {
+    const classes = getDeclaredClasses();
+    const hiddenClass = getHiddenClass();
+    const classNames = Object.keys(classes);
+    const possibleValues = [...classNames, ...hiddenClass];
+    let generatedRules = [];
+
+    if (!possibleValues.length) {
+        showError("Erro: Nenhuma classe ou letra disponível para gerar regras.");
+        return;
+    }
+    if (!hiddenClass.length && classNames.length) {
+        showError("Erro: Nenhuma palavra fornecida na entrada, e apenas classes estão disponíveis.");
+        return;
+    }
+
+    // Tipos de transformação com pesos
+    const transformationTypes = [
+        { type: 'sound_to_sound', weight: 0.4 },
+        { type: 'class_to_class', weight: 0.2 },
+        { type: 'class_to_sound', weight: 0.15 },
+        { type: 'sound_to_deletion', weight: 0.15 },
+        { type: 'class_to_deletion', weight: 0.05 },
+        { type: 'empty_to_sound', weight: 0.05 }
+    ];
+
+    for (let i = 0; i < numRules; i++) {
+        // Escolher processo fonológico
+        const process = weightedRandom(Object.keys(transformationProcesses), Object.values(transformationProcesses).map(p => p.weight));
+        const processData = transformationProcesses[process];
+
+        // Escolher tipo de transformação
+        const transType = weightedRandom(transformationTypes.map(t => t.type), transformationTypes.map(t => t.weight));
+
+        // Escolher contexto
+        let context = processData.contexts[Math.floor(Math.random() * processData.contexts.length)];
+        if (!context && (transType === 'empty_to_sound' || process === 'insertion' || process === 'epenthesis')) {
+            // Inserções e epêntese requerem contexto
+            const validContexts = processData.contexts.filter(c => c.includes('_C') || c.includes('C_') || c.includes('{C}_{D}') || c.includes('{C}_') || c.includes('_{C}'));
+            context = validContexts[Math.floor(Math.random() * validContexts.length)] || '_C';
+        }
+
+        let a, b;
+        if (transType === 'sound_to_sound') {
+            // A: letra da hiddenClass, B: letra do processo, diferente de A
+            let attempts = 0;
+            const maxAttempts = 100;
+            do {
+                a = hiddenClass[Math.floor(Math.random() * hiddenClass.length)];
+                attempts++;
+                if (processData.transformations[a] || attempts >= maxAttempts) {
+                    break;
+                }
+            } while (true);
+            if (attempts >= maxAttempts) {
+                showError("Aviso: Usando letra avulsa para A na regra " + (i + 1));
+                a = hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || '∅';
+                const aType = getSoundType(a);
+                const validBOptions = hiddenClass.filter(h => h !== a && getSoundType(h) === aType);
+                b = validBOptions.length > 0 ? validBOptions[Math.floor(Math.random() * validBOptions.length)] : 
+                    (aType === 'vowel' ? typicalVowels.filter(v => v !== a)[0] : typicalConsonants.filter(c => c !== a)[0]) || '∅';
+            } else {
+                const bOptions = processData.transformations[a]?.filter(b => b !== a) || [];
+                b = bOptions.length > 0 ? bOptions[Math.floor(Math.random() * bOptions.length)] : 
+                    hiddenClass.filter(h => h !== a)[Math.floor(Math.random() * (hiddenClass.length - (hiddenClass.includes(a) ? 1 : 0)))] || '∅';
+            }
+        } else if (transType === 'class_to_class') {
+            // A: classe, B: classe de mesmo tamanho e tipo, diferente de A
+            let attempts = 0;
+            const maxAttempts = 100;
+            do {
+                a = classNames[Math.floor(Math.random() * classNames.length)];
+                attempts++;
+                if (hiddenClass.some(letter => isInClass(letter, a, classes)) || attempts >= maxAttempts) {
+                    break;
+                }
+            } while (true);
+            if (attempts >= maxAttempts) {
+                showError("Aviso: Usando letra avulsa para A na regra " + (i + 1));
+                a = hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || '∅';
+                const aType = getSoundType(a);
+                const validBOptions = hiddenClass.filter(h => h !== a && getSoundType(h) === aType);
+                b = validBOptions.length > 0 ? validBOptions[Math.floor(Math.random() * validBOptions.length)] : 
+                    (aType === 'vowel' ? typicalVowels.filter(v => v !== a)[0] : typicalConsonants.filter(c => c !== a)[0]) || '∅';
+            } else {
+                const classSize = classes[a]?.sounds.length;
+                const aType = classes[a]?.type;
+                const sameSizeClasses = classNames.filter(c => c !== a && classes[c].sounds.length === classSize && classes[c].type === aType);
+                b = sameSizeClasses.length > 0 ? sameSizeClasses[Math.floor(Math.random() * sameSizeClasses.length)] : 
+                    hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || '∅';
+                if (b in classes && !hiddenClass.some(letter => isInClass(letter, b, classes))) {
+                    b = hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || '∅';
+                }
+            }
+        } else if (transType === 'class_to_sound') {
+            // A: classe, B: letra do mesmo tipo (vogal ou consoante), diferente de A
+            let attempts = 0;
+            const maxAttempts = 100;
+            do {
+                a = classNames[Math.floor(Math.random() * classNames.length)];
+                attempts++;
+                if (hiddenClass.some(letter => isInClass(letter, a, classes)) || attempts >= maxAttempts) {
+                    break;
+                }
+            } while (true);
+            if (attempts >= maxAttempts) {
+                showError("Aviso: Usando letra avulsa para A na regra " + (i + 1));
+                a = hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || '∅';
+                const aType = getSoundType(a);
+                const validBOptions = hiddenClass.filter(h => h !== a && getSoundType(h) === aType);
+                b = validBOptions.length > 0 ? validBOptions[Math.floor(Math.random() * validBOptions.length)] : 
+                    (aType === 'vowel' ? typicalVowels.filter(v => v !== a)[0] : typicalConsonants.filter(c => c !== a)[0]) || '∅';
+            } else {
+                const classSounds = classes[a]?.sounds || [];
+                const aType = classes[a]?.type || 'unknown';
+                let validBOptions = [];
+                if (aType === 'vowel') {
+                    validBOptions = hiddenClass.filter(h => !classSounds.includes(h) && typicalVowels.includes(h));
+                    if (validBOptions.length === 0) {
+                        validBOptions = typicalVowels.filter(v => !classSounds.includes(v));
+                    }
+                } else if (aType === 'consonant') {
+                    validBOptions = hiddenClass.filter(h => !classSounds.includes(h) && typicalConsonants.includes(h));
+                    if (validBOptions.length === 0) {
+                        validBOptions = typicalConsonants.filter(c => !classSounds.includes(c));
+                    }
+                } else {
+                    validBOptions = hiddenClass.filter(h => !classSounds.includes(h));
+                    if (validBOptions.length === 0) {
+                        validBOptions = typicalVowels.concat(typicalConsonants).filter(s => !classSounds.includes(s));
+                    }
+                }
+                b = validBOptions.length > 0 ? validBOptions[Math.floor(Math.random() * validBOptions.length)] : 
+                    (aType === 'vowel' ? typicalVowels[0] : typicalConsonants[0]) || 'a';
+            }
+        } else if (transType === 'sound_to_deletion') {
+            // A: letra, B: ∅ (sempre diferente de A)
+            a = hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || 'p';
+            b = '∅';
+        } else if (transType === 'class_to_deletion') {
+            // A: classe, B: ∅ (sempre diferente de A)
+            let attempts = 0;
+            const maxAttempts = 100;
+            do {
+                a = classNames[Math.floor(Math.random() * classNames.length)];
+                attempts++;
+                if (hiddenClass.some(letter => isInClass(letter, a, classes)) || attempts >= maxAttempts) {
+                    break;
+                }
+            } while (true);
+            if (attempts >= maxAttempts) {
+                showError("Aviso: Usando letra avulsa para A na regra " + (i + 1));
+                a = hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || '∅';
+            }
+            b = '∅';
+        } else if (transType === 'empty_to_sound') {
+            // A: ∅, B: letra (sempre diferente de A)
+            a = '∅';
+            b = processData.transformations['∅']?.[Math.floor(Math.random() * processData.transformations['∅'].length)] || 
+                hiddenClass[Math.floor(Math.random() * hiddenClass.length)] || 'a';
+        }
+
+        // Substituir {C} e {D} no contexto
+        if (context.includes('{C}')) {
+            const c = classNames[Math.floor(Math.random() * classNames.length)] || 'V';
+            context = context.replace('{C}', c);
+        }
+        if (context.includes('{D}')) {
+            const d = classNames[Math.floor(Math.random() * classNames.length)] || 'C';
+            context = context.replace('{D}', d);
+        }
+
+        // Montar a regra
+        const rule = context ? `${a} / ${b} / ${context}` : `${a} / ${b}`;
+
+        // Garantir contexto para inserções e A ≠ B
+        if (a === b || (a === '∅' && !context)) {
+            continue;
+        }
+
+        generatedRules.push(rule);
+    }
+
+    // Inserir no CodeMirror
+    const currentValue = editor.getValue();
+    const newValue = /* currentValue ? currentValue + '\n' + generatedRules.join('\n') : */ generatedRules.join('\n');
+    editor.setValue(newValue);
+    updateDeclaredClasses(newValue);
+    $('#btnSalvarSC').show();
+    $('#btnApagarSC').hide();
+    $('#nomeLista').hide();
+}
 </script>

@@ -711,37 +711,11 @@
 		}
 	}
 
-	function loadCharDiv(eid,destDiv = "divInserirChars", forceReload = false, fonte = 0){
-		$('#lateralEid').val(eid);
-		$('#tempNat').val($('#escrita_nativa_'+eid).val());
-
-		$.get("api.php?action=getLastChange&data=writing&eid="+eid, function (data){
-			if (forceReload || data > localStorage.getItem("k_chars"+eid+"_updated")){
-				console.log('local chars outdated > update');
-				$.get("api.php?action=ajaxGetDivLateralWriting2&eid="+eid, function (lex){
-					$("#"+destDiv).html(lex);
-					localStorage.setItem("k_chars"+eid, lex);
-					localStorage.setItem("k_chars"+eid+"_updated", data);
-					if(fonte == 3) addNatDraw(''); else { $('#tempNat').removeClass();$('#tempNat').addClass('form-control custom-font-'+eid);}
-				})
-			}else{
-				console.log('local chars load');
-				$("#"+destDiv).html( localStorage.getItem("k_chars"+eid) );
-				if(fonte == 3) addNatDraw(''); else { $('#tempNat').removeClass();$('#tempNat').addClass('form-control custom-font-'+eid);}
-			}
-		});
-
-	}
-
 	function salvarItem(concordancia){
 		var i = $('#idc_'+concordancia).val();
 		$.get("api.php?action=ajaxGravarItem&pid="+ $('#idPalavra').val()+"&iid=<?=$id_idioma?>"
 		+"&c="+concordancia+"&i="+i , function (data){
 				if ($.trim(data) >0){
-
-					//loadWord($('#idPalavra').val() ); 
-					//xxxxx load apenas generos/flexoes
-					// action getDetMorfPalavra pid
 					$('#detalhesGramaticais').load("api.php?action=getDetMorfPalavra&pid="+ $('#idPalavra').val());
 
 				}else{

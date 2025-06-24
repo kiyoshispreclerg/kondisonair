@@ -384,7 +384,8 @@ INSERT INTO `opcoes_sistema` (`id`, `opcao`, `valor`) VALUES
 (9, 'limite_escritas_l', '3'),
 (10, 'lim_conc_lang', '8'),
 (11, 'lim_itens_conc', '8'),
-(15, 'lim_sons_lang', '80');
+(15, 'lim_sons_lang', '80'),
+(16, 'frases_mes', '50');
 
 INSERT INTO `referentes` (`id`, `descricao`, `detalhes`, `descricaoPort`, `descricaoEo`, `descricaoJp`) VALUES
 (1, 'I (me)', 'Primeira pessoa, o falante', 'eu', '', ''),

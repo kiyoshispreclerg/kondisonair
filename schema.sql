@@ -750,6 +750,20 @@ CREATE TABLE `wordbanks` (
   `data_modificacao` datetime NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
+CREATE TABLE `frases` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_idioma` bigint(20) UNSIGNED NOT NULL,
+  `id_criador` bigint(20) UNSIGNED NOT NULL,
+  `id_original` bigint(20) UNSIGNED NOT NULL,
+  `frase` text NOT NULL,
+  `info` text NULL,
+  `privado` text NULL,
+  `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `frases`
+  ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `artygs`
   ADD PRIMARY KEY (`id`);

@@ -2,8 +2,6 @@
 
 
 <?php 
-
- // <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
  
  	$romanizacao = 0;
 	$isOwner = false;
@@ -97,51 +95,6 @@
 		background-color: rgba(var(--tblr-red-rgb), var(--tblr-bg-opacity)) !important;
 	}
 	<?php } ?>
-	.unmarked {
-		background-color: unset !important;
-	}
-	.nostud {
-		margin: 2px 0;
-		border-radius: 3px;
-		border: 1px solid transparent;
-	}
-	.pstud {
-		margin: 2px 0;
-		border-radius: 3px;
-		border: 1px solid transparent;
-		transition: all 0.15s ease-in-out;
-	}
-	.pstud:hover {
-		border: 1px solid ;
-		border-color: var(--tblr-card-color);
-		cursor:pointer;
-		/*transform: scale(1.06);*/
-	}
-	.lightSquare {
-		padding: 3px;
-		border-color: var(--tblr-border-color);
-	}
-	.panelpal {
-		/*border-radius: 10px;*/
-		/*background-color: black;*/
-		padding: 8px;
-		margin-bottom: 4px;
-	}
-	.panelpal div {
-		margin-bottom: 0px !important;
-	}
-	.badge {
-		cursor:pointer;
-	}
-	.sGl {
-		font-family: 'sans';
-		font-size: small; /*8px;*/
-		display:none;
-	}
-	.palSelected {
-		border: 1px solid;
-		border-color: var(--tblr-card-color);
-	}
 </style>
 <input type="hidden" id="curText" value="<?=$id_texto?>" />
 <input type="hidden" id="curAid" value="0" />

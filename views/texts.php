@@ -34,7 +34,7 @@
                 SELECT id_idioma FROM collabs WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].")) ;";
                 //echo $query;
         $imports = 'usuários';
-        $btnNovoTexto = '<a class="btn btn-sm btn-info btn-rounded pull-right" title="Nova palavra" data-toggle="tooltip" onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
+        $btnNovoTexto = '<a class="btn btn-default"onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
 
 
         $modalNovoTexto = '<div class="modal modal-blur" id="modalAddText" tabindex="-1" role="dialog" aria-hidden="true">
@@ -188,6 +188,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title"><?=_t('Textos')?></h3>
+                        <?=$btnNovoTexto?>
                     </div>
                     <div class="card-bodyx">
                     <div class="list-group list-group-flush overflow-auto" style="max-height: 35rem">

@@ -59,7 +59,7 @@ $romanizacao = $idioma['romanizacao'];
 
 
             <div class="col-8">
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-body">
                         <h3 class="form-label"><?php
                         echo strlen($idioma['nome_nativo'])>0 ? getSpanPalavraNativa($idioma['nome_nativo'],$idioma['eid'],$idioma['fonte'],$idioma['tamanho']) : $idioma['nome_legivel'];
@@ -137,6 +137,58 @@ $romanizacao = $idioma['romanizacao'];
 
                     </div>
                 </div>
+                <div class="row row-deckx row-cards">
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title"><?=_t('Frases')?></h3>
+                                <div class="card-actions">
+                                    <input type="text" class="form-control" id="testFilter" onkeyup="testFilter('divWord','testFilter')" placeholder="<?=_t('Buscar')?>">
+                                </div>
+                            </div>
+                            
+                            <div class="list-group list-group-flush list-group-hoverable overflow-auto" style="max-height: 25rem" id="phrases">
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">
+                            <h3 class="card-title"><?=_t('Textos')?></h3>
+                            </div>
+                            
+                            <div class="list-group list-group-flush list-group-hoverable overflow-auto" style="max-height: 25rem" id="texts">
+
+                            
+                                <?php
+                                $query = "SELECT t.*,
+                                    (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
+                                    FROM studason_tests t
+                                    WHERE t.id_idioma = ".$id_idioma." AND t.num_palavras > 0 ;";
+
+                                $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
+                                
+                                if (mysqli_num_rows($result)>0){
+                                    while($r = mysqli_fetch_assoc($result)){
+
+                                        echo '<div class="list-group-item"><div class="row">
+                                            <div class="col-auto">
+                                            <a href="?page=text&id='.$r['id'].'">'.$r['titulo'].' </a>
+                                            <div class="text-secondary text-truncate mt-n1">'.$r['num_palavras'].' '._t('palavras únicas').' - '.$r['imports'].' '._t('usuários importaram').'</div>
+                                            </div>
+                                        </div></div>';
+
+                                    };
+                                };
+
+                            ?>
+
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="col-4">
@@ -153,42 +205,7 @@ $romanizacao = $idioma['romanizacao'];
                     </div>
                     
                 </div>
-                <?php
-                    $query = "SELECT t.*,
-                        (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
-                        FROM studason_tests t
-                        WHERE t.id_idioma = ".$id_idioma." AND t.num_palavras > 0 ;";
 
-                    $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
-                    
-                    if (mysqli_num_rows($result)>0){
-                ?>
-                <div class="card">
-                    <div class="card-header">
-                    <h3 class="card-title"><?=_t('Textos')?></h3>
-                    </div>
-                    
-                    <div class="list-group list-group-flush list-group-hoverable overflow-auto" style="max-height: 25rem">
-
-                    
-                        <?php
-                        while($r = mysqli_fetch_assoc($result)){
-
-                            echo '<div class="list-group-item"><div class="row">
-                                <div class="col-auto">
-                                <a href="?page=text&id='.$r['id'].'">'.$r['titulo'].' </a>
-                                <div class="text-secondary text-truncate mt-n1">'.$r['num_palavras'].' '._t('palavras únicas').' - '.$r['imports'].' '._t('usuários importaram').'</div>
-                                </div>
-                            </div></div>';
-
-                        };
-
-                    ?>
-
-                    </div>
-                    
-                </div>
-                <?php }; ?>
 
             </div>
 
@@ -230,7 +247,7 @@ function listFormat(json){
               </div>
           </div></div>`;
     });
-    return html;
+    return html ? html : 'Nenhuma palavra.';
 }
 function loadWords(){
 
@@ -241,13 +258,33 @@ function loadWords(){
             $("#words").html( listFormat(lex) );
             localStorage.setItem("k_words_<?=$id_idioma?>", lex);
             localStorage.setItem("k_words_<?=$id_idioma?>_updated", data);
-            $('[data-bs-toggle="tooltip"]').tooltip();
         })
     }else{
         console.log('local words load');
         $("#words").html( listFormat(localStorage.getItem("k_words_<?=$id_idioma?>")) );
-        $('[data-bs-toggle="tooltip"]').tooltip();
     }
 }
+
+
+function phrasesFormat(json){
+    let html = "";
+    data = JSON.parse(json);
+    $.each( data, function( key, val ) {
+        html += `<div class="list-group-item"><div class="row">
+                        <div class="col-auto">
+                        <a href="?page=phrase&id=`+val.id +`">`+val.frase +`</a>
+                        </div>
+                    </div></div>`;
+    });
+    return html ? html : 'Nenhuma frase.';
+};
+
+function loadFrases(){
+    $.get("api.php?action=listPhrases&iid=<?=$id_idioma?>", function (lex){
+        $("#phrases").html(phrasesFormat(lex));
+    })
+}
+
 loadWords();
+loadFrases();
 </script>

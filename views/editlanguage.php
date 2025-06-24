@@ -17,6 +17,7 @@ if ($id_idioma>0){
                 (SELECT COUNT(*) FROM palavras where id_idioma = i.id) as numTotalWords,
                 (SELECT COUNT(*) FROM escritas where id_idioma = i.id) as numWritingSysts,
                 (SELECT COUNT(*) FROM artygs where id_idioma = i.id) as numArtigos,
+                (SELECT COUNT(*) FROM frases where id_idioma = i.id) as numFrases,
                 (SELECT id FROM escritas where id_idioma = i.id AND padrao = 1) as eid,
                 (SELECT COUNT(*) FROM glifos where id_escrita IN(SELECT id FROM escritas where id_idioma = i.id)) as numCharsTotal,
                 (SELECT COUNT(*) FROM inventarios where id_idioma = i.id) as numTotalSounds,
@@ -327,8 +328,8 @@ if ($id_idioma>0){
                             <div class="row align-items-center">
                                 <!--div class="col-auto"><span class="badge bg-red"></span></div-->
                                 <div class="col text-truncate">
-                                    <a href="?page=changer&iid=<?=$id_idioma?>" class="text-reset d-block"><?=_t('Transformar')?></a>
-                                    <div class="d-block text-secondary text-truncate mt-n1"><?=$idioma['numChangesList']?> <?=_t('listas de mudanças salvas')?></div>
+                                    <a href="?page=phrases&iid=<?=$id_idioma?>" class="text-reset d-block"><?=_t('Frases')?></a>
+                                    <div class="d-block text-secondary text-truncate mt-n1"><?=$idioma['numFrases']?> <?=_t('frases')?></div>
                                 </div>
                             </div>
                         </div> 
@@ -349,6 +350,16 @@ if ($id_idioma>0){
                                 <div class="col text-truncate">
                                     <a href="?page=texts&iid=<?=$id_idioma?>" class="text-reset d-block"><?=_t('Textos')?></a>
                                     <div class="d-block text-secondary text-truncate mt-n1"><?=$idioma['numPublishedTexts']?> <?=_t('textos publicados')?>, <?=$idioma['numUsersTexts']?> <?=_t('usuários estudando')?></div>
+                                </div>
+                            </div>
+                        </div> 
+
+                        <div class="list-group-item">
+                            <div class="row align-items-center">
+                                <!--div class="col-auto"><span class="badge bg-red"></span></div-->
+                                <div class="col text-truncate">
+                                    <a href="?page=changer&iid=<?=$id_idioma?>" class="text-reset d-block"><?=_t('Transformar')?></a>
+                                    <div class="d-block text-secondary text-truncate mt-n1"><?=$idioma['numChangesList']?> <?=_t('listas de mudanças salvas')?></div>
                                 </div>
                             </div>
                         </div> 
@@ -521,12 +532,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Apagar cache local
-                <br>
-                Exportar para arquivo local backup
+                <a href="#" class="btn link-secondary" onclick="limparCacheLocal('<?=$id_idioma?>')">
+                    Apagar todo o cache local
+                </a>
+                <a href="#" class="btn link-secondary" onclick="exportarIdioma('<?=$id_idioma?>')">
+                    Exportar para arquivo
+                </a>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
+                <a href="#" class="btn link-danger" onclick="excluirIdioma('<?=$id_idioma?>')">
                     Excluir idioma!
                 </a>
                 <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal">Fechar</a>

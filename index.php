@@ -141,11 +141,14 @@ require('api.php');
                     <div class="dropdown-menu-columns">
                       <div class="dropdown-menu-column">
                         <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
-                        <a class="dropdown-item" href="?page=texts">
-                          <?=_t('Textos')?>
-                        </a>
                         <a class="dropdown-item" href="?page=wordbanks">
                         <?=_t('Bancos de palavras')?>
+                        </a>
+                        <a class="dropdown-item" href="?page=phrases">
+                        <?=_t('Frases')?>
+                        </a>
+                        <a class="dropdown-item" href="?page=texts">
+                          <?=_t('Textos')?>
                         </a>
                         <?php } ?>
                         <!--a class="dropdown-item" href="?page=courses">

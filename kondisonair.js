@@ -1153,23 +1153,53 @@ $(document).on('click', function(e) {
     }
 });
 
-function limparCacheLocal() {
-    if (confirm("Tem certeza?")) {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('k_')) {
-                localStorage.removeItem(key);
-            }
+function loadCharDiv(eid,destDiv = "divInserirChars", forceReload = true, fonte = 0){
+    $('#lateralEid').val(eid);
+    $('#tempNat').val($('#escrita_nativa_'+eid).val());
+
+    $.get("api.php?action=getLastChange&data=writing&eid="+eid, function (data){
+        if (forceReload || data > localStorage.getItem("k_chars"+eid+"_updated")){
+            console.log('local chars outdated > update');
+            $.get("api.php?action=ajaxGetDivLateralWriting2&eid="+eid, function (lex){
+                $("#"+destDiv).html(lex);
+                localStorage.setItem("k_chars"+eid, lex);
+                localStorage.setItem("k_chars"+eid+"_updated", data);
+                if(fonte == 3) addNatDraw(''); else { $('#tempNat').removeClass();$('#tempNat').addClass('form-control custom-font-'+eid);}
+            })
+        }else{
+            console.log('local chars load');
+            $("#"+destDiv).html( localStorage.getItem("k_chars"+eid) );
+            if(fonte == 3) addNatDraw(''); else { $('#tempNat').removeClass();$('#tempNat').addClass('form-control custom-font-'+eid);}
         }
-        if ('caches' in window) {
-            caches.keys().then(cacheNames => {
-                cacheNames.forEach(cacheName => {
-                    caches.delete(cacheName);
+    });
+}
+
+function limparCacheLocal(id = '') {
+    if (confirm("Tem certeza?")) {
+        if (id == ''){
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('k_')) {
+                    localStorage.removeItem(key);
+                }
+            }
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    cacheNames.forEach(cacheName => {
+                        caches.delete(cacheName);
+                    });
+                    console.log('Todos os caches do Service Worker foram limpos.');
+                }).catch(error => {
+                    console.error('Erro ao limpar caches:', error);
                 });
-                console.log('Todos os caches do Service Worker foram limpos.');
-            }).catch(error => {
-                console.error('Erro ao limpar caches:', error);
-            });
+            }
+        }else{
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.includes(id)) {
+                    localStorage.removeItem(key);
+                }
+            }
         }
         window.location.reload();
     }

@@ -296,6 +296,9 @@ switch($page){
     case 'editentity': $tituloPagina .= ' - '._t('Entidade'); break;
     case 'wordgen': $tituloPagina .= ' - '._t('Gerador de palavras'); break;
     case 'offline': $tituloPagina .= ' - '._t('Offline'); break;
+    case 'phrases': $tituloPagina .= ' - '._t('Frases'); break;
+    case 'editphrase': $tituloPagina .= ' - '._t('Frase'); break;
+    case 'phrase': $tituloPagina .= ' - '._t('Frase'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -423,6 +426,13 @@ function linkAcao($idusuario,$usuario,$tipo,$iddestino,$destino,$t,$data){
         $nome = '<tr><td><div><a href="?action=person&uid='.$idusuario.'">@'.$usuario.'</a> '.$verbo.' '._t('a escrita').' <a href="?action=skreveson&eid='.
           $iddestino.'">'.$destino.'</a> <small class="pull-right"> '.$data.'</small></div></td></tr>';
       break;
+    case 'frase':
+      $res0 = mysqli_query($GLOBALS['dblink'],"SELECT publico FROM idiomas WHERE id = (SELECT id_idioma FROM frases WHERE id = ".$iddestino." LIMIT 1);") or die(mysqli_error($GLOBALS['dblink']));
+      $r0 = mysqli_fetch_assoc($res0);
+      if(isset($r0['publico']) && $r0['publico']==1) 
+        $nome = '<tr><td><div><a href="?action=person&uid='.$idusuario.'">@'.$usuario.'</a> '.$verbo.' '._t('a frase').' <a href="?action=phrase&id='.
+          $iddestino.'">'.$destino.'</a> <small class="pull-right"> '.$data.'</small></div></td></tr>';
+      break;
   }
 
   return $nome;
@@ -468,6 +478,19 @@ function linkData($idusuario,$usuario,$tipo,$iddestino,$destino,$t,$data){
         $dados['text'] = $verbo.' '._t('a escrita').' ';
         $dados['date'] = $data;
         $dados['link'] = '?action=skreveson&eid='.$iddestino;
+        $dados['ltitle'] = $destino;
+      }
+      break;
+    case 'frase':
+      $res0 = mysqli_query($GLOBALS['dblink'],"SELECT publico FROM idiomas WHERE id = (SELECT id_idioma FROM frases WHERE id = ".$iddestino." LIMIT 1);") or die(mysqli_error($GLOBALS['dblink']));
+      $r0 = mysqli_fetch_assoc($res0);
+      if(isset($r0['publico']) && $r0['publico']==1) {
+        
+        $dados['uid'] = $idusuario;
+        $dados['uname'] = $usuario;
+        $dados['text'] = $verbo.' '._t('a frase').' ';
+        $dados['date'] = $data;
+        $dados['link'] = '?action=phrase&id='.$iddestino;
         $dados['ltitle'] = $destino;
       }
       break;
@@ -3907,6 +3930,270 @@ function getSpanPalavraNativa($palavra = '',$eid,$fonte,$tamanho){
     return $ret;
 }
 
+// SEPARANDO FUNÇÕES DE GET STUDY TEXT
+  
+function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin){
+    $texto = '<div style="display:flex;flex-wrap: wrap;" >';
+
+
+    $palavras = separarPalavrasLinha($separadorPalavras,$linha,$id_idioma,$eid)[0];
+    $linhaExtras = $linha;
+
+    $textoLinha = '';
+    $listaPalavrasUnicas = [];
+
+    for($i = 0; $i < sizeof($palavras); $i++){
+      $p = $palavras[$i];
+      if ($p) {
+
+        
+        $posPalavra = mb_strpos($linhaExtras,$p);
+        if ($posPalavra>0) {
+          //tem coisa antes
+          $textoLinha .= '<div class="nostud">'.mb_substr($linhaExtras,0,$posPalavra).'</div>';
+          // remove o inicio, da pos 0 até posPalavra
+          $linhaExtras = mb_substr($linhaExtras,$posPalavra);
+        }
+
+        
+        // get palavra no dicionario kondisonair (nativos/romanizacao)
+        $pid = 0;
+        $aid = 0;
+        $pids = '';
+        $rom = '';
+        $pron = '';
+        $gloss = '';
+        $ggloss = '';
+        $dic = '';
+        $gen = '';
+        $ggen = '';
+        $trad = '';
+        $popup = '';
+        $minigloss = '';
+
+        $postexto = '';
+        $posProx = 0;
+
+        $palTotal++;
+
+        $sql = "SELECT p.*, c.id as clid, pn.palavra as nativa, c.nome as cnome, 
+              (SELECT gloss FROM glosses WHERE id = c.id_gloss LIMIT 1) as cgloss,
+              (SELECT g.nome FROM classesGeneros cg LEFT JOIN generos g ON g.id = cg.id_genero
+                WHERE cg.id_palavra = p.id) as genero,
+              (SELECT gl.gloss FROM classesGeneros cg LEFT JOIN generos g ON g.id = cg.id_genero LEFT JOIN glosses gl ON gl.id = g.id_gloss
+                WHERE cg.id_palavra = p.id) as ggloss,
+              ( SELECT GROUP_CONCAT(g.descricao SEPARATOR ' ') FROM itens_palavras ip
+                LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
+                  LEFT JOIN gloss_itens gi ON gi.id_item = i.id
+                  LEFT JOIN glosses g ON gi.id_gloss = g.id 
+                WHERE ip.id_palavra = p.id AND usar = 1 ) as flexnomes,
+              ( SELECT GROUP_CONCAT(g.gloss SEPARATOR '.') FROM itens_palavras ip
+                  LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
+                    LEFT JOIN gloss_itens gi ON gi.id_item = i.id
+                    LEFT JOIN glosses g ON gi.id_gloss = g.id 
+                  WHERE ip.id_palavra = p.id AND usar = 1 ) as flexgloss,
+              (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
+            FROM palavras p
+              LEFT JOIN classes c ON p.id_classe = c.id 
+              LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
+            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." 
+            ORDER BY p.id_forma_dicionario DESC;"; 
+            // AND p.id_forma_dicionario = 0
+        //echo $sql;
+        $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+        
+        if (mysqli_num_rows($a)<1){
+
+          //if (!$isOwner) die('<script>window.location = "index.php";</script>');
+          // palavra nao existe
+          $pst = 9; // 9: não existe no kondisonair ainda ->  0- nova no aprendizado -> 1~4 aprendendo -> 5 aprendida/ignorada/ok
+          $popup = null; //_t('Esta palavra não existe no dicionário'); // $popup : popup
+          $minigloss = '?';  // $minigloss : minigloss
+          $palDesc++;
+          $pids = '0,';
+        }else{
+          $palCon++;
+          // if > 1, pegar todos os pid com vírgula
+          //if ($popup != '') $popup .= "\n";
+          
+          while($qpid = mysqli_fetch_assoc($a)){
+            // pegar dados da palavra
+            $pid = $qpid['id'];
+            $pids .= $pid.',';
+            $rom = $qpid['romanizacao'];
+            $pron = $qpid['pronuncia'];
+            $sig = $qpid['significado'];
+            $dic = $qpid['dic'];
+            $ggen = $gen = '';
+
+            if ($qpid['genero'] != '') $gen = ' '.$qpid['genero'];
+            if ($qpid['ggloss'] != '') $ggen = '.'.$qpid['ggloss'];
+
+            if ($qpid['flexnomes'] != '') $gen .= ' '.$qpid['flexnomes'];
+            if ($qpid['flexgloss'] != '') $ggen .= '.'.$qpid['flexgloss'];
+
+            $gloss = $qpid['cnome'].$gen;
+            $ggloss = $qpid['cgloss'].$ggen;
+
+            $trad = '';
+
+            if ($popup != '') $popup .= "<hr class='my-1'>";
+            if ($minigloss != '') $minigloss .= "\n";
+            
+            $popupbox = '';
+            $glossbox = '';
+            if ($rom != '') { $popupbox .= $rom; $glossbox .= $rom; }
+            if ($pron != '') {$popupbox .= ' /'.$pron."/<br>\n"; $glossbox .= ' /'.$pron."/";}
+
+            // $popupbox: nome classe, genero e flexões
+            //if ($gloss != '') {$popupbox .= ' ('.$gloss.")";}
+            // utbox: gloss classe, genero e flexoes
+            if ($ggloss != '') {$glossbox .= ' '.$ggloss;$popupbox .= ' '.$ggloss;}
+
+            if ($sig != '') {$popupbox .= ": ".$sig; $glossbox .= ": ".$sig;}
+            
+            $popup .= $popupbox;
+            $minigloss .= $glossbox;
+            
+          }
+          
+          $minigloss = str_replace("\n",'<br>',$minigloss);
+
+          if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
+          else $listaPalavrasUnicas[$p]['q'] = 1;
+
+          $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+          $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
+          if (mysqli_num_rows($qpstres)<1){
+              $pst = 0;
+              $aid = 0;
+              $palNovas++;
+          }else{
+              $qpst = mysqli_fetch_assoc($qpstres);
+              $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
+              $aid = $qpst['id']>0 ? $qpst['id'] : 0;
+
+              $listaPalavrasUnicas[$p]['s'] = $pst;
+
+              if ($qpst['status_aprendido']==5) $palOk++;
+              else if ($qpst['status_aprendido']>0) $palStud++;
+              else $palNovas++;
+          }
+        }
+
+        //remover esta palavra
+        $linhaExtras = mb_substr($linhaExtras,mb_strlen($palavras[$i]));
+
+        if($e['id_fonte']==3) $pnat = getSpanPalavraNativa($p,$e['eid'],$e['id_fonte'],$e['tamanho']); else $pnat = $p;
+
+        $textoLinha .= '<div onclick="cpk(\''.substr($pids,0,-1).'\','.$pst.','.$aid.',\''.$p.'\',\''.str_replace(',','-',$pid).'\',this)" 
+          data-bs-html="true" data-bs-trigger="hover" data-bs-toggle="popover"
+          title="'.$popup.'" class="pstat-'.$pst.' pstud pstud-'.str_replace(',','-',$pid).'">'.$pnat.'<div class="sGl">'.$minigloss.'</div></div>';
+      }
+      
+
+      if ($palavras[$i+1]) {
+        $posProx = mb_strpos($linhaExtras,$palavras[$i+1]);
+        if($posProx>0){
+          $textoLinha .= '<div class="nostud">'.mb_substr($linhaExtras,0,$posProx).'</div>';
+          $linhaExtras = mb_substr($linhaExtras,$posProx);
+        }
+      }else{
+        // preisa checar se é fim da linha realmente
+        //echo '= mb_strpos: linha: "'.$linhaExtras.'" => ant: "'.$palavras[$i-1].'" => prox: "'.$palavras[$i+1].'" => pos: '.$posProx.' => count: '.$i.'/'.sizeof($palavras).'<br>';
+
+        
+        if ($i == sizeof($palavras)-1 /* $linhaExtras != '' */ )
+          $textoLinha .= '<div class="nostud">'.$linhaExtras.'</div>';
+      }
+
+    }
+    $texto .= $textoLinha.'</div>'; // '<br>'  data-bs-toggle="tooltip" data-bs-placement="bottom"
+
+    return [$texto,$listaPalavrasUnicas];
+};
+
+// original study text function
+function getFullStudyText($id) {
+  $sql = "SELECT t.*, e.id as eid, e.binario, e.id_fonte, e.tamanho,
+    e.separadores, e.iniciadores,
+    (SELECT nome_legivel FROM idiomas WHERE id = t.id_idioma) as idioma,
+    (SELECT id_usuario FROM idiomas WHERE id = t.id_idioma) as uidioma
+    FROM studason_tests t
+    LEFT JOIN escritas e  ON e.id_idioma = t.id_idioma
+    WHERE  t.id = ".$id."  ORDER BY e.padrao DESC;";
+  //echo $sql;
+  $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+  // getGlossedText($text,$iid,$eid,$tamanho,$fonte,$binary,$isOwner);
+
+  $isOwner = false;
+  $e = mysqli_fetch_assoc($langs);  
+  $id_idioma = $e['id_idioma'];
+  $idioma = $e['idioma'];
+  $titulo = $e['titulo'];
+  $texto = '';
+  if ($e['eid']>0) $eid = $e['eid'];
+  if ($e['binario']>0) $bin = ' BINARY ';
+  if ($e['uidioma'] == $_SESSION['KondisonairUzatorIDX']) $isOwner = true;
+
+  // if (!$isOwner && !$e['num_palavras']>0) die('novalered');
+
+  $textoSentencas = $e['texto'];
+
+  // $texto = preg_replace('#(\d)\s([^\d])#', '$1 | $2', $str);
+
+  /*
+  foreach caractere separador
+  tem um desses caracteres? posição > 0?
+  replace essa posição por '\n' + caractere + ' '
+  */
+  $separadorPalavras = preg_split('//u', $e['separadores'], null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
+
+
+  /*
+  foreach caractere iniciador
+  tem um desses caracteres? posição > 0?
+  replace essa posição por ' ' + caractere
+  */
+  $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
+  foreach ($iniciadoresPalavras as $sep){
+    $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
+  }
+
+
+
+
+  $palDesc = 0;
+  $palCon = 0;
+  $palTotal = 0;
+  $palStud = 0;
+  $palNovas = 0;
+  $palOk = 0;
+  
+  $listaPalavrasUnicas = array();
+
+  $separadorLinhas = array("\n");
+
+  $linhas = multiexplode($separadorLinhas,$textoSentencas);
+
+  //foreach ($linhas as $linha){ // cada linha
+  for($j = 0; $j < sizeof($linhas); $j++){
+      $linha = $linhas[$j];
+
+      [$textoTemp,$listaPalavrasUnicasTemp] = getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin);
+      $texto .= $textoTemp;
+      $listaPalavrasUnicas = array_merge($listaPalavrasUnicas,$listaPalavrasUnicasTemp);
+  }
+  
+  $novasUnicas = 0;
+  foreach($listaPalavrasUnicas as $pal => $pu){ if ($pu['s']<1) { $novasUnicas++; } };
+  $echo = '<script>$("#tstats").html("'.count($listaPalavrasUnicas)." "._t('palavras')." - ".$novasUnicas." "._t('novas')." (".round($novasUnicas / (count($listaPalavrasUnicas) > 0 ? count($listaPalavrasUnicas) : 1) * 100).'%) ");
+    $(".pstud").tooltip({html:true});</script>';
+  // echo '<script>$("#tstats").html("'.length($listaPalavrasUnicas)." palavras - ".$palNovas." novas (".round($palNovas / (length($listaPalavrasUnicas) > 0 ? length($listaPalavrasUnicas) : 1) * 100).'%) ")</script>';
+  return $texto.$echo;
+};
+
 /*
   AÇÕES KONDISONAIR - DE EDIÇÃO (PARA APENAS LOGADO)
 */
@@ -4574,6 +4861,67 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     //echo $pid;
     die();
+  }
+
+  if ($_GET['action'] == 'listPhrases') {
+    // id_idioma id_usuario
+    if ($_GET['uid'] > 0) $id_usuario = $_GET['uid'];
+    if ($_GET['iid'] > 0) {
+      $id_idioma = $_GET['iid'];
+      $en = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
+                      LEFT JOIN fontes f ON f.id = e.id_fonte
+                      WHERE e.id_idioma = $id_idioma AND e.padrao = 1;") or die(mysqli_error($GLOBALS['dblink']));
+      if(mysqli_num_rows($en)>0){
+          $en = mysqli_fetch_assoc($en);
+          $escrita = $en['id'];
+          $id_fonte = $en['id_fonte'];
+          $tamanho = $en['tamanho'];
+      }else { $escrita = 0; $fonte = 'notosans';$id_fonte = 0; $tamanho = '';}
+    }
+
+    $escrita_original = '';
+    $id_fonte_original = '';
+    $tamanho_original = '';
+
+    //`id` BIGINT UNSIGNED NOT NULL , `id_idioma` BIGINT UNSIGNED NOT NULL , `id_criador` BIGINT UNSIGNED NOT NULL , `id_original` BIGINT UNSIGNED NOT NULL , `frase` TEXT NOT NULL , `info`
+
+    if ($id_idioma == $_SESSION['KondisonairUzatorIDX'] /*|| $idioma['collab'] > 0 */) {
+		  // listagem top frases do idioma - link pra edição
+        $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
+          LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
+          WHERE f.id_idioma = $id_idioma  ORDER BY RAND() LIMIT 100";
+	  }else if($id_idioma > 0){
+        // apenas listagem de top frases do idioma
+        $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
+          LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
+          WHERE f.id_idioma = $id_idioma  ORDER BY RAND() LIMIT 100";
+    }else if($id_usuario > 0){
+        // apenas listagem de frases do usuario - edit se é o logado
+        $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
+          LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
+          WHERE f.id_criador = $id_usuario  ORDER BY RAND() LIMIT 100";
+    }else {
+        //lista random top frases
+        //add select pra idiomas
+        $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
+          LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
+          ORDER BY RAND() LIMIT 100";
+    }
+    $data = [];
+    $result = mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    while ($r = mysqli_fetch_assoc($result)) {
+        $r['frase'] = getSpanPalavraNativa($r['frase'],$r['eid'],$r['fonte'],$r['tamanho']);
+        /*if ($r['id_original'] > 0) {
+            $r['original'] = getSpanPalavraNativa($r['frase2'],$r['eid2'],$r['fonte2'],$r['tamanho2']);
+            $r['idioma_original'] = 'Japonês';
+        }
+        */
+        //if($r['traducao']) $r['traducao'].' - '.$r['idioma_traducao']; // trad idioma do usuario, se houver trad nele
+        $data[] = $r;
+    }
+
+    echo json_encode($data);
+    exit();
   }
 
   if ($_GET['action']=='ajaxGravarNivel') {
@@ -7455,6 +7803,43 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         logAcao(0,'skreveson',$idEscrita);
     }
 
+    die();
+  };
+
+  if ($_GET['action'] == 'ajaxSalvarFrase') {
+    
+    if ($_GET['id']>0){ 
+      $sql = "UPDATE frases SET 
+          id_original = ".$_POST['original'].",
+          frase = \"".$_POST['frase']."\",
+          info = \"".$_POST['info']."\"
+          WHERE id = ".$_GET['id'].";";
+
+      mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+      echo $_GET['id'];
+      logAcao(1,'frase',$_GET['id']);
+    }else{
+      
+      $res2 = mysqli_query($GLOBALS['dblink'],"SELECT 
+        (SELECT COUNT(*) FROM frases WHERE id_criador = ".$_SESSION['KondisonairUzatorIDX']." AND MONTH(data_criacao) = MONTH(NOW())) as frases,
+        (SELECT valor FROM opcoes_sistema WHERE opcao = 'frases_mes') as limite;") or die(mysqli_error($GLOBALS['dblink']));
+      $r2 = mysqli_fetch_assoc($res2);
+
+      if($r2['escritas'] > $r2['limite']){
+        echo 'limit';
+        die();
+      };
+      
+      $id = generateId();
+      mysqli_query($GLOBALS['dblink'],"INSERT INTO frases SET id = $id,
+          id_idioma = '".$_POST['idioma']."',
+          id_criador = ".$_SESSION['KondisonairUzatorIDX'].",
+          id_original = ".$_POST['original'].",
+          frase = \"".$_POST['frase']."\",
+          info = \"".$_POST['info']."\";") or die(mysqli_error($GLOBALS['dblink']));
+      echo $id;
+      logAcao(0,'frase',$id);
+    }
     die();
   };
   
@@ -10414,266 +10799,8 @@ if ($_GET['action'] == 'testAdisonason') {
 
 };
 
-if ($_GET['action'] == 'getStudTest') {
-  $sql = "SELECT t.*, e.id as eid, e.binario, e.id_fonte, e.tamanho,
-    e.separadores, e.iniciadores,
-    (SELECT nome_legivel FROM idiomas WHERE id = t.id_idioma) as idioma,
-    (SELECT id_usuario FROM idiomas WHERE id = t.id_idioma) as uidioma
-    FROM studason_tests t
-    LEFT JOIN escritas e  ON e.id_idioma = t.id_idioma
-    WHERE  t.id = ".$_GET['id']."  ORDER BY e.padrao DESC;";
-  //echo $sql;
-  $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
-  $isOwner = false;
-  $e = mysqli_fetch_assoc($langs);  
-  $id_idioma = $e['id_idioma'];
-  $idioma = $e['idioma'];
-  $titulo = $e['titulo'];
-  $texto = '';
-  if ($e['eid']>0) $eid = $e['eid'];
-  if ($e['binario']>0) $bin = ' BINARY ';
-  if ($e['uidioma'] == $_SESSION['KondisonairUzatorIDX']) $isOwner = true;
-
-  // if (!$isOwner && !$e['num_palavras']>0) die('novalered');
-
-  $textoSentencas = $e['texto'];
-
-  // $texto = preg_replace('#(\d)\s([^\d])#', '$1 | $2', $str);
-
-  /*
-  foreach caractere separador
-  tem um desses caracteres? posição > 0?
-  replace essa posição por '\n' + caractere + ' '
-  */
-  $separadorPalavras = preg_split('//u', $e['separadores'], null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
-
-
-  /*
-  foreach caractere iniciador
-  tem um desses caracteres? posição > 0?
-  replace essa posição por ' ' + caractere
-  */
-  $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
-  foreach ($iniciadoresPalavras as $sep){
-    $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
-  }
-
-
-
-
-  $palDesc = 0;
-  $palCon = 0;
-  $palTotal = 0;
-  $palStud = 0;
-  $palNovas = 0;
-  $palOk = 0;
-  
-  $listaPalavrasUnicas = array();
-
-  $separadorLinhas = array("\n");
-
-  $linhas = multiexplode($separadorLinhas,$textoSentencas);
-
-  //foreach ($linhas as $linha){ // cada linha
-  for($j = 0; $j < sizeof($linhas); $j++){
-      $linha = $linhas[$j];
-
-      $texto .= '<div style="display:flex;flex-wrap: wrap;" >';
-
-      $palavras = separarPalavrasLinha($separadorPalavras,$linha,$id_idioma,$eid)[0];
-      //xxxxx e as pontuações e caracteres do multiexplode ?
-      $linhaExtras = $linha;
-
-      // ver se o idioma do texto tem escrita nativa ou romanizacao
-      //if ($entrada[0]=='nativa'){ // entrada[1] = id da escrita
-        $pnp = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id";
-        //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
-        $pnq = "pn.palavra as nativa, ";
-      //}
-
-      //echo $linha.'<br>'; //xxxxx debugtest - linhas
-
-      //foreach ($palavras as $p){
-      $textoLinha = '';
-
-      for($i = 0; $i < sizeof($palavras); $i++){
-        $p = $palavras[$i];
-        if ($p) {
-
-          
-          $posPalavra = mb_strpos($linhaExtras,$p);
-          if ($posPalavra>0) {
-            //tem coisa antes
-            $textoLinha .= '<div class="nostud">'.mb_substr($linhaExtras,0,$posPalavra).'</div>';
-            // remove o inicio, da pos 0 até posPalavra
-            $linhaExtras = mb_substr($linhaExtras,$posPalavra);
-          }
-
-          
-          // get palavra no dicionario kondisonair (nativos/romanizacao)
-          $pid = 0;
-          $aid = 0;
-          $pids = '';
-          $rom = '';
-          $pron = '';
-          $gloss = '';
-          $ggloss = '';
-          $dic = '';
-          $gen = '';
-          $ggen = '';
-          $trad = '';
-          $box = '';
-          $ubox = '';
-          $tbox = '';
-          $utbox = '';
-          $minigloss = '';
-
-          $postexto = '';
-          $posProx = 0;
-
-          $palTotal++;
-
-          $sql = "SELECT p.*, c.id as clid, ".$pnq." c.nome as cnome, 
-                (SELECT gloss FROM glosses WHERE id = c.id_gloss LIMIT 1) as cgloss,
-                (SELECT g.nome FROM classesGeneros cg LEFT JOIN generos g ON g.id = cg.id_genero
-                  WHERE cg.id_palavra = p.id) as genero,
-                (SELECT gl.gloss FROM classesGeneros cg LEFT JOIN generos g ON g.id = cg.id_genero LEFT JOIN glosses gl ON gl.id = g.id_gloss
-                  WHERE cg.id_palavra = p.id) as ggloss,
-                ( SELECT GROUP_CONCAT(g.descricao SEPARATOR ' ') FROM itens_palavras ip
-                  LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
-                    LEFT JOIN gloss_itens gi ON gi.id_item = i.id
-                    LEFT JOIN glosses g ON gi.id_gloss = g.id 
-                  WHERE ip.id_palavra = p.id AND usar = 1 ) as flexnomes,
-                ( SELECT GROUP_CONCAT(g.gloss SEPARATOR '.') FROM itens_palavras ip
-                    LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
-                      LEFT JOIN gloss_itens gi ON gi.id_item = i.id
-                      LEFT JOIN glosses g ON gi.id_gloss = g.id 
-                    WHERE ip.id_palavra = p.id AND usar = 1 ) as flexgloss,
-                (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
-              FROM palavras p
-                LEFT JOIN classes c ON p.id_classe = c.id ".$pnp." 
-              WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." 
-              ORDER BY p.id_forma_dicionario DESC;"; 
-              // AND p.id_forma_dicionario = 0
-          //echo $sql;
-          $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-          
-          if (mysqli_num_rows($a)<1){
-
-            //if (!$isOwner) die('<script>window.location = "index.php";</script>');
-            // palavra nao existe
-            $pst = 9; // 9: não existe no kondisonair ainda ->  0- nova no aprendizado -> 1~4 aprendendo -> 5 aprendida/ignorada/ok
-            $box = _t('Esta palavra não existe no dicionário %1',[$idioma]);
-            $ubox = '?';
-            $palDesc++;
-            $pids = '0,';
-          }else{
-            $palCon++;
-            // if > 1, pegar todos os pid com vírgula
-            //if ($box != '') $box .= "\n";
-            
-            while($qpid = mysqli_fetch_assoc($a)){
-              // pegar dados da palavra
-              $pid = $qpid['id'];
-              $pids .= $pid.',';
-              $rom = $qpid['romanizacao'];
-              $pron = $qpid['pronuncia'];
-              $sig = $qpid['significado'];
-              $dic = $qpid['dic'];
-              $ggen = $gen = '';
-
-              if ($qpid['genero'] != '') $gen = ' '.$qpid['genero'];
-              if ($qpid['ggloss'] != '') $ggen = '.'.$qpid['ggloss'];
-
-              if ($qpid['flexnomes'] != '') $gen .= ' '.$qpid['flexnomes'];
-              if ($qpid['flexgloss'] != '') $ggen .= '.'.$qpid['flexgloss'];
-
-              $gloss = $qpid['cnome'].$gen;
-              $ggloss = $qpid['cgloss'].$ggen;
-
-              $trad = '';
-
-              if ($box != '') $box .= "<br>\n";
-              if ($ubox != '') $ubox .= "\n";
-              
-              $tbox = '';
-              $utbox = '';
-              if ($rom != '') { $tbox .= $rom; $utbox .= $rom; }
-              if ($pron != '') {$tbox .= ' /'.$pron."/<br>\n"; $utbox .= ' /'.$pron."/";}
-
-              // $tbox: nome classe, genero e flexões
-              if ($gloss != '') {$tbox .= ' ('.$gloss.")";}
-              // utbox: gloss classe, genero e flexoes
-              if ($ggloss != '') {$utbox .= ' '.$ggloss." ";}
-
-              if ($sig != '') {$tbox .= "<br>\n".$sig; $utbox .= ": ".$sig;}
-              
-              $box .= $tbox;
-              $ubox .= $utbox;
-
-              if ($minigloss != '') $minigloss .= '<br>';
-              
-            }
-            
-            $minigloss .= str_replace("\n",'<br>',$ubox);
-
-            if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
-            else $listaPalavrasUnicas[$p]['q'] = 1;
-
-            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
-            $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
-            if (mysqli_num_rows($qpstres)<1){
-                $pst = 0;
-                $aid = 0;
-                $palNovas++;
-            }else{
-                $qpst = mysqli_fetch_assoc($qpstres);
-                $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
-                $aid = $qpst['id']>0 ? $qpst['id'] : 0;
-
-                $listaPalavrasUnicas[$p]['s'] = $pst;
-
-                if ($qpst['status_aprendido']==5) $palOk++;
-                else if ($qpst['status_aprendido']>0) $palStud++;
-                else $palNovas++;
-            }
-          }
-
-          //remover esta palavra
-          $linhaExtras = mb_substr($linhaExtras,mb_strlen($palavras[$i]));
-
-          if($e['id_fonte']<0) $pnat = getSpanPalavraNativa($p,$e['eid'],$e['id_fonte'],$e['tamanho']); else $pnat = $p;
-
-          $textoLinha .= '<div onclick="cpk(\''.substr($pids,0,-1).'\','.$pst.','.$aid.',\''.$p.'\',\''.str_replace(',','-',$pid).'\',this)" title="'.$box.'"  class="pstat-'.$pst.' pstud pstud-'.str_replace(',','-',$pid).'">'.$pnat.'<div class="sGl">'.$minigloss.'</div></div>';
-        }
-        
-
-        if ($palavras[$i+1]) {
-          $posProx = mb_strpos($linhaExtras,$palavras[$i+1]);
-          if($posProx>0){
-            $textoLinha .= '<div class="nostud">'.mb_substr($linhaExtras,0,$posProx).'</div>';
-            $linhaExtras = mb_substr($linhaExtras,$posProx);
-          }
-        }else{
-          // preisa checar se é fim da linha realmente
-          //echo '= mb_strpos: linha: "'.$linhaExtras.'" => ant: "'.$palavras[$i-1].'" => prox: "'.$palavras[$i+1].'" => pos: '.$posProx.' => count: '.$i.'/'.sizeof($palavras).'<br>';
-
-          
-          if ($i == sizeof($palavras)-1 /* $linhaExtras != '' */ )
-            $textoLinha .= '<div class="nostud">'.$linhaExtras.'</div>';
-        }
-
-      }
-      $texto .= $textoLinha.'</div>'; // '<br>'  data-bs-toggle="tooltip" data-bs-placement="bottom"
-  }
-  
-  echo $texto;
-  $novasUnicas = 0;
-  foreach($listaPalavrasUnicas as $pal => $pu){ if ($pu['s']<1) { $novasUnicas++; } };
-  echo '<script>$("#tstats").html("'.count($listaPalavrasUnicas)." "._t('palavras')." - ".$novasUnicas." "._t('novas')." (".round($novasUnicas / (count($listaPalavrasUnicas) > 0 ? count($listaPalavrasUnicas) : 1) * 100).'%) ");
-    $(".pstud").tooltip({html:true});</script>';
-  // echo '<script>$("#tstats").html("'.length($listaPalavrasUnicas)." palavras - ".$palNovas." novas (".round($palNovas / (length($listaPalavrasUnicas) > 0 ? length($listaPalavrasUnicas) : 1) * 100).'%) ")</script>';
+if ($_GET['action'] == 'getStudTest') { 
+  echo getFullStudyText($_GET['id']); 
   die();
 };
 

@@ -181,14 +181,16 @@
                               $sql = "SELECT u.username, u.id as userid, a.tipo_destino as tipo, a.tipo as t, a.id_destino, 
                                 DATE_FORMAT( a.data_acao,'%d/%m/%Y %h:%i:%s') as data_acao,
                                 i.nome_legivel as d_idioma,
+                                f.frase as frase,
                                 p.pronuncia as d_palavra, pn.palavra as d_nativo, p.romanizacao as d_romanizacao,
-                                e.nome as d_escrita, pn.id_escrita as eid, en.id_fonte, en.tamanho
+                                e.nome as d_escrita, en.id as eid, en.id_fonte, en.tamanho
                                 FROM asons a
                                 LEFT JOIN idiomas i ON (a.tipo_destino = 'diom' AND i.id = a.id_destino)
-                                LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
                                 LEFT JOIN palavras p ON (a.tipo_destino = 'palavr' AND p.id = a.id_destino)
+                                LEFT JOIN frases f ON (a.tipo_destino = 'frase' AND f.id = a.id_destino)
+                                LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
                                 LEFT JOIN palavrasNativas pn ON (p.id = pn.id_palavra AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1))
-                                LEFT JOIN escritas en ON (en.id_idioma = p.id_idioma AND en.padrao = 1)
+                                LEFT JOIN escritas en ON ((en.id_idioma = p.id_idioma) OR (en.id_idioma = f.id_idioma) AND en.padrao = 1)
                                 LEFT JOIN usuarios u ON u.id = a.id_usuario 
                                 WHERE a.id_usuario IN (SELECT ss.id_seguido FROM sosail_sgisons ss WHERE ss.id_usuario = ".$_SESSION['KondisonairUzatorIDX'].")
                                 GROUP BY a.tipo_destino, a.id_destino
@@ -199,7 +201,11 @@
                             while($r = mysqli_fetch_assoc($res2)) { 
 
                               $linkData = linkData( $r['userid'], $r['username'], $r['tipo'], $r['id_destino'], 
-                                ( $r['d_nativo']=='' ? ($r['d_romanizacao']==''? $r['d_palavra'] : $r['d_romanizacao'] ) : getSpanPalavraNativa($r['d_nativo'],$r['eid'],$r['id_fonte'],$r['tamanho']) )
+                                ( $r['d_nativo']=='' ? 
+                                    ($r['d_romanizacao']==''? $r['d_palavra'] : $r['d_romanizacao'] ) 
+                                    : 
+                                    getSpanPalavraNativa($r['d_nativo'],$r['eid'],$r['id_fonte'],$r['tamanho']) 
+                                ).getSpanPalavraNativa($r['frase'],$r['eid'],$r['id_fonte'],$r['tamanho']) 
                                 .$r['d_escrita'].$r['d_idioma'], $r['t'], $r['data_acao'] );
                               if(!empty($linkData))
                               echo '<div>
