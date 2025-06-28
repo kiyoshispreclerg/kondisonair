@@ -105,11 +105,21 @@ $tamanho = $idioma['tamanho'];
                         <div class="row">
                             <div class="col-6">
                                 <label class="form-label"><?=_t('Idioma')?></label>
-                                <select class="form-select" id="idsig" onchange="window.location.href='?page=wordbank&id=<?=$_GET['id']?>&iid='+$('#idsig').val()"><option value="0" selected><?=_t('Selecionar meu idioma...')?></option><?php 
-                                        $oiids = mysqli_query($GLOBALS['dblink'],
+                                <select class="form-select" id="idsig" onchange="window.location.href='?page=wordbank&id=<?=$_GET['id']?>&iid='+$('#idsig').val()">
+                                    <option value="0" selected><?=_t('Selecionar idioma...')?></option><?php 
+                                    $oiids = mysqli_query($GLOBALS['dblink'],
                                         "SELECT i.nome_legivel, i.id as iid, e.id as eid FROM idiomas i
                                         LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
-                                        WHERE i.id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($GLOBALS['dblink'])); // AND buscavel = 1
+                                        WHERE i.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';") or die(mysqli_error($GLOBALS['dblink'])); // AND buscavel = 1
+                                    while($oid = mysqli_fetch_assoc($oiids)) {
+                                        echo '<option value="'.$oid['iid'].'" data=e="'.$oid['eid'].'" data-n="'.$oid['nome_legivel'].'" '.($oid['iid']==$_GET['iid']?'selected':'').'>'.$oid['nome_legivel'].'</option>';
+                                    };
+
+                                    $oiids = mysqli_query($GLOBALS['dblink'],
+                                        "SELECT i.nome_legivel, i.id as iid, e.id as eid FROM idiomas i
+                                        LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
+                                        WHERE i.publico = 1;") or die(mysqli_error($GLOBALS['dblink'])); // AND buscavel = 1
+                                    if (mysqli_num_rows($oiids)>0) echo '<option value="0" disabled>'._t('Idiomas naturais').'</option>';
                                     while($oid = mysqli_fetch_assoc($oiids)) {
                                         echo '<option value="'.$oid['iid'].'" data=e="'.$oid['eid'].'" data-n="'.$oid['nome_legivel'].'" '.($oid['iid']==$_GET['iid']?'selected':'').'>'.$oid['nome_legivel'].'</option>';
                                     };
@@ -138,7 +148,7 @@ $tamanho = $idioma['tamanho'];
                     <div class="card-header">
                         <h3 class="card-title"><?=$bancoDados['titulo']?></h3>
 						<div class="card-actions">
-                            <?php if($_GET['iid']>0){ ?>
+                            <?php if($idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ ?>
                                 <a href="#" class="btn btn-primary" onclick="aplicarImportacao()">
                                 <?=_t('Importar')?>
                                 </a>
@@ -176,80 +186,160 @@ $tamanho = $idioma['tamanho'];
                             $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
 
                             $totalWords = 0;
-                            while($r = mysqli_fetch_assoc($result)){
-                                $pals = explode("|",$r['palavrasSig']);
 
-                                $nativo = '';
-                                $pronuncia = '';
-                                $romanizacao = '';
-                                $signficado = '';
+                            if($idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ 
 
-                                foreach($pals as $pal){
-                                    $pal = explode("*",$pal);
-                                    $nativo .= $pal[3].', ';
-                                    $pronuncia .= $pal[0].', ';
-                                    $romanizacao .= $pal[2].', ';
-                                    $signficado .= $pal[1].', ';
-                                }
+                                while($r = mysqli_fetch_assoc($result)){
+                                    $pals = explode("|",$r['palavrasSig']);
 
-                                $jatem = '';
-                                //if($id_iidesc!=$id_idioma){
-                                    $exs = explode("|",$r['palavrasExtras']);
-                                    foreach($exs as $ex){
-                                        $x = explode("*",$ex);
+                                    $nativo = '';
+                                    $pronuncia = '';
+                                    $romanizacao = '';
+                                    $signficado = '';
 
-                                        if($x[3] && $escrita>-1) $jatem .= getSpanPalavraNativa($x[3],$escrita,$fonte,$tamanho).' ';
-
-                                        if($x[2]) $jatem .= $x[2].' '; // $romanizacao .= $pal[2].', ';
-                                        else if($x[0]) $jatem .= '/'.$x[0].'/ '; //$pronuncia .= $pal[0].', ';
-                                        
-                                        //$signficado .= $pal[1].', ';
+                                    foreach($pals as $pal){
+                                        $pal = explode("*",$pal);
+                                        $nativo .= $pal[3].', ';
+                                        $pronuncia .= $pal[0].', ';
+                                        $romanizacao .= $pal[2].', ';
+                                        $signficado .= $pal[1].', ';
                                     }
-                                //}
 
-                                echo '<div class="list-group-item" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)" id="r'.$r['id_referente'].'">
-                                    <div class="row align-items-center" id="r'.$r['id_referente'].'">
-                                        <div class="col-auto" ><input type="checkbox" value="'.$r['id_referente'].'" id="ck'.$r['id_referente'].'" class="form-check-input ck-inputs"></div>
-                                        <div class="col-auto">
-                                            <a href="#" class="text-reset d-block">'.($nativo!=''?getSpanPalavraNativa(substr($nativo,0,-2),$escritadesc,$fontedesc,$tamanhodesc)/*'<span class="custom-font-'.$escritadesc.'">'.substr($nativo,0,-2).'</span>'*/: ( $romanizacao!='' ? substr($romanizacao,0,-2):substr($pronuncia,0,-2) ) ).'</a>
-                                            <div class="d-block text-secondary mt-n1">'.$r['descricao'].'</div>
-                                        </div>
-                                        <div class="col">
-                                            <div class="input-group mb-2">
-                                                <span class="input-group-text">'._t('Pronuncia').'</span>
-                                                <input type="text" class="form-control" autocomplete="off" id="pron'.$r['id_referente'].'" onchange="checarPronuncia(\''.$r['id_referente'].'\',\''.$id_idioma.'\')" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
-                                            </div>';
-                                if ($escrita>-1){
+                                    $jatem = '';
+                                    //if($id_iidesc!=$id_idioma){
+                                        $exs = explode("|",$r['palavrasExtras']);
+                                        foreach($exs as $ex){
+                                            $x = explode("*",$ex);
+
+                                            if($x[3] && $escrita>-1) $jatem .= getSpanPalavraNativa($x[3],$escrita,$fonte,$tamanho).' ';
+
+                                            if($x[2]) $jatem .= $x[2].' '; // $romanizacao .= $pal[2].', ';
+                                            else if($x[0]) $jatem .= '/'.$x[0].'/ '; //$pronuncia .= $pal[0].', ';
+                                            
+                                            //$signficado .= $pal[1].', ';
+                                        }
+                                    //}
+
+                                    echo '<div class="list-group-item" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)" id="r'.$r['id_referente'].'">
+                                        <div class="row align-items-center" id="r'.$r['id_referente'].'">
+                                            <div class="col-auto" ><input type="checkbox" value="'.$r['id_referente'].'" id="ck'.$r['id_referente'].'" class="form-check-input ck-inputs"></div>
+                                            <div class="col-auto">
+                                                <a href="#" class="text-reset d-block">'.($nativo!=''?getSpanPalavraNativa(substr($nativo,0,-2),$escritadesc,$fontedesc,$tamanhodesc)/*'<span class="custom-font-'.$escritadesc.'">'.substr($nativo,0,-2).'</span>'*/: ( $romanizacao!='' ? substr($romanizacao,0,-2):substr($pronuncia,0,-2) ) ).'</a>
+                                                <div class="d-block text-secondary mt-n1">'.$r['descricao'].'</div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Pronuncia').'</span>
+                                                    <input type="text" class="form-control" autocomplete="off" id="pron'.$r['id_referente'].'" onchange="checarPronuncia(\''.$r['id_referente'].'\',\''.$id_idioma.'\')" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
+                                                </div>';
+                                    if ($escrita>-1){
+                                                echo '<div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Romanizacao').'</span>
+                                                    <input type="text" class="form-control" autocomplete="off" id="rom'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarRomanizacao(\''.$r['id_referente'].'\',\''.$id_idioma.'\')">
+                                                </div>';
+                                    }
+
+                                    if ($escrita>-1){
+                                        if($fonte==3){
+                                            // echo input oculto e div visual e btn de add lateral
+                                        }else{
                                             echo '<div class="input-group mb-2">
-                                                <span class="input-group-text">'._t('Romanizacao').'</span>
-                                                <input type="text" class="form-control" autocomplete="off" id="rom'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarRomanizacao(\''.$r['id_referente'].'\',\''.$id_idioma.'\')">
-                                            </div>';
-                                }
-
-                                if ($escrita>-1){
-                                    if($fonte==3){
-                                        // echo input oculto e div visual e btn de add lateral
-                                    }else{
-                                        echo '<div class="input-group mb-2">
-                                                <span class="input-group-text">'._t('Nativo').'</span>
-                                                <input type="text" class="form-control custom-font-'.$escrita.'" autocomplete="off" id="nat'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarNativo(\''.$r['id_referente'].'\',\''.$escrita.'\')">
-                                            </div>';
+                                                    <span class="input-group-text">'._t('Nativo').'</span>
+                                                    <input type="text" class="form-control custom-font-'.$escrita.'" autocomplete="off" id="nat'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarNativo(\''.$r['id_referente'].'\',\''.$escrita.'\')">
+                                                </div>';
+                                        }
                                     }
-                                }
 
-                                echo '<div class="input-group mb-2">
-                                                <span class="input-group-text">'._t('Significado').'</span>
-                                                <input type="text" class="form-control" autocomplete="off" id="sig'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
-                                            </div>';
-                                
-                                if ($jatem!='') echo '<label class="form-label alert alert-warning">Já tem palavra(s) com este referente: '.$jatem.'</label>';
+                                    echo '<div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Significado').'</span>
+                                                    <input type="text" class="form-control" autocomplete="off" id="sig'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
+                                                </div>';
+                                    
+                                    if ($jatem!='') echo '<label class="form-label alert alert-warning">Já tem palavra(s) com este referente: '.$jatem.'</label>';
 
-                                echo '</div>
-                                    </div>
-                                </div>';
+                                    echo '</div>
+                                        </div>
+                                    </div>';
 
-                                $totalWords++;
-                            };
+                                    $totalWords++;
+                                };
+
+                            }else{
+                                //apenas para leitura!
+
+                                while($r = mysqli_fetch_assoc($result)){
+                                    $pals = explode("|",$r['palavrasSig']);
+
+                                    $nativo = '';
+                                    $pronuncia = '';
+                                    $romanizacao = '';
+                                    $signficado = '';
+
+                                    foreach($pals as $pal){
+                                        $pal = explode("*",$pal);
+                                        $nativo .= $pal[3].', ';
+                                        $pronuncia .= $pal[0].', ';
+                                        $romanizacao .= $pal[2].', ';
+                                        $signficado .= $pal[1].', ';
+                                    }
+
+                                    $jatem = '';
+                                    //if($id_iidesc!=$id_idioma){
+                                        $exs = explode("|",$r['palavrasExtras']);
+                                        foreach($exs as $ex){
+                                            $x = explode("*",$ex);
+
+                                            if($x[3] && $escrita>-1) $jatem .= getSpanPalavraNativa($x[3],$escrita,$fonte,$tamanho).' ';
+
+                                            if($x[2]) $jatem .= $x[2].' '; // $romanizacao .= $pal[2].', ';
+                                            else if($x[0]) $jatem .= '/'.$x[0].'/ '; //$pronuncia .= $pal[0].', ';
+                                            
+                                            //$signficado .= $pal[1].', ';
+                                        }
+                                    //}
+
+                                    $chkbox = ''; if ($_SESSION['KondisonairUzatorIDX']>0) $chkbox='<div class="col-auto" ><input type="checkbox" value="'.$r['id_referente'].'" id="ck'.$r['id_referente'].'" class="form-check-input ck-inputs"></div>';
+                                    echo '<div class="list-group-item" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)" id="r'.$r['id_referente'].'">
+                                        <div class="row align-items-center" id="r'.$r['id_referente'].'">'.$chkbox.'
+                                            <div class="col-auto">
+                                                <a href="#" class="text-reset d-block">'.($nativo!=''?getSpanPalavraNativa(substr($nativo,0,-2),$escritadesc,$fontedesc,$tamanhodesc) : ( $romanizacao!='' ? substr($romanizacao,0,-2):substr($pronuncia,0,-2) ) ).'</a>
+                                                <div class="d-block text-secondary mt-n1">'.$r['descricao'].'</div>
+                                            </div>
+                                            <div class="col">
+                                                <div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Pronuncia').'</span>
+                                                    <input type="text" class="form-control" value="'.$x[0].'">
+                                                </div>';
+                                    if ($escrita>-1){
+                                                echo '<div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Romanizacao').'</span>
+                                                    <input type="text" class="form-control" value="'.$x[2].'">
+                                                </div>';
+                                    }
+
+                                    if ($escrita>-1){
+                                        if($fonte==3){
+                                            // echo input oculto e div visual e btn de add lateral
+                                        }else{
+                                            echo '<div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Nativo').'</span>
+                                                    <input type="text" class="form-control custom-font-'.$escrita.'" value="'.$x[3].'">
+                                                </div>';
+                                        }
+                                    }
+
+                                    echo '<div class="input-group mb-2">
+                                                    <span class="input-group-text">'._t('Significado').'</span>
+                                                    <input type="text" class="form-control" value="'.$x[1].'">
+                                                </div>';
+
+                                    echo '</div>
+                                        </div>
+                                    </div>';
+
+                                    $totalWords++;
+                                };
+                            }
 
                         ?>
                     </div>
@@ -310,6 +400,7 @@ $tamanho = $idioma['tamanho'];
         $("#ck"+id).attr("checked","true");
     };
 
+    <?php if($idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ ?>
     function aplicarImportacao(){
         var pals = []; 
         var rid = 0;
@@ -337,6 +428,7 @@ $tamanho = $idioma['tamanho'];
             alert("<?=_t("Não se esqueça de preencher pelo menos a pronúncia e o significado das palavras que deseja importar.")?>");
         }
     };
+    <?php } ?>
 
 
 function aplicarGerar(){
@@ -365,8 +457,10 @@ function dropHandler(ev) {
     }
 }
 formatarTablerSelect('idsig',null);
+<?php if($id_idioma>0){?>
 let soundsChanged = <?=getLastChange('sounds',$id_idioma)?>;
 if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>") ) loadPronuncias('<?=$id_idioma?>',soundsChanged, true);
 soundsChanged = <?=getLastChange('autosubstituicoes',$escrita)?>;
 if ( soundsChanged > localStorage.getItem("k_autosubs_updated_<?=$escrita?>") ) loadAutoSubstituicoes('<?=$escrita?>', soundsChanged, true);
+<?php }; ?>
 </script>

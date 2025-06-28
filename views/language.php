@@ -143,7 +143,7 @@ $romanizacao = $idioma['romanizacao'];
                             <div class="card-header">
                                 <h3 class="card-title"><?=_t('Frases')?></h3>
                                 <div class="card-actions">
-                                    <input type="text" class="form-control" id="testFilter" onkeyup="testFilter('divWord','testFilter')" placeholder="<?=_t('Buscar')?>">
+                                    <a href="?page=phrases&iid=<?=$id_idioma?>" class="btn btn-primary"><?=_t('Ver mais')?></a>
                                 </div>
                             </div>
                             
@@ -155,7 +155,10 @@ $romanizacao = $idioma['romanizacao'];
                     <div class="col-6">
                         <div class="card">
                             <div class="card-header">
-                            <h3 class="card-title"><?=_t('Textos')?></h3>
+                                <h3 class="card-title"><?=_t('Textos')?></h3>
+                                <div class="card-actions">
+                                    <a href="?page=texts&iid=<?=$id_idioma?>" class="btn btn-primary"><?=_t('Ver mais')?></a>
+                                </div>
                             </div>
                             
                             <div class="list-group list-group-flush list-group-hoverable overflow-auto" style="max-height: 25rem" id="texts">

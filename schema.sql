@@ -730,16 +730,16 @@ CREATE TABLE `tiposSom` (
 CREATE TABLE `usuarios` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `username` varchar(255) NOT NULL,
-  `senha` varchar(255) NOT NULL,
-  `nome_completo` varchar(255) NOT NULL,
-  `descricao` text NOT NULL,
-  `id_idioma_nativo` bigint(20) UNSIGNED NOT NULL,
-  `data_cadastro` datetime NOT NULL,
-  `email` varchar(250) NOT NULL,
-  `confirmacao` varchar(250) NOT NULL,
-  `acesso` tinyint(4) NOT NULL DEFAULT 0,
-  `publico` tinyint(4) NOT NULL DEFAULT 0,
-  `token` varchar(255) DEFAULT NULL,
+  `senha` varchar(255) DEFAULT NULL,
+  `nome_completo` varchar(255) DEFAULT NULL,
+  `descricao` text DEFAULT NULL,
+  `id_idioma_nativo` bigint(20) UNSIGNED DEFAULT NULL,
+  `data_cadastro` datetime DEFAULT NULL,
+  `email` varchar(250) DEFAULT NULL,
+  `confirmacao` varchar(250) DEFAULT NULL,
+  `acesso` tinyint(4) DEFAULT NULL DEFAULT 0,
+  `publico` tinyint(4) DEFAULT NULL DEFAULT 0,
+  `token` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `wordbanks` (
@@ -891,9 +891,6 @@ ALTER TABLE `itens_palavras`
   ADD KEY `idx_ipip` (`id_palavra`),
   ADD KEY `idx_ipic` (`id_concordancia`);
 
-ALTER TABLE `listasReferentes`
-  ADD PRIMARY KEY (`id`);
-
 ALTER TABLE `listas_referentes`
   ADD PRIMARY KEY (`id`);
 
@@ -1023,6 +1020,8 @@ ALTER TABLE `usuarios`
 
 ALTER TABLE `wordbanks`
   ADD PRIMARY KEY (`id`);
+
+ALTER TABLE collabs ADD CONSTRAINT unique_usuario_idioma UNIQUE (id_usuario, id_idioma);
 
 COMMIT;
 

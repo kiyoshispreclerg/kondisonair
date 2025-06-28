@@ -8,8 +8,8 @@
 	$idioma = array();   
 	$romanizacao = 0;
 	$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, e.id as eid, e.id_fonte as fonte, e.tamanho, e.substituicao,
-        (SELECT COUNT(*) FROM studason_palavrs WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].") as numPal,
-        (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab
+        (SELECT COUNT(*) FROM studason_palavrs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."') as numPal,
+        (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab
         FROM idiomas i LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
         WHERE i.id = '".$id_idioma."';") or die(mysqli_error($GLOBALS['dblink']));
     while($r = mysqli_fetch_assoc($result)) { 
@@ -30,11 +30,11 @@
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = ".$_GET['iid']." AND (t.id_usuario = ".$_SESSION['KondisonairUzatorIDX']." OR t.id_usuario IN(
-                SELECT id_idioma FROM collabs WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].")) ;";
+            WHERE t.id_idioma = ".$_GET['iid']." AND (t.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR t.id_usuario IN(
+                SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')) ;";
                 //echo $query;
         $imports = 'usuários';
-        $btnNovoTexto = '<a class="btn btn-default"onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
+        $btnNovoTexto = '<a class="btn btn-primary"onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
 
 
         $modalNovoTexto = '<div class="modal modal-blur" id="modalAddText" tabindex="-1" role="dialog" aria-hidden="true">
@@ -101,7 +101,7 @@
         };
 
         function salvarTexto(){
-                var texto = '.($fonte < 0 ? '$("#escrita_nativa_'.$eid.'").val()' : '$("#testStudason").val()' ).';
+                var texto = '.($fonte == 3 ? '$("#escrita_nativa_'.$eid.'").val()' : '$("#testStudason").val()' ).';
                 $.post("api.php?action=testSalvar&iid='.$id_idioma.'&id="+ $("#curTexto").val(), 
                     {   texto: texto,
                         titulo: $("#testTytol").val()
@@ -140,7 +140,7 @@
                 (SELECT iniciadores FROM escritas e WHERE e.id_idioma = s.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores
             FROM tests_importasons i
                 LEFT JOIN studason_tests s ON i.id_texto = s.id
-                WHERE i.id_usuario = ".$_SESSION['KondisonairUzatorIDX'];//." AND s.num_palavras > 0;";
+                WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0);//." AND s.num_palavras > 0;";
 
     }else {
         echo '<script>window.location = "index.php";</script>';
@@ -188,7 +188,9 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title"><?=_t('Textos')?></h3>
+                        <div class="card-actions">
                         <?=$btnNovoTexto?>
+						</div>
                     </div>
                     <div class="card-bodyx">
                     <div class="list-group list-group-flush overflow-auto" style="max-height: 35rem">
@@ -271,7 +273,7 @@
                                             if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
                                             else $listaPalavrasUnicas[$p]['q'] = 1;
                                             
-                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0).";";
                                             $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
                                             if (mysqli_num_rows($qpstres)<1){
                                                 $palNovas++;
@@ -392,7 +394,7 @@
                                             if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
                                             else $listaPalavrasUnicas[$p]['q'] = 1;
                                             
-                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';";
                                             $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
                                             if (mysqli_num_rows($qpstres)<1){
                                                 $palNovas++;

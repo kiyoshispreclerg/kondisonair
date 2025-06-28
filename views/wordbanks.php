@@ -31,7 +31,7 @@
                     <?php 
                         $query = "SELECT l.*, (SELECT COUNT(*) FROM listas_referentes r WHERE r.id_lista = l.id) as numRefs
                             FROM wordbanks l
-                          WHERE (SELECT COUNT(*) FROM listas_referentes r WHERE r.id_referente = l.id) > 0 OR id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";//." AND s.num_palavras > 0;";
+                          WHERE (SELECT COUNT(*) FROM listas_referentes r WHERE r.id_referente = l.id) > 0 OR id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';";//." AND s.num_palavras > 0;";
                         //echo $query;
                         $result = mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
                         while($r = mysqli_fetch_assoc($result)){

@@ -1,6 +1,5 @@
 <?php
 require('config.php');
-require(DB_CONFIG);
 
 if (file_exists(DB_CONFIG)) {
     header('Location: index.php');
@@ -40,22 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (strlen($host) > 255 || strlen($dbname) > 64 || strlen($user) > 100 || strlen($admin_name) > 100) {
             $error = "Um ou mais campos excedem o tamanho máximo permitido.";
-        }
-
-        function generateId() {
-            // Epoch: 1º Jan 2025, em milissegundos
-            $epoch = 1735689600000;
-            
-            $timestamp = round(microtime(true) * 1000) - $epoch;
-            
-            if ($timestamp < 0 || $timestamp > 0x1FFFFFFFFFF) { // 2^41 - 1
-                throw new Exception("Timestamp fora do intervalo para gerar ID");
-            }
-            
-            $random = mt_rand(0, 0x7FFFFF); // 2^23 - 1
-            
-            $id = ($timestamp << 23) | $random;
-            return $id > 10000 ? $id : generateId();
         }
 
         if (empty($host) || empty($user) || empty($dbname) || empty($admin_name) || empty($admin_pass)) {
@@ -99,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = true;
             } catch (Exception $e) {
                 error_log("Erro de instalação: " . $e->getMessage());
-                $error = "Erro durante a instalação. Verifique os dados e tente novamente.";
+                $error = "Erro durante a instalação. Verifique os dados e tente novamente.".$e->getMessage();
             }
         }
     }
@@ -180,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <select name="def_lang" class="chosen-select form-control">
                                         <?php 
                                         foreach ($idiomas_sistema as $id => $nome_exibido) {
-                                            $html .= '<option value="' . $id . '">' . htmlspecialchars($nome_exibido) . '</option>';
+                                            echo '<option value="' . $id . '">' . htmlspecialchars($nome_exibido) . '</option>';
                                         }
                                         ?>
                                     </select>

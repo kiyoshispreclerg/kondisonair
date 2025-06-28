@@ -94,7 +94,7 @@ $tamanho = $idioma['tamanho'];
                                         $oiids = mysqli_query($GLOBALS['dblink'],
                                         "SELECT i.nome_legivel, i.id as iid, e.id as eid FROM idiomas i
                                         LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
-                                        WHERE i.id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($GLOBALS['dblink'])); // AND buscavel = 1
+                                        WHERE i.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';") or die(mysqli_error($GLOBALS['dblink'])); // AND buscavel = 1
                                     while($oid = mysqli_fetch_assoc($oiids)) {
                                         echo '<option value="'.$oid['iid'].'" data=e="'.$oid['eid'].'" data-n="'.$oid['nome_legivel'].'" '.($oid['iid']==$_GET['iid']?'selected':'').'>'.$oid['nome_legivel'].'</option>';
                                     };

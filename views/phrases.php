@@ -5,7 +5,7 @@
 
 	$idioma = array();   
 	$result = mysqli_query($GLOBALS['dblink'],"SELECT *, (SELECT nome_legivel FROM idiomas d WHERE d.id = i.id_idioma_descricao LIMIT 1) as desc_idioma,
-            (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab FROM idiomas i
+            (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab FROM idiomas i
 						WHERE id = '".$id_idioma."';") or die(mysqli_error($GLOBALS['dblink']));
 	while($r = mysqli_fetch_assoc($result)) { 
 	    $idioma  = $r;
@@ -18,7 +18,7 @@
 	    $usuario  = $r;
 	};
 
-	if ($idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX'] || $idioma['collab'] > 0 ) {
+	if ($_SESSION['KondisonairUzatorIDX'] > 0 && ($idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX'] || $idioma['collab'] > 0 ) ) {
 		// listagem top frases do idioma - link pra edição
         $breadcrumb = '<li class="breadcrumb-item"><a href="?page=editlanguage&iid='.$id_idioma.'">'.$idioma['nome_legivel'].'</a></li>';
         $htmlItem = '`<div data-search="` + val.search +
@@ -31,7 +31,6 @@
                 <div class="text-secondary text-truncate">` + ( val.idioma_original ? val.idioma_original : \'\' ) + `</div>
               </div-->
               <div class="col-auto"><a href="?page=editphrase&iid=`+val.id_idioma+`&id=`+val.id+`" >Editar</a></div>
-              <!--div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord(\'`+val.id+`\')">Del</a></div-->
           </div></div>`';
 	}else if($id_idioma > 0){
         // apenas listagem de top frases do idioma
@@ -41,11 +40,6 @@
               <div class="col-auto" data-bs-toggle="tooltip">
                 <a href="?page=phrase&iid='.$id_idioma.'&id=`+val.id+`" >` + val.frase + ` </a>
               </div>
-              <!--div class="col text-truncate">
-                <a href="?page=phrase&iid='.$id_idioma.'&id=`+val.id+`" class="text-body d-block">` + val.original + `</a>
-                <div class="text-secondary text-truncate">` + ( val.idioma_original ? val.idioma_original : \'\' ) + `</div>
-              </div-->
-              <!--div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord(\'`+val.id+`\')">Del</a></div-->
           </div></div>`';
     }else if($id_usuario > 0){
         // apenas listagem de frases do usuario - edit se é o logado
@@ -57,10 +51,6 @@
                 <div class="col-auto" data-bs-toggle="tooltip">
                     <a href="?page=phrase&iid=`+val.id_idioma+`&id=`+val.id+`" >` + val.frase + ` </a>
                 </div>
-                <!--div class="col text-truncate">
-                    <a href="?page=phrase&iid=`+val.id_idioma+`&id=`+val.id+`" class="text-body d-block">` + val.original + `</a>
-                    <div class="text-secondary text-truncate">` + ( val.idioma_original ? val.idioma_original : \'\' ) + `</div>
-                </div-->
                 <div class="col-auto"><a href="?page=editphrase&iid=`+val.id_idioma+`&id=`+val.id+`" >Editar</a></div>
                 <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delWord(\'`+val.id+`\')">Del</a></div>
             </div></div>`';
@@ -70,10 +60,6 @@
                 <div class="col-auto" data-bs-toggle="tooltip">
                     <a href="?page=phrase&iid=`+val.id_idioma+`&id=`+val.id+`" >` + val.frase + ` </a>
                 </div>
-                <!--div class="col text-truncate">
-                    <a href="?page=phrase&iid=`+val.id_idioma+`&id=`+val.id+`" class="text-body d-block">` + val.original + `</a>
-                    <div class="text-secondary text-truncate">` + ( val.idioma_original ? val.idioma_original : \'\' ) + `</div>
-                </div-->
             </div></div>`';
 
     }else {
@@ -130,7 +116,9 @@
                         </div>
 
 						<div class="mt-5">
-							<a class="btn btn-primary w-100 mt-2" href="?page=phrases&uid=<?=$_SESSION['KondisonairUzatorIDX']?>"><?=_t('Minhas frases')?></a>
+							<?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
+                                <a class="btn btn-primary w-100 mt-2" href="?page=phrases&uid=<?=$_SESSION['KondisonairUzatorIDX']?>"><?=_t('Minhas frases')?></a>
+                            <?php }; ?>
 							<a class="btn btn-primary w-100 mt-2" href="?page=phrases"><?=_t('Todas as frases')?></a>
                         </div>
 
@@ -143,6 +131,7 @@
                     <div class="card-header">
                         <h3 class="card-title"><?=_t('Frases')?></h3>
 						<div class="card-actions">
+                            <?php if($_SESSION['KondisonairUzatorIDX']>0){?>
                             <div class="row">
                                 <div class="col">
                                         <a href="index.php?page=editphrase&iid=<?=$id_idioma?>" class="btn btn-primary d-none d-sm-inline-block">
@@ -152,6 +141,7 @@
                                     </a>
                                 </div>
                             </div>
+                            <?php } ?>
 						</div>
                     </div>
                     <div class="card-bodyx">

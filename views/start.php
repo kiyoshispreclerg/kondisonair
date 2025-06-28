@@ -21,8 +21,7 @@
                   <div class="card-body">
 
                     <div class="mb-1">
-                      <span style="font-size:x-large"><?=_t('Bem vindo!')?> </span> 
-                      <span style="font-size:large"> <?=_t('Organize suas conlangs')?></span>
+                      <span style="font-size:x-large"><?=_t('Olá!')?> </span>
                     </div>
                     <div class="mb-3"><?=_t('Algumas coisas compartilhadas por aqui')?>
                       
@@ -111,8 +110,62 @@
                         $listaFamilias = array(); $listaTotais = array();
 
                         $res = mysqli_query($GLOBALS['dblink'],"SELECT i.* ,
-                          (SELECT COUNT(*) FROM palavras p WHERE
-                          p.id_idioma = i.id AND p.id_forma_dicionario = 0) as num_palavras,
+                          (SELECT f.arquivo as fonte FROM escritas e 
+                            LEFT JOIN fontes f ON f.id = e.id_fonte
+                            WHERE e.id_idioma = i.id and e.padrao = 1
+                            ) as fonte,
+                          (SELECT e.id_fonte FROM escritas e 
+                            WHERE e.id_idioma = i.id and e.padrao = 1
+                            ) as id_fonte,
+                          (SELECT e.tamanho FROM escritas e 
+                            WHERE e.id_idioma = i.id and e.padrao = 1
+                            ) as tamanho,
+                          (SELECT e.id FROM escritas e 
+                            WHERE e.id_idioma = i.id and e.padrao = 1
+                            ) as eid,
+                          (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas e 
+                                  WHERE e.id_idioma = i.id and e.padrao = 1) limit 1) as nativo
+                          FROM idiomas i WHERE i.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR i.id IN(
+                            SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')
+                          ORDER BY i.data_modificacao DESC LIMIT 4;") or die(mysqli_error($GLOBALS['dblink']));
+                        
+                        // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
+
+                        while($r = mysqli_fetch_assoc($res)) { 
+
+                          $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
+                          if($r['publico']!=1) { $icon = 'eye-slash'; $title = "Privada"; }
+                          if($r['nativo']!='') $nat = getSpanPalavraNativa($r['nativo'],$r['eid'],$r['id_fonte'],$r['tamanho'])."<br>";
+                          
+                          echo '<div class="col-md-6 col-lg-3">
+                              <div class="card">
+                                <div class="card-body">
+                                  <a href="?page=editlanguage&iid='.$r['id'].'"><h3 class="card-title">'.$nat.$r['nome_legivel'].'</h3></a>
+                                </div>
+                              </div>
+                            </div>'; 
+                        };
+                      ?>
+
+
+                    </div>
+                  </div>
+                </div>
+                <?php } ?>
+                <?php if($_SESSION['KondisonairUzatorNivle']==100){ ?>
+                <div class="card mt-3">
+                  <div class="card-header">
+                    <h3 class="card-title"><?=_t('Idiomas de sistema')?></h3>
+                  </div>
+                  <div class="card-body">
+                    <div class="">
+
+                      <?php
+                        $listaTodas = ''; $totalIdiomas = 0;
+                        $listaOutras = ''; $totalOutras = 0;
+                        $listaFamilias = array(); $listaTotais = array();
+
+                        $res = mysqli_query($GLOBALS['dblink'],"SELECT i.* ,
 
                           (SELECT f.arquivo as fonte FROM escritas e 
                             LEFT JOIN fontes f ON f.id = e.id_fonte
@@ -127,29 +180,14 @@
                           (SELECT e.id FROM escritas e 
                             WHERE e.id_idioma = i.id and e.padrao = 1
                             ) as eid,
-
-                          (SELECT nome from grupos_idiomas where id = i.id_familia limit 1) as grupo,
                           (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas e 
                                   WHERE e.id_idioma = i.id and e.padrao = 1) limit 1) as nativo
-                          FROM idiomas i WHERE i.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' 
-                          ORDER BY i.data_modificacao DESC LIMIT 6;") or die(mysqli_error($GLOBALS['dblink']));
-                        
-                        // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
+                          FROM idiomas i WHERE i.id < 10000 
+                          ORDER BY i.data_modificacao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 
                         while($r = mysqli_fetch_assoc($res)) { 
-
-                          $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
-                          if($r['publico']!=1) { $icon = 'eye-slash'; $title = "Privada"; }
                           if($r['nativo']!='') $nat = getSpanPalavraNativa($r['nativo'],$r['eid'],$r['id_fonte'],$r['tamanho'])."<br>";
-                          
-                          echo '<div class="col-md-6 col-lg-4">
-                              <div class="card">
-                                <div class="card-body">
-                                  <a href="?page=editlanguage&iid='.$r['id'].'"><h3 class="card-title">'.$nat.$r['nome_legivel'].'</h3></a>
-                                  <p class="text-secondary">'.$r['num_palavras'].' '._t('palavras').' </p>
-                                </div>
-                              </div>
-                            </div>'; 
+                          echo '<a class="btn btn-primary" onclick="acessarEdicaoIdiomaSistema(\''.$r['id'].'\')">'.$nat.$r['nome_legivel'].'</a>'; 
                         };
                       ?>
 
@@ -157,7 +195,7 @@
                     </div>
                   </div>
                 </div>
-                <?php } ?>
+                <?php }; ?>
 
               </div>
                 
@@ -166,6 +204,35 @@
               <div class="col-md-4">
           
                 <div class="row row-cards">
+                  <?php
+                    $sql = "SELECT u.username, u.id as userid, a.tipo_destino as tipo, a.tipo as t, a.id_destino, 
+                      DATE_FORMAT( a.data_acao,'%d/%m/%Y %h:%i:%s') as data_acao,
+                      i.nome_legivel as d_idioma,
+                      f.frase as frase,
+                      p.pronuncia as d_palavra, pn.palavra as d_nativo, p.romanizacao as d_romanizacao,
+                      e.nome as d_escrita, en.id as eid, en.id_fonte, en.tamanho
+                      FROM asons a
+                      LEFT JOIN idiomas i ON (a.tipo_destino = 'diom' AND i.id = a.id_destino)
+                      LEFT JOIN palavras p ON (a.tipo_destino = 'palavr' AND p.id = a.id_destino)
+                        LEFT JOIN idiomas pi ON (pi.id = p.id_idioma)
+                      LEFT JOIN frases f ON (a.tipo_destino = 'frase' AND f.id = a.id_destino)
+                        LEFT JOIN idiomas fi ON (fi.id = f.id_idioma)
+                      LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
+                        LEFT JOIN idiomas ei ON (ei.id = e.id_idioma)
+                      LEFT JOIN palavrasNativas pn ON (p.id = pn.id_palavra AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1))
+                      LEFT JOIN escritas en ON ((en.id_idioma = p.id_idioma) OR (en.id_idioma = f.id_idioma) AND en.padrao = 1)
+                      LEFT JOIN usuarios u ON u.id = a.id_usuario 
+                      WHERE a.id_usuario IN (SELECT ss.id_seguido FROM sosail_sgisons ss WHERE ss.id_usuario = ".$_SESSION['KondisonairUzatorIDX'].")
+                        AND ( i.publico = 1 
+                        OR (p.id > 0 AND pi.publico = 1) 
+                        OR (f.id > 0 AND fi.publico = 1) 
+                        OR (e.id > 0 AND ei.publico = 1) )
+                      GROUP BY a.tipo_destino, a.id_destino
+                      ORDER BY a.data_acao DESC
+                      LIMIT ".$feedLimit.";";
+                  $res2 = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //WHERE destinos in id usuarios q segue
+                  if (mysqli_num_rows($res2)>0){ ?>
+
                   <div class="col-12">
                     <div class="card" style="height: 28rem">
                     <div class="card-header">
@@ -175,29 +242,6 @@
                         <div class="divide-y">
                           
                           <?php
-
-
-
-                              $sql = "SELECT u.username, u.id as userid, a.tipo_destino as tipo, a.tipo as t, a.id_destino, 
-                                DATE_FORMAT( a.data_acao,'%d/%m/%Y %h:%i:%s') as data_acao,
-                                i.nome_legivel as d_idioma,
-                                f.frase as frase,
-                                p.pronuncia as d_palavra, pn.palavra as d_nativo, p.romanizacao as d_romanizacao,
-                                e.nome as d_escrita, en.id as eid, en.id_fonte, en.tamanho
-                                FROM asons a
-                                LEFT JOIN idiomas i ON (a.tipo_destino = 'diom' AND i.id = a.id_destino)
-                                LEFT JOIN palavras p ON (a.tipo_destino = 'palavr' AND p.id = a.id_destino)
-                                LEFT JOIN frases f ON (a.tipo_destino = 'frase' AND f.id = a.id_destino)
-                                LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
-                                LEFT JOIN palavrasNativas pn ON (p.id = pn.id_palavra AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1))
-                                LEFT JOIN escritas en ON ((en.id_idioma = p.id_idioma) OR (en.id_idioma = f.id_idioma) AND en.padrao = 1)
-                                LEFT JOIN usuarios u ON u.id = a.id_usuario 
-                                WHERE a.id_usuario IN (SELECT ss.id_seguido FROM sosail_sgisons ss WHERE ss.id_usuario = ".$_SESSION['KondisonairUzatorIDX'].")
-                                GROUP BY a.tipo_destino, a.id_destino
-                                ORDER BY a.data_acao DESC
-                                LIMIT ".$feedLimit.";";
-                            $res2 = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //WHERE destinos in id usuarios q segue
-                            if (mysqli_num_rows($res2)>0){
                             while($r = mysqli_fetch_assoc($res2)) { 
 
                               $linkData = linkData( $r['userid'], $r['username'], $r['tipo'], $r['id_destino'], 
@@ -218,15 +262,13 @@
                                 </div>
                               </div>';
                             };
-                          }else{
-                            echo _t('Nenhuma atividade para mostrar.');
-                          }
                           ?> 
 
                         </div>
                       </div>
                     </div>
                   </div>
+                  <?php } ?>
 
                   <?php if($_SESSION['KondisonairUzatorNivle']==100){ 
                         $resop = mysqli_query($GLOBALS['dblink'],"SELECT * FROM opcoes_sistema;") or die(mysqli_error($GLOBALS['dblink']));
@@ -311,19 +353,18 @@
                   </div>
                   <script>
 
-                  function gravarOpsons(param){
-                      $.get("api.php?action=ajaxGravarOption&param="+param+"&value="+$('#'+param).val(), 
-                          function (data){
-                          if ($.trim(data) == 'ok'){
-                              //alert('ok');//window.location = "dash.php?ason=opsons";
-                          }else{
-                              alert(data);
-                          }
-                      });
-                  };
+                    function gravarOpsons(param){
+                        $.get("api.php?action=ajaxGravarOption&param="+param+"&value="+$('#'+param).val(), 
+                            function (data){
+                            if ($.trim(data) == 'ok'){
+                                //alert('ok');//window.location = "dash.php?ason=opsons";
+                            }else{
+                                alert(data);
+                            }
+                        });
+                    };
                   </script>
                   <?php } ?>
-
 
                 </div>
               </div>
@@ -347,14 +388,24 @@
                               "SELECT u.username, u.id as userid, a.tipo_destino as tipo, a.tipo as t, a.id_destino, 
                                 DATE_FORMAT( a.data_acao,'%d/%m/%Y %h:%i:%s') as data_acao,
                                 i.nome_legivel as d_idioma,
+                                f.frase as frase,
                                 p.pronuncia as d_palavra, pn.palavra as d_nativo, p.romanizacao as d_romanizacao,
-                                e.nome as d_escrita, pn.id_escrita as eid
+                                e.nome as d_escrita, en.id as eid, en.id_fonte, en.tamanho
                               FROM asons a
                               LEFT JOIN idiomas i ON (a.tipo_destino = 'diom' AND i.id = a.id_destino)
-                              LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
                               LEFT JOIN palavras p ON (a.tipo_destino = 'palavr' AND p.id = a.id_destino)
+                                LEFT JOIN idiomas pi ON (pi.id = p.id_idioma)
+                              LEFT JOIN frases f ON (a.tipo_destino = 'frase' AND f.id = a.id_destino)
+                                LEFT JOIN idiomas fi ON (fi.id = f.id_idioma)
+                              LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
+                                LEFT JOIN idiomas ei ON (ei.id = e.id_idioma)
                               LEFT JOIN palavrasNativas pn ON (p.id = pn.id_palavra AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1))
+                              LEFT JOIN escritas en ON ((en.id_idioma = p.id_idioma) OR (en.id_idioma = f.id_idioma) AND en.padrao = 1)
                               LEFT JOIN usuarios u ON u.id = a.id_usuario 
+                              WHERE i.publico = 1 
+                              OR (p.id > 0 AND pi.publico = 1) 
+                              OR (f.id > 0 AND fi.publico = 1) 
+                              OR (e.id > 0 AND ei.publico = 1)
                               GROUP BY a.tipo_destino, a.id_destino
                               ORDER BY a.data_acao DESC
                               LIMIT ".$feedLimit.";") or die(mysqli_error($GLOBALS['dblink'])); //WHERE destinos in id usuarios q segue
@@ -362,23 +413,20 @@
                             while($r = mysqli_fetch_assoc($res2)) { 
 
                               $linkData = linkData( $r['userid'], $r['username'], $r['tipo'], $r['id_destino'], 
-                                ( $r['d_nativo']=='' ? ($r['d_romanizacao']==''? $r['d_palavra'] : $r['d_romanizacao'] ) : getSpanPalavraNativa($r['d_nativo'],$r['eid'],$r['fonte'],$r['tamanho'])  )
+                                ( $r['d_nativo']=='' ? 
+                                ($r['d_romanizacao']==''? $r['d_palavra'] : $r['d_romanizacao'] ) 
+                                : 
+                                getSpanPalavraNativa($r['d_nativo'],$r['eid'],$r['fonte'],$r['tamanho']) 
+                                ).getSpanPalavraNativa($r['frase'],$r['eid'],$r['id_fonte'],$r['tamanho']) 
                                 .$r['d_escrita'].$r['d_idioma'], $r['t'], $r['data_acao'] );
 
                               echo '<div>
                                 <div class="row">
-                                  <div class="col-auto">
-                                    <span class="avatar" style="background-image: url(./static/avatars/'.$linkData['uid'].'.jpg)"></span>
-                                  </div>
                                   <div class="col">
                                     <div class="text-truncate">
                                       <strong><a href="?page=profile&user='.$linkData['uname'].'">'.$linkData['uname'].'</a></strong> '.$linkData['text'].' <strong>'.$linkData['ltitle'].'</strong>.
                                     </div>
-                                    <div class="text-secondary">'.$linkData['date'].'</div>
                                   </div>
-                                  <!--div class="col-auto align-self-center">
-                                    <div class="badge bg-primary"></div>
-                                  </div-->
                                 </div>
                               </div>';
                             };
@@ -396,4 +444,15 @@
             </div>
           </div>
         </div>
-		
+<?php if($_SESSION['KondisonairUzatorNivle']==100){ ?>
+<script>
+function acessarEdicaoIdiomaSistema(id){
+    if(confirm("<?=_t('Deseja realmente ser colaborador deste idioma?')?>")) {
+        $.get("api.php?action=getAcessoColaborador&iid="+id, function (data){
+            if($.trim(data)=='ok') window.location.replace("?page=editlanguage&iid="+id);
+            else alert(data);
+        });
+    }
+}
+</script>
+<?php } ?>

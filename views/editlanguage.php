@@ -29,7 +29,7 @@ if ($id_idioma>0){
     };
 
     if ( $idioma['nome_legivel']==''){
-        echo '<script>window.location = "index.php";</script>';
+        echo '<script>window.location = "index.php?page=mylanguages";</script>';
         exit;
     }else if($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'] && !$idioma['collab'] > 0) {
         echo '<script>window.location = "index.php";</script>';
@@ -522,6 +522,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     tinyMCE.init(options);
 })
+
+function togglePasswordField() {
+    const passwordContainer = document.getElementById('passwordContainer');
+    const deleteStatus = document.getElementById('deleteStatus');
+    passwordContainer.classList.toggle('d-none');
+    deleteStatus.classList.add('d-none'); // Hide status on toggle
+    document.getElementById('deletePassword').value = ''; // Clear password field
+}
 </script>
 
 <div class="modal modal-blur" id="modal-configs" tabindex="-1" style="display: none;" aria-hidden="true">
@@ -535,16 +543,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 <a href="#" class="btn link-secondary" onclick="limparCacheLocal('<?=$id_idioma?>')">
                     Apagar todo o cache local
                 </a>
-                <a href="#" class="btn link-secondary" onclick="exportarIdioma('<?=$id_idioma?>')">
+                <a href="?action=exportarIdioma&id_idioma=<?=$id_idioma?>" class="btn link-secondary" target="_blank">
                     Exportar para arquivo
                 </a>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn link-danger" onclick="excluirIdioma('<?=$id_idioma?>')">
-                    Excluir idioma!
-                </a>
+                <div class="d-flex align-items-center">
+                    <a href="#" class="btn link-danger" onclick="togglePasswordField()">Excluir idioma!</a>
+                    <div id="passwordContainer" class="ms-3 d-none">
+                        <input type="password" class="form-control d-inline-block" id="deletePassword" placeholder="Insira sua senha" style="width: 200px;">
+                        <button class="btn btn-danger ms-2" onclick="excluirIdioma('<?=$id_idioma?>', document.getElementById('deletePassword').value)">Confirmar</button>
+                    </div>
+                </div>
                 <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal">Fechar</a>
             </div>
+            <div id="deleteStatus" class="modal-body d-none"></div>
         </div>
     </div>
 </div>

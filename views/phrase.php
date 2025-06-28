@@ -45,8 +45,13 @@ while ($row = mysqli_fetch_assoc($result)) {
     $translations[] = $row;
 }
 
-$separadorPalavras = preg_split('//u', $main_phrase['separadores'], null, PREG_SPLIT_NO_EMPTY);
-$mainPhrase = getStudySentence($separadorPalavras,$main_phrase['frase'],$id_idioma,$main_phrase['eid'], ($main_phrase['binario']>0?' BINARY ':'') )[0];
+$textoSentenca=$main_phrase['frase'];
+$separadorPalavras = preg_split('//u', $main_phrase['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [];
+$iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: [];
+foreach ($iniciadoresPalavras as $sep){
+    $textoSentenca = str_replace($sep," ".$sep,$textoSentenca);
+}
+$mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$main_phrase['eid'], ($main_phrase['binario']>0?' BINARY ':''),$main_phrase['fonte'],$main_phrase['tamanho']  )[0];
 ?>
 
 <div class="page-header d-print-none">
@@ -136,6 +141,7 @@ $mainPhrase = getStudySentence($separadorPalavras,$main_phrase['frase'],$id_idio
                         <h3 class="card-title"><?=_t('Traduções')?></h3>
                         <div class="card-actions">
                             <div class="row">
+                                <?php if($_SESSION['KondisonairUzatorIDX']>0){?>
                                 <div class="col">
                                         <a href="index.php?page=editphrase&original=<?=$id_frase?>" class="btn btn-primary d-none d-sm-inline-block">
                                         <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
@@ -143,6 +149,7 @@ $mainPhrase = getStudySentence($separadorPalavras,$main_phrase['frase'],$id_idio
                                         <?=_t('Adicionar tradução')?>
                                     </a>
                                 </div>
+                                <?php } ?>
                             </div>
                         </div>
                     </div>
@@ -189,6 +196,6 @@ $mainPhrase = getStudySentence($separadorPalavras,$main_phrase['frase'],$id_idio
 </div> 
 <script>
 $(document).ready(function() {
-    //$('.pstud').tooltip({html:true});  
+    $('.pstud').tooltip({html:true});  
 });
 </script>

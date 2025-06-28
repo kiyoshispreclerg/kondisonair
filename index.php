@@ -141,12 +141,6 @@ require('api.php');
                     <div class="dropdown-menu-columns">
                       <div class="dropdown-menu-column">
                         <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
-                        <a class="dropdown-item" href="?page=wordbanks">
-                        <?=_t('Bancos de palavras')?>
-                        </a>
-                        <a class="dropdown-item" href="?page=phrases">
-                        <?=_t('Frases')?>
-                        </a>
                         <a class="dropdown-item" href="?page=texts">
                           <?=_t('Textos')?>
                         </a>
@@ -154,6 +148,12 @@ require('api.php');
                         <!--a class="dropdown-item" href="?page=courses">
                         <?=_t('Cursos')?>
                         </a-->
+                        <a class="dropdown-item" href="?page=wordbanks">
+                        <?=_t('Bancos de palavras')?>
+                        </a>
+                        <a class="dropdown-item" href="?page=phrases">
+                        <?=_t('Frases')?>
+                        </a>
                         <a class="dropdown-item" href="?page=changer">
                         <?=_t('Alterador sonoro')?>
                         </a>
@@ -222,6 +222,7 @@ require('api.php');
     <script src="./dist/libs/jsvectormap/dist/maps/world-merc.js?1692870487" defer></script>
     <script src="./dist/libs/tom-select/dist/js/tom-select.base.min.js?1692870487" defer></script>
     <script src="./dist/libs/list.js/dist/list.min.js?1692870487" defer></script>
+    <script src="./dist/libs/dropzone/dist/dropzone-min.js?1692870487" defer></script>
 
     <script src="./dist/libs/tinymce/tinymce.min.js?1692870487" defer></script>
 

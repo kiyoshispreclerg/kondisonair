@@ -25,6 +25,9 @@
                   <div class="card-header">
                     <h3 class="card-title"><?=_t('Meus idiomas')?></h3>
                     <div class="card-actions">
+                      <a onclick="$('#importLanguageModal').modal('show')" class="btn btn-primary">
+                        <?=_t('Importar')?>
+                      </a>
                       <a href="?page=editlanguage&iid=0" class="btn btn-primary">
                         <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
@@ -108,4 +111,25 @@
             </div>
           </div>
         </div>
-		
+
+<div class="modal modal-blur fade" id="importLanguageModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Language</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="languageFile" class="form-label">Select JSON file</label>
+                    <input type="file" class="form-control" id="languageFile" accept=".json">
+                </div>
+                <div id="importStatus" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="importLanguage()">Import</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -2,16 +2,15 @@
 <!-- PANEL START -->
 <?php 
 $compactMode = false;
-$id_idioma = $_GET['iid'];
+$id_idioma = $_GET['iid'] ?: 0;
 if (!$id_idioma>0) {
   $id_idioma = 0;
   $compactMode = true;
 }
 $rowsh = 20;
 $idioma = array(); 
-$idioma['nome_legivel'] = '';  
 $result = mysqli_query($GLOBALS['dblink'],"SELECT *,
-(SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab FROM idiomas i 
+(SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab FROM idiomas i 
                WHERE id = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
 while($r = mysqli_fetch_assoc($result)) { 
 $idioma  = $r;

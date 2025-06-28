@@ -5,6 +5,10 @@ $id_idioma = $_GET['iid'] ?: 0;
 $id_usuario = $_SESSION['KondisonairUzatorIDX'] ?: 0;
 $id_idioma_original = 0;
 
+if (!$id_usuario>0) {
+    echo '<script>window.location = "index.php";</script>';
+    exit;
+}
 // Initialize variables
 $data = [];
 $breadcrumb = '';
@@ -222,6 +226,11 @@ if ($id_frase > 0 || $id_idioma > 0) {
 		</div>
 	</div>
 </div>
+<script>
+$(document).ready(function() {
+    createTablerSelect('selectLanguage', null, true);
+});
+</script>
 <?php } ?>
 
 <script>

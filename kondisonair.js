@@ -77,8 +77,9 @@ function createTablerSelectNativeWords(campo,fonte = '0', tamanho = ''){
                         tmp += '<span class="drawchar drawchar-'+tamanho+'" style="background-image: url(./writing/'+data.eid+'/'+t+'.png)"></span>';
                     });
                     return '<div>' + tmp + escape(data.text) + '</div>';
-                  }else
+                  }else{
                     return '<div><span class="custom-font-'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
+                  }
               },
               option: function(data,escape){
                   if (fonte == 3) {
@@ -86,9 +87,20 @@ function createTablerSelectNativeWords(campo,fonte = '0', tamanho = ''){
                     data.nativa.split(",").forEach(function(t){
                         tmp += '<span class="drawchar drawchar-'+tamanho+'" style="background-image: url(./writing/'+data.eid+'/'+t+'.png)"></span>';
                     });
-                    return '<div>' + tmp + escape(data.text) + '</div>';
-                  }else
-                  return '<div><span class="custom-font-'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
+                    if (data.rom) {
+                        return `<div>
+                            <span class="date" style="font-size: 12px; color: #a0a0a0; display: block;">${escape(data.rom)}</span>
+                            ${tmp}${escape(data.text)}
+                        </div>`;
+                    } else return '<div>' + tmp + escape(data.text) + '</div>';
+                  }else{
+                    if (data.rom) {
+                        return `<div>
+                            <span class="date" style="font-size: 12px; color: #a0a0a0; display: block;">${escape(data.rom)}</span>
+                            <span class="custom-font-${escape(data.eid)}">${escape(data.nativa)}</span>${escape(data.text)}
+                        </div>`;
+                    } else return '<div><span class="custom-font-'+data.eid+'">' + data.nativa + '</span>' + escape(data.text) + '</div>';
+                  }
               },
           },
       });
@@ -136,15 +148,13 @@ function updateTablerSelect(campo,val){
 }
 
 async function sonalMdason(mdasonList, palavrList, mtor, elment, iid, defCats = ""){
-    if (palavrList == '') return '';
+    if (!palavrList || !mdasonList) return '';
         
     const formData = new FormData();
     formData.append('palavras', palavrList);
     formData.append('regras', mdasonList);
-    //formData.append('categorias', defCats);
     formData.append('v', 0);
     formData.append('classes', defCats);
-    // formData.append('substituicoes', document.getElementById('check_rewrites').checked ? document.getElementById('text_rewrites').value : 0);
 
     const response = await fetch(`?action=getKSC&iid=`+iid, {
         method: 'POST',
@@ -1458,4 +1468,90 @@ function checarDigitacao(iid, ipaInput) {
     // Remove duplicates and return results
     const uniqueResults = [...new Set(finalResults)];
     return uniqueResults.length > 0 ? uniqueResults : [ipaInput];
+}
+
+function importLanguage() {
+    const fileInput = document.getElementById('languageFile');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        $('#importStatus').html(
+            '<div class="alert alert-danger alert-dismissible" role="alert">' +
+            'Please select a JSON file' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+            '</div>'
+        );
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    $.ajax({
+        url: 'import_language.php',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            $('#importStatus').html(
+                '<div class="alert alert-success alert-dismissible" role="alert">' +
+                response.message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            );
+            fileInput.value = ''; // Reset file input
+        },
+        error: function(xhr) {
+            let errorMessage = 'Error importing language';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            $('#importStatus').html(
+                '<div class="alert alert-danger alert-dismissible" role="alert">' +
+                errorMessage +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            );
+        }
+    });
+}
+
+function excluirIdioma(idIdioma,password){
+    if (!idIdioma || !password) {
+        $('#deleteStatus').html(
+            '<div class="alert alert-danger alert-dismissible" role="alert">' +
+            'Please enter language ID and password' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+            '</div>'
+        );
+        return;
+    }
+    $.ajax({
+        url: 'api.php?action=apagarIdioma',
+        method: 'POST',
+        data: { id_idioma: idIdioma, password: password },
+        success: function(response) {
+            $('#deleteStatus').html(
+                '<div class="alert alert-success alert-dismissible" role="alert">' +
+                response.message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            ).removeClass('d-none');
+            document.getElementById('deletePassword').value = ''; // Clear password
+            document.getElementById('passwordContainer').classList.add('d-none'); // Hide password field
+            setTimeout(() => location.reload(), 3000);
+        },
+        error: function(xhr) {
+            let errorMessage = 'Erro ao excluir idioma';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            $('#deleteStatus').html(
+                '<div class="alert alert-danger alert-dismissible" role="alert">' +
+                errorMessage +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            ).removeClass('d-none');
+            document.getElementById('deletePassword').value = ''; // Clear password
+        }
+    });
 }

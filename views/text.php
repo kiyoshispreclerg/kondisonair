@@ -14,7 +14,7 @@
 		(SELECT id_artyg FROM artyg_dest WHERE id_dest = t.id AND tipo_dest = 'text' LIMIT 1) as artigo_ligado,
 		( SELECT texto FROM artygs WHERE id = (SELECT id_artyg FROM artyg_dest WHERE id_dest = t.id AND tipo_dest = 'text' LIMIT 1) LIMIT 1) as artigo_texto,
 		(SELECT id_usuario FROM idiomas WHERE id = t.id_idioma) as luid,
-		(SELECT id FROM collabs WHERE id_idioma = t.id_idioma AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as lcid
+		(SELECT id FROM collabs WHERE id_idioma = t.id_idioma AND id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)." LIMIT 1) as lcid
 		FROM studason_tests t
 		LEFT JOIN escritas e  ON e.id_idioma = t.id_idioma
 		WHERE  t.id = ".$_GET['id']."  ORDER BY e.padrao DESC;";
@@ -59,11 +59,11 @@
 	if (!$isOwner){
 		$tos = mysqli_query($GLOBALS['dblink'],"SELECT i.* FROM tests_importasons i
 			LEFT JOIN studason_tests s ON i.id_texto = s.id
-			WHERE i.id_usuario = ".$_SESSION['KondisonairUzatorIDX']." AND i.id_texto = ".$id_texto.";") or die(mysqli_error($GLOBALS['dblink']));
+			WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)." AND i.id_texto = ".$id_texto.";") or die(mysqli_error($GLOBALS['dblink']));
 		if (mysqli_num_rows($tos)<1){
 			mysqli_query($GLOBALS['dblink'],"INSERT INTO tests_importasons SET
 			id_texto = ".$id_texto.", id = ".generateId().", 
-			id_usuario = ".$_SESSION['KondisonairUzatorIDX']) or die(mysqli_error($GLOBALS['dblink']));
+			id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)) or die(mysqli_error($GLOBALS['dblink']));
 		}
 	}
 
@@ -95,6 +95,10 @@
 		background-color: rgba(var(--tblr-red-rgb), var(--tblr-bg-opacity)) !important;
 	}
 	<?php } ?>
+
+.unmarked {
+    background-color: unset !important;
+}
 </style>
 <input type="hidden" id="curText" value="<?=$id_texto?>" />
 <input type="hidden" id="curAid" value="0" />
@@ -161,7 +165,7 @@
 
 						</select>
 					
-                    <div class="col-sm-12 custom-font-<?=$eid?>" style="white-space:preserve;" id="textoMarcado"></div> 
+                    <div class="col-sm-12" style="white-space:preserve;" id="textoMarcado"></div> 
 					
                   </div>
                 </div>
@@ -221,28 +225,6 @@
 
 
 <script>
-
-/*
-window.onscroll = function() {autoScrollPanel()};
-
-function autoScrollPanel(){
-	var pos = document.documentElement.scrollTop;
-	var el = document.getElementById('painelStud').style.top;
-	var tamTop = 130;
-
-	var elb = document.getElementById('painelStud').offsetHeight;
-
-	if (pos < tamTop) pos = 0;
-	else pos = pos - tamTop;
-
-	if ( elb > window.screen.height && pos > 0){
-		pos = pos - window.screen.height;
-	}
-	
-
-	document.getElementById('painelStud').style.top = pos+'px';
-}
-*/
 
 function showCl(){
 	$(".pstud").removeClass('unmarked'); $("#btnHideCl").show(); $("#btnShowCl").hide();
@@ -334,12 +316,7 @@ function updateStAprend(aid,st,pids,pal='',ps='0'){
 $(document).ready(function(){
 	loadTexto();
 
-    $('[data-toggle="tooltip"]').tooltip(); 
-
-	//document.getElementById('painelStud').style.height = '500px';
-	//document.getElementById('textoMarcado').style.height = '500px'; //$(window).height() + 'px'; 
-	//document.getElementById('wrapper').style.height = window.screen.height + 'px';
-	//novaPalavra();
+    $(".pstud").popover({html:true});
 }); 
 
 function abrirArtigoSel(){
@@ -402,20 +379,3 @@ function updateArtVinculado(){
 }
 <?php } ?>
 </script>
-
-<style>
-    .popover {
-        max-width: 350px !important;
-    }
-    .popover-table {
-        font-size: 12px;
-        margin: 0;
-        width: 100%;
-    }
-    .popover-table td, .popover-table th {
-        padding: 2px 5px;
-    }
-    .pstud {
-        cursor: pointer;
-    }
-</style>
