@@ -59,11 +59,11 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Gloss')?></label>
-                            <input type="text" class="form-control" id="gloss" onchange="showGravarGloss()" placeholder="<?=_t('Ex.: NOM')?>">
+                            <input type="text" class="form-control" id="gloss" onkeyup="showGravarGloss()" placeholder="<?=_t('Ex.: NOM')?>">
                         </div>
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Descrição')?></label>
-                            <input type="text" class="form-control" id="descricao" onchange="showGravarGloss()" placeholder="<?=_t('Ex.: Nominativo')?>">
+                            <input type="text" class="form-control" id="descricao" onkeyup="showGravarGloss()" placeholder="<?=_t('Opcional')?>">
                         </div>
                     </div>
                 </div>

@@ -329,7 +329,7 @@ CREATE TABLE `idiomas` (
   `nome` varchar(255) NOT NULL,
   `id_nome_nativo` bigint(20) UNSIGNED NOT NULL,
   `id_ascendente` bigint(20) UNSIGNED NOT NULL,
-  `descricao` text DEFAULT NULL,
+  `descricao` mediumtext DEFAULT NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
   `nome_legivel` varchar(250) NOT NULL,
   `ordem` int(11) DEFAULT NULL,
@@ -440,7 +440,7 @@ CREATE TABLE `palavras` (
   `irregular` tinyint(4) DEFAULT 0,
   `id_classe` bigint(20) DEFAULT 0,
   `id_idioma` bigint(20) UNSIGNED NOT NULL,
-  `detalhes` text DEFAULT NULL,
+  `detalhes` mediumtext DEFAULT NULL,
   `pronuncia` varchar(255) DEFAULT NULL,
   `romanizacao` varchar(255) DEFAULT NULL,
   `significado` text DEFAULT NULL,
@@ -758,6 +758,7 @@ CREATE TABLE `frases` (
   `frase` text NOT NULL,
   `info` text NULL,
   `privado` text NULL,
+  `descricao` text NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
   `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -882,7 +883,8 @@ ALTER TABLE `itensConcordancias`
   ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `itens_flexoes`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD INDEX `idx_if` (`id_genero`, `id_flexao`, `id_concordancia`, `id_item`); 
 
 ALTER TABLE `itens_palavras`
   ADD PRIMARY KEY (`id`),

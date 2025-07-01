@@ -1,12 +1,6 @@
 
 
 <?php 
-if($_SESSION['KondisonairUzatorID']>0){
-	//logado
-}else{
-	//deslogado
-}
-
 if (isset($_GET['uid']) && $_GET['uid']>0)
   $query = "SELECT *, DATE_FORMAT( data_cadastro,'%m/%Y') as cadastro,
     (SELECT COUNT(*) FROM sosail_sgisons WHERE id_seguido = ".$id_usuario.") as seguidores, 
@@ -28,18 +22,12 @@ else
   FROM usuarios u
     WHERE id = '".$_SESSION['KondisonairUzatorIDX']."';";
 
-    //echo $query;  
-
-$usuario = array();   
 $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
-while($r = mysqli_fetch_assoc($result)) { 
-	$usuario  = $r;
-};
+$usuario = mysqli_fetch_assoc($result);
 
 $id_usuario = $usuario['id'];
 
-if (! $id_usuario > 0 || $usuario['publico'] == '0') {
-    
+if ( $id_usuario != $_SESSION['KondisonairUzatorIDX'] && ( $id_usuario > 0 || $usuario['publico'] == '0') ) {
   echo '<script>window.location = "index.php";</script>';
   exit;
 }

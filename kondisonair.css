@@ -333,6 +333,9 @@
 .nowrap {
   text-wrap: nowrap;
 }
+.nowrap-ws {
+  white-space: nowrap;
+}
 
 .intermediate-container {
     transition: all 0.3s ease;

@@ -69,7 +69,7 @@
                           ORDER BY i.data_modificacao DESC;") or die(mysqli_error($GLOBALS['dblink']));
                         
                         // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
-
+                      if (mysqli_num_rows($res)==0) { echo _t('<div class="col-md-6 col-lg-3">Nada aqui.</div>'); }else{
                         while($r = mysqli_fetch_assoc($res)) { 
 
                           $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
@@ -100,6 +100,7 @@
                               </div>
                             </div>'; 
                         };
+                      };
                       ?>
 
 
@@ -116,19 +117,19 @@
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Import Language</h5>
+                <h5 class="modal-title"><?=_t('Importar idioma')?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label for="languageFile" class="form-label">Select JSON file</label>
-                    <input type="file" class="form-control" id="languageFile" accept=".json">
+                    <label for="languageFile" class="form-label"><?=_t('Selecione o arquivo Zip')?></label>
+                    <input type="file" class="form-control" id="languageFile" accept=".zip">
                 </div>
                 <div id="importStatus" class="mt-3"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="importLanguage()">Import</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?=_t('Fechar')?></button>
+                <button type="button" class="btn btn-primary" onclick="importLanguage()"><?=_t('Importar')?></button>
             </div>
         </div>
     </div>

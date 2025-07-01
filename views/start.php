@@ -23,30 +23,33 @@
                     <div class="mb-1">
                       <span style="font-size:x-large"><?=_t('Olá!')?> </span>
                     </div>
-                    <div class="mb-3"><?=_t('Algumas coisas compartilhadas por aqui')?>
-                      
-                    </div>
+                    <?php 
+                      $las = mysqli_query($GLOBALS['dblink'],
+                        "SELECT i.*, 
+                        (SELECT palavra FROM palavrasNativas WHERE id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) LIMIT 1) as nativo,
+                        (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as eid,
+                        (SELECT id_fonte FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as fonte,
+                        (SELECT tamanho FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as tamanho 
+                        FROM idiomas i 
+                        WHERE publico = 1 
+                        AND id IN(SELECT id_idioma FROM studason_tests WHERE num_palavras > 0) 
+                        ORDER BY RAND() LIMIT 1;" // AND id IN(SELECT id_idioma FROM studason_tests WHERE num_palavras > 0)
+                      ) or die(mysqli_error($GLOBALS['dblink']));
+                      $la = mysqli_fetch_assoc($las);
+                      $eid = $la['eid'];
+                      if (! $la['id'] > 0){
+                        echo '<div class=" ">'._t('Nada compartilhado por aqui ainda.').'</div>';
+                      }else{
+                    ?>
+                    <div class="mb-4"><?=_t('Algumas coisas compartilhadas por aqui')?></div>
                     <div class="row row-cards">
                       <div class="mb-3 col-4">
                       <div class="datagrid-title"><?=_t('Idioma aleatório')?></div>
                         <?php 
-                          $las = mysqli_query($GLOBALS['dblink'],
-                            "SELECT i.*, 
-                            (SELECT palavra FROM palavrasNativas WHERE id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) LIMIT 1) as nativo,
-                            (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as eid,
-                            (SELECT id_fonte FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as fonte,
-                            (SELECT tamanho FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as tamanho 
-                            FROM idiomas i 
-                            WHERE publico = 1  ORDER BY RAND() LIMIT 1;" // AND id IN(SELECT id_idioma FROM studason_tests WHERE num_palavras > 0)
-                          ) or die(mysqli_error($GLOBALS['dblink']));
-                          $la = mysqli_fetch_assoc($las);
-                          $eid = $la['eid'];
                           echo '<a href="?page=language&iid='.$la['id'].'">'.$la['nome_legivel'].'<br>'.getSpanPalavraNativa($la['nativo'],$la['eid'],$la['fonte'],$la['tamanho']).'</a>';
                         ?>
-
-                      </div>
-                      <div class="mb-3 col-4">
-                        <div class="datagrid-title"><?=_t('Palavra aleatória')?></div>
+ 
+                        <div class="datagrid-title mt-3"><?=_t('Palavra aleatória')?></div>
                         <?php 
                         if ($la['id']){
                           $las = mysqli_query($GLOBALS['dblink'],
@@ -74,6 +77,24 @@
 
                       </div>
                       <div class="mb-3 col-4">
+                        <div class="datagrid-title"><?=_t('Frase aleatória')?></div>
+
+                        <?php 
+                        if($la['id']){
+                          $las = mysqli_query($GLOBALS['dblink'],
+                            "SELECT *, 
+                            (SELECT id_fonte FROM escritas WHERE id_idioma = t.id_idioma AND padrao = 1 LIMIT 1) as fonte,
+                            (SELECT tamanho FROM escritas WHERE id_idioma = t.id_idioma AND padrao = 1 LIMIT 1) as tamanho,
+                            (SELECT id FROM escritas WHERE id_idioma = t.id_idioma AND padrao = 1 LIMIT 1) as eid  
+                            FROM frases t ORDER BY RAND() LIMIT 1;" // AND id_idioma = ".$la['id_idioma']." 
+                          ) or die(mysqli_error($GLOBALS['dblink']));
+                          $la = mysqli_fetch_assoc($las);
+                          echo '<a href="?page=phrase&id='.$la['id'].'">'.getSpanPalavraNativa($la['frase'],$la['eid'],$la['fonte'],$la['tamanho']).'</a>';
+                      }
+                        ?>
+
+                      </div>
+                      <div class="mb-3 col-4">
                         <div class="datagrid-title"><?=_t('Texto aleatório')?></div>
 
                         <?php 
@@ -86,12 +107,13 @@
                              WHERE num_palavras > 0 ORDER BY RAND() LIMIT 1;" // AND id_idioma = ".$la['id_idioma']." 
                           ) or die(mysqli_error($GLOBALS['dblink']));
                           $la = mysqli_fetch_assoc($las);
-                          echo '<a href="?page=text&id='.$la['id'].'">'.$la['titulo'].'<br>'.getSpanPalavraNativa(mb_substr($la['texto'],0,60),$la['eid'],$la['fonte'],$la['tamanho']).'...</a>';
+                          echo '<a href="?page=text&id='.$la['id'].'">'.$la['titulo'].'<br>'.getSpanPalavraNativa(mb_substr($la['texto'],0,64),$la['eid'],$la['fonte'],$la['tamanho']).'</a> ...';
                       }
                         ?>
 
                       </div>
                     </div>
+                    <?php } ?>
 
                   </div>
                 </div>
@@ -100,6 +122,10 @@
                 <div class="card mt-3">
                   <div class="card-header">
                     <h3 class="card-title"><?=_t('Meus idiomas')?></h3>
+                    <div class="card-actions">
+                      <a href="?page=mylanguages" class="btn btn-primary"><?=_t('Todos')?>
+                      </a>
+                    </div>
                   </div>
                   <div class="card-body">
                     <div class="row row-cards">
@@ -130,21 +156,22 @@
                           ORDER BY i.data_modificacao DESC LIMIT 4;") or die(mysqli_error($GLOBALS['dblink']));
                         
                         // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
+                        if (mysqli_num_rows($res)==0) { echo _t('<div class="col-md-6 col-lg-3">Nada aqui.</div>'); }else{
+                          while($r = mysqli_fetch_assoc($res)) { 
 
-                        while($r = mysqli_fetch_assoc($res)) { 
-
-                          $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
-                          if($r['publico']!=1) { $icon = 'eye-slash'; $title = "Privada"; }
-                          if($r['nativo']!='') $nat = getSpanPalavraNativa($r['nativo'],$r['eid'],$r['id_fonte'],$r['tamanho'])."<br>";
-                          
-                          echo '<div class="col-md-6 col-lg-3">
-                              <div class="card">
-                                <div class="card-body">
-                                  <a href="?page=editlanguage&iid='.$r['id'].'"><h3 class="card-title">'.$nat.$r['nome_legivel'].'</h3></a>
+                            $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
+                            if($r['publico']!=1) { $icon = 'eye-slash'; $title = "Privada"; }
+                            if($r['nativo']!='') $nat = getSpanPalavraNativa($r['nativo'],$r['eid'],$r['id_fonte'],$r['tamanho'])."<br>";
+                            
+                            echo '<div class="col-md-6 col-lg-3">
+                                <div class="card">
+                                  <div class="card-body">
+                                    <a href="?page=editlanguage&iid='.$r['id'].'"><h3 class="card-title">'.$nat.$r['nome_legivel'].'</h3></a>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>'; 
-                        };
+                              </div>'; 
+                          };
+                        }
                       ?>
 
 
@@ -165,7 +192,7 @@
                         $listaOutras = ''; $totalOutras = 0;
                         $listaFamilias = array(); $listaTotais = array();
 
-                        $res = mysqli_query($GLOBALS['dblink'],"SELECT i.* ,
+                        $res2 = mysqli_query($GLOBALS['dblink'],"SELECT i.* ,
 
                           (SELECT f.arquivo as fonte FROM escritas e 
                             LEFT JOIN fontes f ON f.id = e.id_fonte
@@ -180,14 +207,14 @@
                           (SELECT e.id FROM escritas e 
                             WHERE e.id_idioma = i.id and e.padrao = 1
                             ) as eid,
-                          (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas e 
+                          (SELECT n.palavra from palavrasNativas n where n.id_palavra = i.id_nome_nativo AND n.id_escrita = (SELECT id FROM escritas e 
                                   WHERE e.id_idioma = i.id and e.padrao = 1) limit 1) as nativo
                           FROM idiomas i WHERE i.id < 10000 
                           ORDER BY i.data_modificacao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 
-                        while($r = mysqli_fetch_assoc($res)) { 
-                          if($r['nativo']!='') $nat = getSpanPalavraNativa($r['nativo'],$r['eid'],$r['id_fonte'],$r['tamanho'])."<br>";
-                          echo '<a class="btn btn-primary" onclick="acessarEdicaoIdiomaSistema(\''.$r['id'].'\')">'.$nat.$r['nome_legivel'].'</a>'; 
+                        while($r2 = mysqli_fetch_assoc($res2)) { 
+                          if($r2['nativo']!='') $nat2 = getSpanPalavraNativa($r2['nativo'],$r2['eid'],$r2['id_fonte'],$r2['tamanho'])."<br>";
+                          echo '<a class="btn btn-primary" onclick="acessarEdicaoIdiomaSistema(\''.$r2['id'].'\')">'.$nat2.$r2['nome_legivel'].'</a> '; 
                         };
                       ?>
 

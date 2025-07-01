@@ -1229,4 +1229,124 @@ function convertBracketedClasses($pattern, $classes) {
 
     return $result;
 }
+
+function applySoundChangesByGroup($lines, $rules, $substitutions = [], $classes = [], $rulesPerLines = null) {
+    // Validações iniciais
+    if (!is_array($lines)) {
+        throw new InvalidArgumentException("lines deve ser um array.");
+    }
+    if (!is_array($rules) || isset($rules[0])) {
+        //throw new InvalidArgumentException("rules deve ser um array associativo de grupos.");
+    }
+    if (!is_array($substitutions) || !is_array($classes)) {
+        throw new InvalidArgumentException("substitutions e classes devem ser arrays.");
+    }
+    if (count($lines) !== count($rules)) {
+        throw new InvalidArgumentException("O número de linhas (" . count($lines) . ") deve ser igual ao número de grupos de regras (" . count($rules) . ").");
+    }
+    if (count($lines) > 10000 || count($rules) > 10000 || count($substitutions) > 10000 || count($classes) > 10000) {
+        throw new InvalidArgumentException("Número excessivo de linhas, regras, substituições ou classes.");
+    }
+
+    $inputLines = $lines;
+    $ruleGroups = $rules;
+    $erros = [];
+
+    // Expandir classes aninhadas
+    $classes = expandNestedClasses($classes);
+
+    // Coletar caracteres únicos
+    $uniqueChars = [];
+    foreach ($inputLines as $line) {
+        $chars = preg_split('//u', $line, -1, PREG_SPLIT_NO_EMPTY);
+        $uniqueChars = array_merge($uniqueChars, $chars);
+    }
+    foreach ($classes as $className => $chars) {
+        $uniqueChars = array_merge($uniqueChars, $chars);
+    }
+    foreach ($ruleGroups as $groupName => $groupRules) {
+        foreach ($groupRules as $rule) {
+            if (preg_match('/^\s*([^=\/]*)\s*(?:→|>|=>|\/)\s*([^\/]*)\s*(?:\/\s*([^\/]*))?(?:\s*\/\s*(.*))?\s*$/u', trim($rule), $matches)) {
+                $source = trim($matches[1]);
+                $target = trim($matches[2]);
+                $contexts = isset($matches[3]) && $matches[3] !== '' ? splitIgnoringBraces($matches[3]) : [];
+                $exclusions = isset($matches[4]) && $matches[4] !== '' ? splitIgnoringBraces($matches[4]) : [];
+                $uniqueChars = array_merge($uniqueChars, preg_split('//u', $source, -1, PREG_SPLIT_NO_EMPTY));
+                $uniqueChars = array_merge($uniqueChars, preg_split('//u', $target, -1, PREG_SPLIT_NO_EMPTY));
+                foreach ($contexts as $context) {
+                    $uniqueChars = array_merge($uniqueChars, preg_split('//u', $context, -1, PREG_SPLIT_NO_EMPTY));
+                }
+                foreach ($exclusions as $exclusion) {
+                    $uniqueChars = array_merge($uniqueChars, preg_split('//u', $exclusion, -1, PREG_SPLIT_NO_EMPTY));
+                }
+            } elseif (!preg_match('/^(\p{Lu}\p{Ll}*)\s*=/u', $rule)) {
+                $erros[] = "KSC: Regra inválida ignorada ao coletar caracteres: $rule";
+            }
+        }
+    }
+    $uniqueChars = array_unique($uniqueChars);
+    $reservedChars = ['∅', 'ø', '→', ':', '=>', ' ', "\n", "\t", "\r", '=', '/', '_', '$', '#', '<', '>', '(', ')', '[', ']', '{', '}', ',', '?', '*', '.', '~', '|', '+'];
+    $ignoredChars = ['´', '`', '^', '¨', "'"];
+    $uniqueChars = array_diff($uniqueChars, $reservedChars, $ignoredChars);
+    $classes['?'] = array_values($uniqueChars);
+
+    // Processar cada linha com o grupo de regras correspondente
+    $result = [];
+    $blockKeys = array_keys($ruleGroups);
+    foreach ($inputLines as $lineIndex => $line) {
+        preg_match('/[\s\t]+/', $line, $separatorMatches);
+        $separator = $separatorMatches ? $separatorMatches[0] : ' ';
+        $words = preg_split('/[\s\t]+/', trim($line), -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($words)) {
+            $result[] = $line;
+            continue;
+        }
+
+        $transformedWords = $words;
+        $lineClasses = $classes;
+        $blockName = $blockKeys[$lineIndex];
+        $groupRules = $ruleGroups[$blockName];
+
+        // Aplicar todas as regras do grupo à linha
+        $tempWords = [];
+        foreach ($transformedWords as $wordIndex => $word) {
+            $newWord = $word;
+            foreach ($groupRules as $ruleIndex => $rule) {
+                if (preg_match('/^(\p{Lu}\p{Ll}*)\s*=\s*(\{[\p{L}\x{0250}-\x{02AF}\x{1D00}-\x{1DBF}\p{M}]+(?:\s*,\s*[\p{L}\x{0250}-\x{02AF}\x{1D00}-\x{1DBF}\p{M}]+)*\s*\}|[\p{L}\x{0250}-\x{02AF}\x{1D00}-\x{1DBF}\p{M}]+|[\p{L}\x{0250}-\x{02AF}\x{1D00}-\x{1DBF}\p{M}]+(?:\s*,\s*[\p{L}\x{0250}-\x{02AF}\x{1D00}-\x{1DBF}\p{M}]+)*)\s*$/u', $rule, $matches)) {
+                    $className = $matches[1];
+                    $classValue = $matches[2];
+                    if (preg_match('/^\{([^\}]*)\}\s*$/u', $classValue, $listMatches)) {
+                        $characters = array_map('trim', explode(',', $listMatches[1]));
+                        $characters = array_filter($characters);
+                    } elseif (mb_strpos($classValue, ",") > 0) {
+                        $characters = array_map('trim', explode(',', $classValue));
+                        $characters = array_filter($characters);
+                    } else {
+                        $characters = preg_split('//u', $classValue, -1, PREG_SPLIT_NO_EMPTY);
+                    }
+                    $lineClasses[$className] = $characters;
+                    continue;
+                }
+                $newWord = applySingleRule($newWord, $rule, $lineClasses);
+            }
+            $tempWords[] = $newWord;
+        }
+        $transformedWords = $tempWords;
+
+        // Aplicar substituições
+        foreach ($substitutions as $sub) {
+            if (preg_match('/^\s*(\S+)\s*=>\s*(\S+)\s*$/u', $sub, $matches)) {
+                $from = $matches[1];
+                $to = $matches[2];
+                $transformedWords = array_map(function($word) use ($from, $to) {
+                    return str_replace($from, $to, $word);
+                }, $transformedWords);
+            }
+        }
+
+        $result[] = implode($separator, $transformedWords);
+    }
+
+    return [$result, $erros];
+}
 ?>

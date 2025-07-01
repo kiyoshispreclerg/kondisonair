@@ -98,7 +98,7 @@ if ($id_universo > 0) {
                                             <div class="form-label"><?=_t('Idioma da descrição')?></div>
                                             <select type="text" class="form-select" id="idioma_descricao" onchange="showGravarDados()">
                                                 <?php 
-                                                $langs = mysqli_query($GLOBALS['dblink'], "SELECT * FROM idiomas WHERE status > 7 AND buscavel = 1;") or die(mysqli_error($GLOBALS['dblink']));
+                                                $langs = mysqli_query($GLOBALS['dblink'], "SELECT * FROM idiomas WHERE id < 10000;") or die(mysqli_error($GLOBALS['dblink']));
                                                 $l = $universo['id_idioma_descricao'] > 0 ? $universo['id_idioma_descricao'] : $_SESSION['KondisonairUzatorDiom'];
                                                 while ($lang = mysqli_fetch_assoc($langs)) {
                                                     if ($lang['id'] > 0) {
@@ -251,22 +251,6 @@ if ($id_universo > 0) {
                                 </div>
                             </div>
                         </div>
-                        <!--div class="list-group-item">
-                            <div class="row align-items-center">
-                                <div class="col text-truncate">
-                                    <a href="?page=myarticles&rid=<?=$id_universo?>" class="text-reset d-block"><?=_t('Artigos')?></a>
-                                    <div class="d-block text-secondary text-truncate mt-n1"><?=$universo['numArtigos']?> <?=_t('artigos publicados')?></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="list-group-item">
-                            <div class="row align-items-center">
-                                <div class="col text-truncate">
-                                    <a href="?page=texts&rid=<?=$id_universo?>" class="text-reset d-block"><?=_t('Textos')?></a>
-                                    <div class="d-block text-secondary text-truncate mt-n1"><?=$universo['numTextos']?> <?=_t('textos publicados')?></div>
-                                </div>
-                            </div>
-                        </div-->
 
 
                         <?php } else { ?>

@@ -740,12 +740,6 @@ INSERT INTO `tiposSom` (`id`, `codigo`, `titulo`, `dimx`, `dimy`, `dimz`) VALUES
 INSERT INTO `wordbanks` (`id`, `titulo`, `id_usuario`, `data_criacao`, `data_modificacao`) VALUES
 (106099661390050001, 'Swadesh (207)', 0, '0000-00-00 00:00:00', '2024-09-04 06:34:33');
 
-INSERT INTO `idiomas` (`id`, `id_usuario`, `id_tipo`, `publico`, `copyright`, `nome`, `id_nome_nativo`, `id_ascendente`, `descricao`, `data_criacao`, `nome_legivel`, `ordem`, `marcacao`, `direcao`, `sintese`, `alinhamento`, `buscavel`, `status`, `romanizacao`, `sigla`, `id_idioma_descricao`, `checar_sons`, `id_familia`, `data_modificacao`, `motor`, `silabas`, `id_realidade`, `id_momento`) VALUES
-(1, 1, 0, 1, NULL, '', 0, 0, '', '2023-04-23 19:57:50', 'Português brasileiro', 2, 1, 1, 2, 1, 1, 9, 0, 'PTBR', 1, 0, 0, '2025-01-01 00:00:00', 'ksc', 0, 0, 0),
-(4, 1, 0, 1, NULL, '', 0, 0, '', '2023-04-25 13:01:16', '日本語', 1, 1, 2, 2, 1, 1, 0, 1, '', 1, 0, 0, '2025-01-01 00:00:00', 'ksc', 0, 0, 0),
-(5, 1, 0, 1, NULL, '', 0, 0, '', '2023-04-25 15:18:22', 'English', NULL, NULL, NULL, NULL, NULL, 1, 9, 0, '', 1, 0, 0, '2025-01-01 00:00:00', 'ksc', 0, 0, 0),
-(6, 1, 0, 1, NULL, '', 0, 0, '', '2023-04-26 22:25:46', 'Esperanto', 2, 1, 1, 2, 1, 1, 9, 0, '', 1, 0, 0, '2025-01-01 00:00:00', 'ksc', 0, 0, 0);
-
 INSERT INTO `usuarios` (`id`, `username`, `senha`, `nome_completo`, `descricao`, `id_idioma_nativo`, `data_cadastro`, `email`, `confirmacao`, `acesso`, `publico`, `token`) VALUES
 (0, 'kondisonair', '', 'Kondisonair', '', 1, '2025-01-01 00:00:00', '', '1', 100, 0, '');
 

@@ -89,7 +89,7 @@ $tamanho = $idioma['tamanho'];
                             </div>
                             <?php }?>
                             <div class="mt-3">
-                                <label class="form-label"><?=_t('Gerar para o meu idioma')?></label>
+                                <label class="form-label"><?=_t('Gerar para o idioma')?></label>
                                 <select class="form-select" id="idsig" onchange="window.location.href='?page=wordgen&id=<?=$_GET['id']?>&iid='+$('#idsig').val()"><option value="0" selected><?=_t('Nenhum (manual)')?></option><?php 
                                         $oiids = mysqli_query($GLOBALS['dblink'],
                                         "SELECT i.nome_legivel, i.id as iid, e.id as eid FROM idiomas i

@@ -105,26 +105,40 @@
                             </select>
                         </div>
 
-                        <!--div class="mb-3">
-                            <div class="form-label"><?=_t('Ligacao')?></div>
-                            <select class="form-select" id="links" title="Ligacao" type="text" value="" onchange="$('#btnSalvar').show()">
-                                <option value="0">Nenhuma</option>
-                                <option disabled>Textos/Aulas</option>
+                        <div class="mb-3">
+                            <div class="form-label"><?=_t('Ligações')?></div>
+                            <select class="form-select" id="links" title="Ligacao" type="text" value="" onchange="$('#btnSalvar').show()" multiple>
+                              
+
+                                <option disabled><?=_t('Frases')?></option>
                                 <?php 
-                                $langs = mysqli_query($GLOBALS['dblink'],
-                                  "SELECT t.*, ad.id_artyg FROM studason_tests t 
-                                    LEFT JOIN idiomas i ON i.id = t.id_idioma
-                                    LEFT JOIN artyg_dest ad ON ad.id_dest = t.id AND tipo_dest = 'text';") or die(mysqli_error($GLOBALS['dblink']));
-                                while ($l = mysqli_fetch_assoc($langs)){
-                                    echo '<option value="'.$l['id'].'"';
-                                    if($aid>0 && $aid==$l['id_artyg']) echo ' selected';
-                                    echo '>Texto: '.$l['titulo'].'</option>';
-                                }
+                                  $langs = mysqli_query($GLOBALS['dblink'],
+                                    "SELECT t.*, ad.id_artyg FROM frases t 
+                                      LEFT JOIN idiomas i ON i.id = t.id_idioma
+                                      LEFT JOIN artyg_dest ad ON ad.id_dest = t.id AND tipo_dest = 'phrase';") or die(mysqli_error($GLOBALS['dblink']));
+                                  while ($l = mysqli_fetch_assoc($langs)){
+                                      echo '<option value="phrase_'.$l['id'].'"';
+                                      if($aid>0 && $aid==$l['id_artyg']) echo ' selected';
+                                      echo '>'._t('Frase').': '.$l['descricao'].'</option>';
+                                  }
+                                ?>
+
+                                <option disabled><?=_t('Textos')?></option>
+                                <?php 
+                                  $langs = mysqli_query($GLOBALS['dblink'],
+                                    "SELECT t.*, ad.id_artyg FROM studason_tests t 
+                                      LEFT JOIN idiomas i ON i.id = t.id_idioma
+                                      LEFT JOIN artyg_dest ad ON ad.id_dest = t.id AND tipo_dest = 'text';") or die(mysqli_error($GLOBALS['dblink']));
+                                  while ($l = mysqli_fetch_assoc($langs)){
+                                      echo '<option value="text_'.$l['id'].'"';
+                                      if($aid>0 && $aid==$l['id_artyg']) echo ' selected';
+                                      echo '>'._t('Texto').': '.$l['titulo'].'</option>';
+                                  }
                                 ?>
 
 
                             </select>
-                        </div-->
+                        </div>
                         <a class="btn btn-primary w-100 mt-2" id="btnSalvar" onclick="salvarArtigo()"><?=_t('Salvar')?></a>
 
 
@@ -146,7 +160,7 @@ $(document).ready(function(){
       menubar: false,
       statusbar: true,
       plugins: [
-        'advlist', 'autolink', 'lists', 'link', 'paste', 'table', 'print', 'preview', 'fullscreen', 'wordcount'
+        'advlist', 'autolink', 'lists', 'link', 'paste', 'table', 'print', 'preview', 'fullscreen', 'wordcount', 'image'
         //'image charmap anchor',
         //'searchreplace visualblocks code',
         //'insertdatetime media paste help wordcount'
@@ -167,9 +181,11 @@ $(document).ready(function(){
         <?php } ?>
 
       },
-
+      automatic_uploads: true,
+      file_picker_types: 'image',
+      images_file_types: 'jpg,jpeg,png,webp',
       toolbar: 'undo redo formatselect ' +
-        'bold italic bullist numlist removeformat link unlink table preview custom_font',
+        'bold italic bullist numlist removeformat link unlink image table preview custom_font',
       content_style: `body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; } <?=$globalcustomfonts?>`
     }
     if (localStorage.getItem("tabler-theme") === 'dark') {
@@ -178,7 +194,7 @@ $(document).ready(function(){
     }
     tinyMCE.init(options);
 
-    //createTablerSelect('links');
+    createTablerSelect('links');
     createTablerSelect('art_pai');
 }); 
 
@@ -192,7 +208,7 @@ function salvarArtigo(){
         tp: $('#typ').val(),
         p: $('#publico').val(),
         ap: $('#art_pai').val(),
-        //l: $('#links').val(),
+        l: $('#links').val(),
         iid: '<?=$iid?>',
         t: tinymce.get('editor').getContent()// $('#texto').summernote('code')
     }, function (data){

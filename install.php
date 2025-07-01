@@ -68,6 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?, ?, ?, ?, '', ?, NOW(), '', '1', 100)");
                 $stmt->execute([$id_usuario, $admin_name, $hashed_pass, $admin_name, $def_lang]);
 
+                $stmt = $pdo->prepare("INSERT INTO idiomas (id, id_usuario, id_tipo, publico, copyright, nome, id_nome_nativo, id_ascendente, descricao, data_criacao, nome_legivel, ordem, marcacao, direcao, sintese, alinhamento, buscavel, status, romanizacao, sigla, id_idioma_descricao, checar_sons, id_familia, data_modificacao, motor, silabas, id_realidade, id_momento) 
+                    VALUES (?, 0, 0, 1, NULL, '', 0, 0, '', '2000-01-01 00:00:00', ?, 2, 1, 1, 2, 1, 1, 9, 0, '', ?, 0, 0, '2025-01-01 00:00:00', 'ksc', 0, 0, 0)");
+                foreach($idiomas_sistema as $id_idioma => $idioma) {
+                    $stmt->execute([$id_idioma, $idioma, $id_idioma]);
+                }
+
                 $config = "<?php\n";
                 $config .= "\$mysql_host = '$host';\n";
                 $config .= "\$mysql_user = '$user';\n";

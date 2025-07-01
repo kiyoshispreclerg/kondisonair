@@ -505,15 +505,18 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     },
     plugins: [
-        'advlist', 'autolink', 'lists', 'link', 'paste'
+        'advlist', 'autolink', 'lists', 'link', 'paste', 'image'
         //'image charmap print preview anchor',
         //'searchreplace visualblocks code fullscreen',
         //'insertdatetime media table code help wordcount'
     ],
     toolbar: 'undo redo | formatselect | ' +
         'bold italic backcolor | alignleft aligncenter ' +
-        'alignright alignjustify | bullist numlist outdent indent | link unlink ' +
+        'alignright alignjustify | bullist numlist outdent indent | link unlink | image |' +
         'removeformat',
+    automatic_uploads: true,
+    file_picker_types: 'image',
+    images_file_types: 'jpg,jpeg,png,webp',
     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }'
     }
     if (localStorage.getItem("tabler-theme") === 'dark') {

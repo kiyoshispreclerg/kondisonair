@@ -67,11 +67,11 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
                         </div>
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Descrição em esperanto')?></label>
-                            <input type="text" class="form-control" id="descricaoPort" onchange="showGravarReferente()">
+                            <input type="text" class="form-control" id="descricaoEo" onchange="showGravarReferente()">
                         </div>
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Descrição em japonês')?></label>
-                            <input type="text" class="form-control" id="descricaoPort" onchange="showGravarReferente()">
+                            <input type="text" class="form-control" id="descricaoJp" onchange="showGravarReferente()">
                         </div>
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Detalhes')?></label>
@@ -93,8 +93,8 @@ function gravarReferente(){
     {
         descricao: $('#descricao').val(),
         descricaoPort: $('#descricaoPort').val(),
-        descricaoEo: $('#descricaoPort').val(),
-        descricaoJp: $('#descricaoPort').val(),
+        descricaoEo: $('#descricaoEo').val(),
+        descricaoJp: $('#descricaoJp').val(),
         detalhes: $('#detalhes').val()
     }, function(data){
         if ($.trim(data) > 0){

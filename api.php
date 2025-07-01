@@ -1823,493 +1823,6 @@ function getInfoPalavra($res,$entrada,$geto){
 
 };
 
-function traduzirTexto($geto,$getd,$posttexto,$postentrada,$postnat,$postpr,$postgl) { //xxxxx otimizar sql queries
-  $return = '';
-
-  /* //xxxxx
-
-      VERIFICAR COM MODELO APERTIUM:
-      ? deformatting
-      v analise morfológica (palavras e tags gramaticais)
-      v traduzir palavra por palavra
-      - desambiguação (se tem +d1 ref ou palavra, verificar contexto)
-      - chunker (análise de blocos, ex palavras>frases>sentenças), do primeiro e dos indo aos nós se não achou significado no chunk
-      - chunk reorder
-      - chunk clean: 
-        - remove tags (palavras já devem estar em formas/flexões corretas)
-      - ajustes de vizinhança (sandhi, elisão, compressão, flexões etc)
-      - formatação final
-
-
-  */
-
-  $didiomas = mysqli_query($GLOBALS['dblink'],"SELECT *,(SELECT id FROM escritas e WHERE e.id_idioma = i.id ORDER BY e.padrao DESC LIMIT 1) as eid from idiomas i
-          WHERE id = ".$geto.";") or die(mysqli_error($GLOBALS['dblink']));
-  $oi = mysqli_fetch_assoc($didiomas);
-  $oroman = $oi['romanizacao']; // idioma['romanizacao']: 1 tem, 0 nao tem, usa nativo
-  $oeid = $oi['eid'];
-  $didiomas = mysqli_query($GLOBALS['dblink'],"SELECT *,(SELECT id FROM escritas e WHERE e.id_idioma = i.id ORDER BY e.padrao DESC LIMIT 1) as eid from idiomas i
-          WHERE id = ".$getd.";") or die(mysqli_error($GLOBALS['dblink']));
-  $di = mysqli_fetch_assoc($didiomas);
-  $droman = $di['romanizacao']; // idioma['romanizacao']: 1 tem, 0 nao tem, usa nativo
-  $deid = $di['eid'];
-  
-  if ($oroman==1) $oromt='romanizacao';
-  else $oromt='nativo';
-
-  $textoEntrada = trim($posttexto);
-
-  $entrada = explode("_",$postentrada);
-
-  $orig = array();
-  $analise1 = $analise2 = '';
-
-  $res = separarPalavras($textoEntrada,$geto,$entrada);
-
-  $stable = cykParse($res,$geto,$entrada);
-  $analises = CYKArrayToBrackets($stable);
-  usort($analises,function($a, $b) {
-    return strlen($b) - strlen($a);
-  });
-  $maioranalise = strlen($analises[0]);
-  foreach($analises as $analise){
-    if (strlen($analise)<$maioranalise) break;
-    $analise1 .= $analise.' ';
-  }
-  
-  //echo CYKArrayToTable($stable); 
-
-
-  for($i = 0; $i < sizeof($res) ; $i++){ 
-    $orig[$i] = $stable[$i][$i];
-  };
-
-  //die();
-
-
-
-  //analisar cada palavra do texto de entrada
-
-  // traduzir palavra por palavra, salvando suas tags de morfologia
-  /*
-  for($i = 0; $i < sizeof($res) ; $i++){
-    continue;
-    //$orig[$i] = getInfoPalavra($res,$entrada,$geto); continue;
-
-    $orig[$i]['orig'] = $res[$i]; // casa (1.ptbr)
-    $orig[$i]['gloss'] = '';
-    $orig[$i]['pron'] = '';
-    $orig[$i]['rom'] = '';
-    $orig[$i]['nat'] = '';
-    $orig[$i]['glossdet'] = '';
-    //$orig[$i]['glossArray'] = null;
-
-    $orig[$i]['cgloss'] = '';
-    $orig[$i]['romanizacao'] = '';
-    $orig[$i]['nativo'] = '';
-    
-    if (isset($_SESSION['KondisonairUzatorDiom'])) $mylang = $_SESSION['KondisonairUzatorDiom'];
-    else $mylang = 1; //1=ptbr 5=id_eng ?
-
-    if ($res[$i]=='') continue;
-    $orig[$i]['exata'] = 1;
-
-    if ($entrada[0]=='nativa'){ // entrada[1] = id da escrita
-      $filtroTipo = "pn.palavra = '".$res[$i]."' AND ";
-      $filtroDeriv = "pn.palavra = '".$res[$i]."' AND";
-      $filtroLike = "pn.palavra LIKE '%".$res[$i]."%' AND";
-      $pnp = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id";
-      $pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
-      $pnq = "pn.palavra as nativa, ";
-    }else{
-      $filtroTipo = 'p.'.$entrada[0]." = '".$res[$i]."' AND " ;
-      $filtroDeriv = "p.".$entrada[0]." = '".$res[$i]."' AND";
-      $filtroLike = "p.".$entrada[0]." LIKE '%".$res[$i]."%' AND";
-      $pnp = "";
-      $pnd = "";
-      $pnq = "";
-    };
-    $a = mysqli_query($GLOBALS['dblink'],"SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-          r.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome  
-        FROM palavras p
-        LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-        LEFT JOIN classes c ON p.id_classe = c.id
-        LEFT JOIN glosses g ON c.id_gloss = c.id
-        LEFT JOIN referentes r ON pr.id_referente = r.id ".$pnp." 
-        WHERE ".$filtroTipo." p.id_idioma = ".$geto."  
-        AND p.id_forma_dicionario = 0;") or die(mysqli_error($GLOBALS['dblink']));
-        
-    //não achou a palavra exata: buscar formas derivadas
-    if (mysqli_num_rows($a)!=1){
-      $sql = "SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-              r.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome  
-              FROM palavras p
-              LEFT JOIN palavras dic ON p.id_forma_dicionario = dic.id
-              LEFT JOIN classes c ON p.id_classe = c.id
-              LEFT JOIN glosses g ON c.id_gloss = c.id
-            LEFT JOIN palavras_referentes pr ON pr.id_palavra = dic.id 
-              LEFT JOIN referentes r ON pr.id_referente = r.id ".$pnd." 
-          WHERE ".$filtroDeriv." dic.id_idioma = ".$geto." 
-              AND dic.id_forma_dicionario = 0;";
-              
-      $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-    }
-    
-    //ainda não achou a palavra exata: buscar outras parecidas
-    if (mysqli_num_rows($a)!=1){
-      $orig[$i]['exata'] = 0;
-      $sql = "SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-              r.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome 
-          FROM palavras p
-          LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-          LEFT JOIN classes c ON p.id_classe = c.id
-          LEFT JOIN glosses g ON c.id_gloss = c.id
-          LEFT JOIN referentes r ON pr.id_referente = r.id ".$pnp." 
-          WHERE ".$filtroLike." p.id_idioma = ".$geto."  
-          ORDER BY p.id_forma_dicionario;";
-      $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    if (mysqli_num_rows($a)>0){
-      if(mysqli_num_rows($a)==1){
-
-        //palavra exata encontrada !!
-        $ax = mysqli_fetch_assoc($a);
-        //print_r($ax);
-
-        // palavras que têm este mesmo referente, mas na lingua do usuário logado
-        // LIST palavras where id_idioma = mylang and referente = este referente
-        $sinonimos = '';
-
-        ///*
-        if ($ax['refid']>0){
-          $p = mysqli_query($GLOBALS['dblink'],"SELECT p.* FROM palavras p
-            LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-            WHERE pr.id_referente = ".$ax['refid']." AND p.id_idioma = ".$mylang."
-            AND p.id_forma_dicionario = 0;") or die(mysqli_error($GLOBALS['dblink']));
-
-          while($px = mysqli_fetch_assoc($p)){
-            $sinonimos .= "\n".$px['significado'];
-          }
-        }
-        //*//*
-        
-        //$orig[$i]['gloss'] = $ax['referente'];
-        $orig[$i]['id_classe'] = $ax['clid'];
-        $orig[$i]['gloss'] = '<span data-toggle="tooltip" data-placement="bottom" title="'.$ax['cnome'].'">'.$ax['cgloss'].'</span>';//$ax['cgloss'];
-        $orig[$i]['pron'] = '/'.$ax['pronuncia'].'/';
-        $orig[$i]['rom'] = $ax['romanizacao'];
-        $orig[$i]['nat'] = $ax['nativa'];
-        $orig[$i]['refid'] = $ax['refid'];
-        $orig[$i]['glossdet'] = $ax['refDesc']."\n".$sinonimos;
-        
-        $orig[$i]['cgloss'] = $ax['cgloss'];
-        $orig[$i]['romanizacao'] = $ax['romanizacao'];
-        $orig[$i]['nativo'] = $ax['nativa'];
-
-        //buscar glosses (classe, itens, opcao/item)
-        $b = mysqli_query($GLOBALS['dblink'],"SELECT i.*, g.gloss FROM itens_palavras ip
-          LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
-          LEFT JOIN glosses g ON i.id_gloss = g.id 
-          WHERE ip.id_palavra = ".$ax['id']." AND usar = 1;") or die(mysqli_error($GLOBALS['dblink']));
-        while($bx = mysqli_fetch_assoc($b)){
-          $orig[$i]['gloss'] .= '-<span data-toggle="tooltip" data-placement="bottom" title="'.$bx['nome'].'">'.$bx['gloss'].'</span>';
-          $orig[$i]['glossArray'][] = $bx;
-        }
-
-
-      }else{
-
-        //mais de uma palavra parecida encontrada
-        //guess / desambiguação
-        //usar contexto geral ?
-
-        
-        //pegou a ultima palavra encontrada, qualquer que seja
-        //xxxxx  alterar aqui pra ser mais coerente
-
-        while($tx = mysqli_fetch_assoc($a)){
-          //print_r($tx);
-          $ax = $tx;
-        }
-
-
-        $sinonimos = '';
-        if ($ax['refid']>0){
-          $p = mysqli_query($GLOBALS['dblink'],"SELECT p.* FROM palavras p
-            LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-            WHERE pr.id_referente = ".$ax['refid']." AND p.id_idioma = ".$mylang."
-            AND p.id_forma_dicionario = 0;") or die(mysqli_error($GLOBALS['dblink']));
-
-          while($px = mysqli_fetch_assoc($p)){
-            $sinonimos .= "\n".$px['significado'];
-          }
-        }
-
-        $orig[$i]['id_classe'] = $ax['clid'];
-        $orig[$i]['gloss'] = '<span data-toggle="tooltip" data-placement="bottom" title="'.$ax['cnome'].'">'.$ax['cgloss'].'</span>';//$ax['cgloss'].' ?'; //$orig[$i]['gloss'] = $ax['referente'].' ?';
-        $orig[$i]['pron'] = '/'.$ax['pronuncia'].'/ ?';
-        $orig[$i]['rom'] = $ax['romanizacao'].' ?';
-        $orig[$i]['nat'] = $ax['nativa'];
-        $orig[$i]['refid'] = $ax['refid'];
-        $orig[$i]['glossdet'] = $ax['refDesc']."\n".$sinonimos;
-        
-        $orig[$i]['cgloss'] = $ax['cgloss'];
-        $orig[$i]['romanizacao'] = $ax['romanizacao'];
-        $orig[$i]['nativo'] = $ax['nativa'];
-
-        //buscar glosses (classe, itens, opcao/item)
-        $b = mysqli_query($GLOBALS['dblink'],"SELECT i.* FROM itens_palavras ip
-          LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
-          WHERE ip.id_palavra = ".$ax['id']." AND usar = 1;") or die(mysqli_error($GLOBALS['dblink']));
-        while($bx = mysqli_fetch_assoc($b)){
-          $orig[$i]['gloss'] .= '-<span data-toggle="tooltip" title="'.$bx['nome'].'">'.$bx['gloss'].'</span>';
-        }
-
-      }
-
-    }else{
-      //não encontrado no dicionário
-      $orig[$i]['id_classe'] = 0;
-      $orig[$i]['gloss'] = '-';
-      $orig[$i]['glossdet'] = 'Não encontrado';//$_t['NaoEncontrado'];
-      $orig[$i]['pron'] = '-';
-      $orig[$i]['rom'] = '-';
-      $orig[$i]['refid'] = 0;
-      $orig[$i]['nat'] = '>';
-      
-      $orig[$i]['cgloss'] = '';
-      $orig[$i]['romanizacao'] = '*';
-      $orig[$i]['nativo'] = '*';
-    }
-
-
-  } 
-  */
-
-  //$dest = array();
-  $dest = $orig;
-  
-  
-  //idioma diferente, fazer tradução! mudar pra bloco a bloco?
-  if ($geto!=$getd) {  //idioma diferente, fazer tradução! bloco a bloco?
-
-    //while pegando cada uma de todas as palavras)
-    for($i = 0; $i < sizeof($orig) ; $i++){
-      if (! ($dest[$i]['a'][0]['refid'] > 0) ) {
-        
-        $dest[$i]['a'][0]['gloss'] = '-';
-        $dest[$i]['a'][0]['glossdet'] = 'Não encontrado';//$_t['NaoEncontrado'];
-        $dest[$i]['a'][0]['pron'] = '-';
-        $dest[$i]['a'][0]['rom'] = '-';
-        $dest[$i]['a'][0]['nat'] = '*';
-        
-        $dest[$i]['a'][0]['cgloss'] = '';
-        $dest[$i]['a'][0]['romanizacao'] = '*';
-        $dest[$i]['a'][0]['nativo'] = '*';
-        continue;
-      } 
-      //echo json_encode($dest ).'<br>'; 
-      
-      // achar palavras equivalentes
-      // select from palavras + referentes referente = refid and language = d
-      $sql = "SELECT p.*, (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id LIMIT 1) as nativa, g.gloss as cgloss, c.nome as cnome  FROM palavras p
-        LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-        LEFT JOIN classes c ON p.id_classe = c.id
-        LEFT JOIN glosses g ON c.id_gloss = c.id
-        WHERE pr.id_referente = ".$dest[$i]['a'][0]['refid']." 
-        AND p.id_idioma = ".$getd."  
-        AND p.id_forma_dicionario = 0;";
-      //echo $sql;
-      
-      $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));   
-      if (mysqli_num_rows($a)!=1){
-        $sql = "SELECT p.*, (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id LIMIT 1) as nativa, g.gloss as cgloss, c.nome as cnome  FROM palavras p
-          LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-          LEFT JOIN classes c ON p.id_classe = c.id
-          LEFT JOIN glosses g ON c.id_gloss = c.id
-          WHERE pr.id_referente = ".$dest[$i]['a'][0]['refid']." 
-          AND p.id_idioma = ".$getd." ;";
-        $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-      }
-
-
-      // if count ==1, palavra exata
-      
-      if (mysqli_num_rows($a)>0){
-
-        if(mysqli_num_rows($a)==1){
-
-          //só uma palavra encontrada relacionada ao referente
-          $dest[$i]['a'][0]['exata'] = 1;
-          
-          $ax = mysqli_fetch_assoc($a);
-
-          $sinonimos = '';
-  
-          $p = mysqli_query($GLOBALS['dblink'],"SELECT p.* FROM palavras p
-            LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
-            WHERE pr.id_referente = ".$dest[$i]['a'][0]['refid']." AND p.id_idioma = ".$getd."
-            AND p.id_forma_dicionario = 0;") or die(mysqli_error($GLOBALS['dblink']));
-  
-          while($px = mysqli_fetch_assoc($p)){
-            $sinonimos .= "\n".$px['significado'];
-          }
-
-          $dest[$i]['i'][0] = $ax['id'];
-          $dest[$i]['a'][0]['gloss'] = '<span data-toggle="tooltip" data-placement="bottom" title="'.$ax['cnome'].'">'.$ax['cgloss'].'</span>';;//$dest[$i]['a'][0]['gloss'] = $ax['referente'];
-          $dest[$i]['a'][0]['pron'] = '/'.$ax['pronuncia'].'/';
-          $dest[$i]['a'][0]['rom'] = $ax['romanizacao'];
-          $dest[$i]['a'][0]['nat'] = $ax['nativa'];
-          $dest[$i]['a'][0]['glossdet'] = $ax['refDesc']."\n".$sinonimos;
-          
-          $dest[$i]['a'][0]['cgloss'] = $ax['cgloss'];
-          $dest[$i]['a'][0]['romanizacao'] = $ax['romanizacao'];
-          $dest[$i]['a'][0]['nativo'] = $ax['nativa'];
-  
-          //buscar glosses (classe, itens, opcao/item)
-          $b = mysqli_query($GLOBALS['dblink'],"SELECT i.*, g.gloss FROM itens_palavras ip
-            LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
-            LEFT JOIN gloss_itens gi ON gi.id_item = i.id
-            LEFT JOIN glosses g ON gi.id_gloss = g.id 
-            WHERE ip.id_palavra = ".$ax['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-          while($bx = mysqli_fetch_assoc($b)){
-            $dest[$i]['a'][0]['gloss'] .= '-<span data-toggle="tooltip" data-placement="bottom" title="'.$bx['nome'].'">'.$bx['gloss'].'</span>';
-            $dest[$i]['a'][0]['glossArray'][] = $bx;
-          }
-          
-  
-  
-        }else{
-  
-          //mais de uma palavra parecida encontrada
-          $dest[$i]['a'][0]['exata'] = 0;
-          //guess
-          //usar contexto geral ?
-          
-          $ax = mysqli_fetch_assoc($a);
-          //pegou a primeira palavra encontrada, qualquer que seja
-
-          //xxxxx talvez buscar se há algo parecido pelo significado ??
-  
-
-
-          $sinonimos = '';
-
-          
-          $dest[$i]['i'][0] = $ax['id'];
-          
-          $dest[$i]['a'][0]['gloss'] = '<span data-toggle="tooltip" data-placement="bottom" title="'.$ax['cnome'].'">'.$ax['cgloss'].'</span>';
-          //$dest[$i]['a'][0]['gloss'] = $ax['referente'].' ?';
-          $dest[$i]['a'][0]['pron'] = '/'.$ax['pronuncia'].'/ ?';
-          $dest[$i]['a'][0]['rom'] = $ax['romanizacao'].' ?';
-          $dest[$i]['a'][0]['nat'] = $ax['nativa'];
-          $dest[$i]['a'][0]['glossdet'] = $ax['refDesc']."\n".$sinonimos;
-
-          $dest[$i]['a'][0]['cgloss'] = $ax['cgloss'];
-          $dest[$i]['a'][0]['romanizacao'] = $ax['romanizacao'];
-          $dest[$i]['a'][0]['nativo'] = $ax['nativa'];
-  
-          //buscar glosses (classe, itens, opcao/item)
-          $b = mysqli_query($GLOBALS['dblink'],"SELECT i.*, g.gloss FROM itens_palavras ip
-            LEFT JOIN itensConcordancias i ON ip.id_item = i.id 
-            LEFT JOIN gloss_itens gi ON gi.id_item = i.id
-            LEFT JOIN glosses g ON gi.id_gloss = g.id 
-            WHERE ip.id_palavra = ".$ax['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-          while($bx = mysqli_fetch_assoc($b)){
-            $dest[$i]['a'][0]['gloss'] .= '-<span data-toggle="tooltip" data-placement="bottom" title="'.$bx['nome'].'">'.$bx['gloss'].'</span>';
-          }
-          
-  
-        }
-
-        //xxxxxxx
-
-      }else{
-        //não encontrado no idioma destino
-        $dest[$i]['a'][0]['gloss'] = '-';
-        $dest[$i]['a'][0]['glossdet'] = 'Não encontrado';//$_t['NaoEncontrado'];
-        $dest[$i]['a'][0]['pron'] = '-';
-        $dest[$i]['a'][0]['rom'] = '-';
-        $dest[$i]['a'][0]['nat'] = '*';
-        
-        $dest[$i]['a'][0]['cgloss'] = '';
-        $dest[$i]['a'][0]['romanizacao'] = '*';
-        $dest[$i]['a'][0]['nativo'] = '*';
-      }
-      
-    }
-
-  }
-
-  //pegar sistemas de escrita
-  /*
-  $lango = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
-    LEFT JOIN fontes f ON f.id = e.id_fonte
-    WHERE id_idioma = ".$geto." AND e.padrao = 1;") or die(mysqli_error($GLOBALS['dblink']));
-  $eo = mysqli_fetch_assoc($lango);
-  $langd = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
-    LEFT JOIN fontes f ON f.id = e.id_fonte
-    WHERE id_idioma = ".$getd." AND e.padrao = 1;") or die(mysqli_error($GLOBALS['dblink']));
-  $ed = mysqli_fetch_assoc($langd);*/
-
-  
-
-  
-  /*
-
-    $orig = array das palavras de destino, mas na ordem da origem ainda
-      - precisa id da classe
-    agora tem o array das palavras uma por uma, rearranjá-las na sintaxe do idioma de destino
-    - linkar noun phrases em blocos de argumentos [de sentenças]
-    - linkar sentenças em blocos de sentenças
-    - separar períodos para processar cada um separado, mas mantendo palavras de contexto desde o primeiro.
-    - reorganizar internamente os blocos de argumentos ?
-    - depois? reorganizar sentenças () com os separadores do idioma destino
-
-  */
-
-
-
-  // imprimir o array final $dest
-
-  echo '<div style="display:flex;flex-wrap: wrap;">';
-  foreach($dest as $pa){ 
-    //echo json_encode($pa).'<br>';
-    $idPal = $pa['i'][0];
-    if ($pa['a'][0]['exata'] == 0) $wk = 'color:#888';
-    else $wk = 'color:#fff';
-    echo '<div style="margin:5px;'.$wk.'" class="text-nowrap" onclick="painelAuxiliar(\'palavr\','.$idPal.')" >';
-
-    if ($postnat==1) {
-      //if ($droman==1) 
-        echo '<span title="'.$pa['a'][0]['significado'].'" data-toggle="tooltip" class="custom-font-'.$deid.'">'.$pa['a'][0]['nat'].'</span><br>';
-      //else 
-        //echo 'X<span data-toggle="tooltip" title="'.$_t['Romanizacao'].'">'.$pa['nat'].'</span>X<br>';
-    }else{
-      echo '<span title="'.$pa['a'][0]['significado'].'" data-toggle="tooltip">'.$pa['a'][0]['rom'].'</span><br>';
-    }
-    if ($postpr==1) echo '<span>'.$pa['a'][0]['pron'].'</span><br>';
-    if ($postnat==0 && $droman==1) echo '<span>'.$pa['a'][0]['rom'].'</span><br>';
-    if ($postgl==1) echo '<span data-toggle="tooltip" data-placement="bottom" title="'.$pa['a'][0]['cnome']."\n".$pa['a'][0]['gdesc'].'">'.$pa['a'][0]['cgloss'].'-'.$pa['a'][0]['gls'].'</span>'; //title="'.$pa['glossdet'].'" data-toggle="tooltip" data-placement="bottom" 
-
-    //echo json_encode($pa);
-    echo '</div>';
-
-    //echo '<div >'; var_dump($pa); echo '</div>';
-    //$analise2 .= '['.$pa['nativo'].' '.$pa['nativo'].']';
-    
-    if ($droman==1)
-      $analise2 .= '['.$pa['cgloss'].' '.$pa['romanizacao'].']';
-    else
-      $analise2 .= '['.$pa['cgloss'].' '.$pa['nativo'].']';
-  }
-
-  echo '<script>$("#code").val("'.$analise1.'").trigger("change");$("#code2").val("'.$analise2.'").trigger("change");</script>';
-
-  return $return;
-};
-
 function getCombosPalavra($pid){ // otimizar sql queries
   $result = mysqli_query($GLOBALS['dblink'],"SELECT c.*, p.id_idioma as iid, p.id_forma_dicionario as id_dic FROM palavras p
         LEFT JOIN classes c ON c.id = p.id_classe
@@ -3147,7 +2660,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
                 }
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
-                else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'/'.$p['pronuncia'].'/':'&nbsp;').'</span>';
+                else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
                 $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho);
 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
@@ -3229,7 +2742,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
                 }
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
-                else $spanSec = '<span class="text-secondary">'.$pal['romanizacao'].' '.($pal['pronuncia']!=''?'/'.$pal['pronuncia'].'/':'&nbsp;').'</span>';
+                else $spanSec = '<span class="text-secondary">'.$pal['romanizacao'].' '.($pal['pronuncia']!=''?'<span class="nowrap">/'.$pal['pronuncia'].'/</span>':'&nbsp;').'</span>';
                 $spanNativo = getSpanPalavraNativa($pal['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho);
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
@@ -3295,7 +2808,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
                 }
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
-                else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'/'.$p['pronuncia'].'/':'&nbsp;').'</span>';
+                else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
                 $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho);
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
@@ -3338,7 +2851,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
       
         echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="'.($p['ips']>0?'nao-vazio':'').'"
                 id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
-                $p['romanizacao'].' '.($p['pronuncia']!=''?'/'.$p['pronuncia'].'/':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
+                $p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
   }
 
 };
@@ -3496,13 +3009,13 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
                       mysqli_query($GLOBALS['dblink'],$insf) or die('2036'.mysqli_error($GLOBALS['dblink']));
                       
-                      $insf = "INSERT INTO itens_flexoes SET 
+                      $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
                         id_flexao = ".$idPalavra.",
                         id_concordancia = ".$linhas.",
                         id_genero = ".$gen.",
                         id_item = ".$x['id'].";";
                       mysqli_query($GLOBALS['dblink'],$insf) or die('2043'.mysqli_error($GLOBALS['dblink']));
-                      $insf = "INSERT INTO itens_flexoes SET 
+                      $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
                         id_flexao = ".$idPalavra.",
                         id_concordancia = ".$colunas.",
                         id_genero = ".$gen.",
@@ -3695,7 +3208,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
                       mysqli_query($GLOBALS['dblink'],$insf) or die('2167'.mysqli_error($GLOBALS['dblink']));
                       
-                      $insf = "INSERT INTO itens_flexoes SET 
+                      $insf = "INSERT INTO itens_flexoes SET id = ".generateId().",
                         id_flexao = ".$idPalavra.",
                         id_concordancia = ".$linhas.",
                         id_genero = ".$gen.",
@@ -3801,7 +3314,7 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
             FROM palavras p
               LEFT JOIN classes c ON p.id_classe = c.id 
               LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
-            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." AND pn.id_escrita = ".$eid."
+            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." -- AND pn.id_escrita = ".$eid."
             ORDER BY p.id_forma_dicionario DESC;"; 
             // AND p.id_forma_dicionario = 0
         //echo $sql;
@@ -4017,7 +3530,7 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
             gloss = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['gloss'])."',
             descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."'
             WHERE id = ".(int)$_GET['gid'].";";
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+      mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
       $gid = $_GET['gid'];
 
     } else {  
@@ -4028,7 +3541,7 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
             descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
             tipo = 'i';";
 
-        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+        mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
     }; 
 
     if($gid>0){ // otimizar sql
@@ -4067,9 +3580,9 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
     $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM glosses;") or die(mysqli_error($GLOBALS['dblink']));
     while ($r = mysqli_fetch_assoc($result)) {
         echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
-            <div class="col" onClick="abrirGloss('.$r['id'].')">
+            <div class="col" onClick="abrirGloss(\''.$r['id'].'\')">
                 <a href="#" >'.htmlspecialchars($r['gloss']).' - '.htmlspecialchars($r['descricao']).'</a>
-            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delGloss('.$r['id'].')">X</a></div>
+            </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delGloss(\''.$r['id'].'\')">X</a></div>
         </div></div>';
     }
     exit();
@@ -4131,69 +3644,10 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
       exit();
   }
 
-  if ($_GET['action'] == 'limparBanco') {  die('no');
-
-    echo 'Limpeza geral:<br>';
-    
-    // limpar palavras sem parente
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM palavras
-      WHERE id_forma_dicionario > 0 
-        AND id_forma_dicionario NOT IN (SELECT o.id FROM palavras o WHERE o.id_forma_dicionario = 0)
-        AND id NOT IN (SELECT id_origem FROM palavras_origens);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' palavras órfãs e em desuso apagadas.<br>';
-
-    // limpar romanizacoes
-    $res = mysqli_query($GLOBALS['dblink'],"UPDATE palavras SET romanizacao = '', data_modificacao = now() 
-          WHERE id_idioma IN(SELECT id FROM idiomas WHERE romanizacao = 0);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' romanizações não-utilizadas apagadas.<br>';
-    
-    // limpar palavras não ligadas a nenhum idioma
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM palavras 
-        WHERE id_idioma NOT IN (SELECT id FROM idiomas);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' palavras sem ligação com um idioma apagadas.<br>';
-
-    // limpar itens de concordancias não ligadas a nenhuma condorcandia
-
-    // limpar flexoes não ligadas a palavra nenhuma
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM itens_palavras 
-      WHERE id_palavra NOT IN (SELECT id FROM palavras);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' concordâncias sem nenhuma palavra apagadas.<br>';
-
-    // limpar escritas não ligadas a idioma nenhum
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM escritas 
-      WHERE id_idioma NOT IN (SELECT id FROM idiomas);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' escritas sem idioma apagados.<br>';
-
-    // limpar nativas não ligadas a palavra ou escrita nenhuma
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM palavrasNativas 
-        WHERE id_palavra NOT IN (SELECT id FROM palavras) 
-        OR id_escrita NOT IN (SELECT id FROM escritas);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' palavras nativas sem relação com palavras ou escritas usadas apagadas.<br>';
-
-    // limpar sons personalizados não utilizados
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM sonsPersonalizados 
-        WHERE id NOT IN (SELECT id_som FROM inventarios);") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' sons personalizados não usados apagados.<br>';
-
-    // limpar fonemas não utilizados
-    $res = mysqli_query($GLOBALS['dblink'],"DELETE FROM inventarios 
-        WHERE id_som NOT IN (SELECT id FROM sonsPersonalizados) 
-        AND id_tipoSom = 0;") or die(mysqli_error($GLOBALS['dblink']));
-    echo mysqli_affected_rows($GLOBALS['dblink']).' fonemas não usados apagados.<br>';
-
-    // verificar pronuncias, e se houver * (inválido), apagar
-      // criar opcao de listar palavras sem pronuncia
-
-    // SEPARADO: limpar flexoes REGULARES, as irregulares deve ser marcadas pelo usuario
-
-    die();
-  };
-
 }else{
   if ($_GET['action']=='ajaxGravarOption') die('Sertno admin');
   if ($_GET['action']=='ajaxGravarOpsons') die('Sertno admin');
   if ($_GET['action']=='ajaxGravarGloss') die('Sertno admin');
-  if ($_GET['action']=='limparBanco') die('Sertno admin');
 }
 
 if($_SESSION['KondisonairUzatorIDX']>0){
@@ -4399,8 +3853,11 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     //tratar entrada
     $changes = str_replace("\\","\\\\",$_POST['l']);
     $instrucoes = str_replace("\\","\\\\",$_POST['ins']);
+
+    $res2 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges 
+      WHERE id = '".$_GET['id']."' AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';") or die(mysqli_error($GLOBALS['dblink']));
     
-    if($_GET['id']>0){ 
+    if(mysqli_num_rows($res2)>0){ 
       $sqlQuerys = "UPDATE soundChanges SET 
         instrucoes = '".str_replace("'",'"',$instrucoes)."' ,
           changes = \"".$changes."\" ,
@@ -4408,7 +3865,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           data_modificacao = now(),
           titulo = \"".$_POST['titulo']."\", 
           motor = \"".$_POST['motor']."\" 
-          WHERE id = ".$_GET['id']." LIMIT 1;";
+          WHERE id = ".$_GET['id']." AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1;";
       //echo $sqlQuerys;
       mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
       $id = $_GET['id'];
@@ -4446,23 +3903,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
     }; 
 
-    echo '<option value="0">Personalizado</option>';
-
-    $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ".
-      ( $idioma > 0 ? " AND id_idioma = ".$idioma : "" ).";") or die(mysqli_error($GLOBALS['dblink']));
-    if (mysqli_num_rows($langs)>0) echo '<option disabled>── Listas específicas Salvas ──</option>';
-    while ($lang = mysqli_fetch_assoc($langs)){
-        echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'"';
-        if ($lang['id']==$id) echo ' selected ';
-        echo'>'.$lang['titulo'].'</option>';
-    }
-    $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;") or die(mysqli_error($GLOBALS['dblink']));
-    if (mysqli_num_rows($langs)>0) echo '<option disabled>── Todas as listas salvas ──</option>';
-    while ($lang = mysqli_fetch_assoc($langs)){
-        echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'"';
-        if ($lang['id']==$id) echo ' selected ';
-        echo'>'.$lang['titulo'].'</option>';
-    }
+    echo $id;
     die();
   }
 
@@ -4495,6 +3936,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           $sql = "UPDATE referentes SET
               descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
               descricaoPort = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoPort'])."',
+              descricaoEo = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoEo'])."',
+              descricaoJp = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoJp'])."',
               detalhes = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['detalhes'])."'
               WHERE id = ".$_GET['rid'].";";
       } else {
@@ -4502,6 +3945,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
               id = ".generateId().",
               descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
               descricaoPort = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoPort'])."',
+              descricaoEo = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoEo'])."',
+              descricaoJp = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoJp'])."',
               detalhes = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['detalhes'])."';";
       }
       mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
@@ -5187,7 +4632,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
   if ($_GET['action'] == 'ajaxApagarListaSC') {
     mysqli_query($GLOBALS['dblink'],"DELETE FROM soundChanges
-        WHERE id = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+        WHERE id = ".$_GET['id']." AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($GLOBALS['dblink']));
     die('ok');
   };
 
@@ -6774,172 +6219,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     echo '<script>$(\'[data-bs-toggle="tooltip"]\').tooltip();</script>';
     die();
   };
-  
-  if ($_GET['action'] == 'listarPersonagens') { //xxxxx otimizar sql queries
-
-    // GET rid - id realidade
-
-    $romanizacao = 0;
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas WHERE id = ".$_GET['id']." AND romanizacao = 1;") or die(mysqli_error($GLOBALS['dblink']));
-    if (mysqli_num_rows($result)>0) $romanizacao = 1;
-
-    $en = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
-                      LEFT JOIN fontes f ON f.id = e.id_fonte
-                      WHERE e.id_idioma = ".$_GET['id']." AND e.padrao = 1;") or die(mysqli_error($GLOBALS['dblink']));
-    if(mysqli_num_rows($en)>0){
-      $en = mysqli_fetch_assoc($en);
-      $escrita = $en['id'];
-      $fonte = $en['fonte'];
-    }else { $escrita = 1; $fonte = 'notosans';}
-    
-    $filtro = $_GET['t'];
-
-    $indice = 'a';
-
-    if ($filtro == 'dici'){
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, n.palavra,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ',') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = 0 ;";
-    }else if ($filtro == 'tudo'){
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, n.palavra,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ',') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id'].";";
-    }else if ($filtro == 'cont'){
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, n.palavra,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ',') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -2 ;";
-    }else if ($filtro == 'morf'){
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, n.palavra,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ',') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -2 ;";
-    }else if ($filtro == 'expr'){
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, n.palavra,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ',') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = -3 ;";
-    }else if ($filtro > 0){ // id_classe
-      $query = "SELECT p.*, c.nome AS classe, g.gloss AS cgl, n.palavra,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ',') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = 0 AND p.id_classe = ".$filtro.";";
-    }else {
-      echo 'err dtyp dfyltr'; die();
-    }
-
-    /*
-      $sql = "SELECT p.*, c.nome AS classe, n.palavra FROM palavras p 
-          LEFT JOIN classes c ON p.id_classe = c.id 
-          LEFT JOIN palavrasNativas n ON n.id_palavra = p.id 
-          WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = ".$r['id'].";";
-
-          //$rd['pronuncia']." ".$rd['significado']." ".$rd['romanizacao']." ".$rd['palavra']." ";
-          
-
-      // original nested query 
-      $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM usuarios u;" ) or die(mysqli_error($GLOBALS['dblink'])); 
-      while($r = mysqli_fetch_assoc($result)){ 
-          $res2 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas WHERE id_usuario = ".$r['id'].";") or die(mysqli_error($GLOBALS['dblink'])); 
-          $lista = '';
-          while($r2 = mysqli_fetch_assoc($res2)){
-              $lista .= '<a class="btn-xs" href="api.php?action=diom&iid='.$r2['id'].'">'.$r2['nome_legivel'].'</a>';
-          } 
-          echo '<tr><td>@'.$r['username'].' - '.$r['nome_completo'].' - '.$r['langs'].' idiomas<br>'.$lista.'</td></tr>';
-      } 
-
-      // TEST FROM INTERNET JOINING NUMA UNICA QUERY
-      $result = mysqli_query($GLOBALS['dblink'], "SELECT `usuarios`.*,  
-              GROUP_CONCAT(`idiomas`.`nome_legivel`) AS `idiomas`,
-              GROUP_CONCAT(`idiomas`.`id`) AS `ids_idiomas` 
-          FROM `usuarios`, `idiomas`
-          WHERE `idiomas`.`id_usuario` = `usuarios`.`id`
-          GROUP BY `usuarios`.`id`;"
-      ) or die(mysqli_error($GLOBALS['dblink']));
-
-      $usuarios = array();
-      while($r = mysqli_fetch_assoc($result)){ 
-          $usuarios[$r['id']] = $r;
-          $usuarios[$r['id']]['idiomas'] = explode(',', $usuarios[$r['id']]['idiomas']);
-          $usuarios[$r['id']]['ids_idiomas'] = explode(',', $usuarios[$r['id']]['ids_idiomas']); 
-          $lista = '';
-          foreach($usuarios[$r['id']]['idiomas'] as $key => $idioma){
-              $lista .=  '<a class="btn-xs" href="api.php?action=diom&iid='.$usuarios[$r['id']]['ids_idiomas'][$key].'">'.$usuarios[$r['id']]['idiomas'][$key].'</a>';
-          } 
-          echo '<tr><td>@'.$r['username'].' - '.$r['nome_completo'].' - '.$r['langs'].' idiomas<br>'.$lista.'</td></tr>';
-      }
-
-    */
-    $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
-    echo '<table id="tabelaPalavras" data-ride="datatables" class="table table-m-b-none">
-          <thead><tr><th style="display:none">Index</th><th>'._t('Palavras').'</th><th style="display:none">'._t('Derivações').'</th></tr></thead><tbody>';
-          
-    while($r = mysqli_fetch_assoc($result)){
-      /*
-        $derivs = '';
-        
-        $sql = "SELECT p.*, c.nome AS classe, n.palavra FROM palavras p 
-            LEFT JOIN classes c ON p.id_classe = c.id 
-            LEFT JOIN palavrasNativas n ON n.id_palavra = p.id 
-            WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = ".$r['id'].";";
-        $resder = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
-        while($rd = mysqli_fetch_assoc($resder)){
-          $derivs .= $rd['pronuncia']." ".$rd['significado']." ".$rd['romanizacao']." ".$rd['palavra']." ";
-        }
-      */
-
-      $indice = // '6-5-0-0-12'; //nativo inicial/final, romaniz inic/fin, num.chars,
-        'ni:'.substr($r['palavra'],0,1).'|nf:'.substr($r['palavra'],strlen($r['palavra'])-1,strlen($r['palavra'])-1).
-        '|ri:'.substr($r['romanizacao'],0,1).'|rf:'.substr($r['romanizacao'],strlen($r['romanizacao'])-1,strlen($r['romanizacao'])-1).
-        '|nc:'.strlen($r['palavra']).'|';
-
-      if($escrita>0)
-        $nativo = "<span class='custom-font-".$escrita."' >".$r['palavra']."</span> ";
-      if ($romanizacao==1) {
-        echo "<tr id='row_".$r['id']."'><td style='display:none'>".$indice." </td><td title='".$r['classe']."' onClick='abrirPalavra(\"".$r['id']."\")'><a class='btn btn-xs btn-info btn-rounded pull-right' onClick='apagarPalavra(".$r['id'].",".$r['id_forma_dicionario'].")'>X</a>"
-          .$nativo.' '.$r['romanizacao'].' /'.$r['pronuncia']."/: ".$r['cgl']." - ".$r['significado']."</td>
-          <td style='display:none'>".$r['extras_palavras']."</td></tr>";
-      }else{ 
-        echo "<tr id='row_".$r['id']."'><td style='display:none'>".$indice." </td><td title='".$r['classe']."' onClick='abrirPalavra(\"".$r['id']."\")'><a class='btn btn-xs btn-info btn-rounded pull-right' onClick='apagarPalavra(".$r['id'].",".$r['id_forma_dicionario'].")'>X</a>"
-          .$nativo.' /'.$r['pronuncia']."/: ".$r['cgl']." - ".$r['significado']."</td>
-          <td style='display:none'>".$r['extras_palavras']."</td></tr>";
-      }
-    };
-    echo '</tbody></table><script>$("#tabelaPalavras").DataTable({
-              paging: false,
-              "scrollCollapse": true
-          });</script>';
-          
-    die();
-
-  };
 
   if ($_GET['action'] == 'ajaxMoverOpcao') {
     // GET id
@@ -7484,6 +6763,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $sql = "UPDATE frases SET 
           id_original = ".$_POST['original'].",
           frase = \"".$_POST['frase']."\",
+          descricao = \"".$_POST['descricao']."\",
           info = \"".$_POST['info']."\"
           WHERE id = ".$_GET['id'].";";
 
@@ -7508,6 +6788,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           id_criador = ".$_SESSION['KondisonairUzatorIDX'].",
           id_original = ".$_POST['original'].",
           frase = \"".$_POST['frase']."\",
+          descricao = \"".$_POST['descricao']."\",
           info = \"".$_POST['info']."\";") or die(mysqli_error($GLOBALS['dblink']));
       echo $id;
       logAcao(0,'frase',$id);
@@ -8376,15 +7657,12 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     }
     
-    /*
     mysqli_query($GLOBALS['dblink'],"DELETE FROM artyg_dest WHERE id_artyg = '".$aid."';") or die(mysqli_error($GLOBALS['dblink']));
     foreach($_POST['l'] as $link) {
       $l = explode('_',$link);
-      //echo "INSERT INTO artyg_dest SET tipo_dest = '".$l[0]."', id_dest = ".$l[1].", id_artyg = "$aid;
-      mysqli_query($GLOBALS['dblink'],"INSERT INTO artyg_dest SET tipo_dest = '".$l[0]."', id_dest = ".$l[1].", id_artyg = ".$aid) or die(mysqli_error($GLOBALS['dblink']));
+      $sql = "INSERT INTO artyg_dest SET id = ".generateID().", tipo_dest = '".$l[0]."', id_dest = ".$l[1].", id_artyg = ".$aid;
+      mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
     }
-
-    */
 
     echo $aid;
     die();
@@ -8573,13 +7851,11 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action'] == 'carregarEdicaoAlfabeto') die('not_user');
   if ($_GET['action'] == 'toggleSonsAdicionaveis')  die('not_user');
   if ($_GET['action'] == 'salvarFlexao')  die('not_user');
-  if ($_GET['action'] == 'limparBanco') die('not_user');
   if ($_GET['action'] == 'ajaxApagarPalavras') die('not_user');
   if ($_GET['action'] == 'ajaxRenomearDimensao') die('not_user');
   if ($_GET['action'] == 'carregarTabelaFlexoes') die('not_user');
   if ($_GET['action'] == 'ajaxCriarSomPersonalizado') die('not_user');
   if ($_GET['action'] == 'ajaxCriarSomPersonalizado2') die('not_user');
-  if ($_GET['action'] == 'listarPersonagens') die('not_user');
   if ($_GET['action'] == 'ajaxSelectRegras')   die('not_user');
   if ($_GET['action'] == 'getDetalhesRegra')   die('not_user');
   if ($_GET['action'] == 'listarRegras')  die('not_user');
@@ -8703,7 +7979,8 @@ if ($_GET['action']=='ajaxTraduzir') { //xxxxx
 
 if ($_GET['action'] == 'ajaxCarregarListaSC') {
 
-  $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+  $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges 
+    WHERE id = ".$_GET['id']." AND (publico = 1 OR id_usuario = ".$_SESSION['KondisonairUzatorIDX'].");") or die(mysqli_error($GLOBALS['dblink']));
 
   $rows = array();
   $r = mysqli_fetch_assoc($result);
@@ -8814,7 +8091,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
 
       $last = mysqli_query($GLOBALS['dblink'],
         "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM autosubstituicoes WHERE id_escrita = ".$id."
+              FROM autosubstituicoes WHERE id_escrita = '".$id."'
             ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
       $l = mysqli_fetch_assoc($last);
       return $l['d'] ? $l['d'] : 0;
@@ -9730,10 +9007,10 @@ if ($_GET['action'] == 'listReferentes') {
     $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM referentes;") or die(mysqli_error($GLOBALS['dblink']));
     while ($r = mysqli_fetch_assoc($result)) {
         echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
-          <div class="col" onClick="abrirReferente('.$r['id'].')">
-            <a href="#" >'.$r['descricao'].' - '.$r['descricaoPort'].'</a>
+          <div class="col" onClick="abrirReferente(\''.$r['id'].'\')">
+            <a href="#" >'.$r['descricao'].' - '.$r['descricaoPort'].'</a> 
             <a class="text-body text-secondary">'.$r['detalhes'].'</a> 
-          </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delReferente('.$r['id'].')">X</a></div>
+          </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delReferente(\''.$r['id'].'\')">X</a></div>
         </div></div>';
   } 
     die();
@@ -10816,6 +10093,29 @@ if ($_GET['action'] == 'getKSC') {  // Kondisonair Sound Changer
     ]);
     die();
 };
+
+if ($_GET['action'] == 'getMultiKSC') {
+    $v = isset($_POST['v']) && $_POST['v'] > 0 ? $_POST['v'] : '';
+    require_once 'ksc' . $v . '.php';
+
+    $rules = isset($_POST['regras']) ? json_decode($_POST['regras'], true) : [];
+    foreach($rules as $key => $rule) {
+        $rules[$key] = parseSoundChangeRules($rule)['default'];
+    }
+
+    $classes = strlen($_POST['classes']) > 2 ? textoParaArrayClasses($_POST['classes']) : ($_GET['iid'] > 0 ? getSCHeader('ksc', $_GET['iid'], 'classes') : []);
+    $words = explode("\n", trim($_POST['palavras']));
+    $substitutions = strlen($_POST['substituicoes']) > 1 ? textoParaArraySubstituicoes($_POST['substituicoes']) : ($_GET['iid'] > 0 ? getWordGenConfig($_GET['iid'])['substitutions'] : []);
+
+    [$results, $erros] = applySoundChangesByGroup($words, $rules, $substitutions, $classes);
+
+    header('Content-Type: application/json');
+    echo json_encode([
+        'words' => $results,
+        'errors' => $erros
+    ]);
+    die();
+}
 
 if ($_GET['action'] == 'getKWG') {  // Kondisonair Word Generator
     require_once 'kwg.php';// Grok
@@ -12671,6 +11971,69 @@ if ($_GET['action'] == 'deleteStatsByEntityAndStat') {
     die();
 }
 
+if ($_GET['action'] == 'ajaxGetListasSC') {
+    echo '<option value="0" data-date=" " selected>'._t('Personalizado').'</option>';
+    
+    if ($_GET['iid'] > 0){
+        $id_idioma = $_GET['iid'];
+        $result = mysqli_query($GLOBALS['dblink'],"SELECT *,
+            (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab FROM idiomas i 
+            WHERE id = '".$id_idioma."';") or die(mysqli_error($GLOBALS['dblink']));
+        $idioma = mysqli_fetch_assoc($result);
+    }
+
+    if ($_SESSION['KondisonairUzatorIDX']>0){
+        if ($idioma['nome_legivel']!=''){
+            $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_idioma = $id_idioma AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;") or die(mysqli_error($GLOBALS['dblink']));
+            if (mysqli_num_rows($langs)>0) echo "\n".'<option disabled data-date=" ">'._t('Minhas listas').'</option>';
+            while ($lang = mysqli_fetch_assoc($langs)){
+                echo "\n".'<option value="'.$lang['id'].'" data-date=" ">'.$lang['titulo'].'</option>';
+            }
+        }else{
+            $langs = mysqli_query($GLOBALS['dblink'],"SELECT s.*, i.nome_legivel FROM soundChanges s 
+                LEFT JOIN idiomas i ON i.id = s.id_idioma
+                WHERE s.id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;") or die(mysqli_error($GLOBALS['dblink']));
+            if (mysqli_num_rows($langs)>0) echo "\n".'<option disabled data-date=" ">'._t('Minhas listas').'</option>';
+            while ($lang = mysqli_fetch_assoc($langs)){
+                echo "\n".'<option value="'.$lang['id'].'" data-date="'.$lang['nome_legivel'].'">'.$lang['titulo'].'</option>';
+            }
+        }
+    }
+    
+    // listas públicas
+    if ($idioma['nome_legivel']!=''){
+        $langs = mysqli_query($GLOBALS['dblink'],"SELECT s.*, u.username FROM soundChanges s 
+          LEFT JOIN usuarios u ON s.id_usuario = u.id 
+          WHERE s.id_idioma = ".$id_idioma." AND s.publico = 1;") or die(mysqli_error($GLOBALS['dblink']));
+        if (mysqli_num_rows($langs)>0) echo "\n".'<option disabled data-date=" ">'._t('Listas públicas de %1',[$idioma['nome_legivel']]).'</option>';
+        while ($lang = mysqli_fetch_assoc($langs)){
+            echo "\n".'<option value="'.$lang['id'].'" data-date="'.$lang['username'].'">'.$lang['titulo'].'</option>';
+        }
+    }else{
+        $langs = mysqli_query($GLOBALS['dblink'],"SELECT s.*, i.nome_legivel, u.username FROM soundChanges s 
+            LEFT JOIN usuarios u ON s.id_usuario = u.id 
+            LEFT JOIN idiomas i ON i.id = s.id_idioma
+            WHERE s.publico = 1 ;") or die(mysqli_error($GLOBALS['dblink']));
+        if (mysqli_num_rows($langs)>0) echo "\n".'<option disabled data-date=" ">'._t('Listas públicas').'</option>';
+        while ($lang = mysqli_fetch_assoc($langs)){
+            echo "\n".'<option value="'.$lang['id'].'" data-date="'.$lang['nome_legivel'].' - '.$lang['username'].'">'.$lang['titulo'].'</option>';
+        }
+    }
+    die();
+};
+
+if ($_GET['action'] == 'ajaxPublicarListaSC') {
+    if ($_GET['id']>0) {
+      $id = (int)$_GET['id'];
+      $result = mysqli_query($GLOBALS['dblink'], "
+          UPDATE soundChanges SET publico = 1
+          WHERE id = $id
+      ") or die(mysqli_error($GLOBALS['dblink']));
+    }
+    echo 'ok';
+    die();
+};
+
 function gerarLinksIdiomas($idioma_atual, $use_js = true) {
     global $idiomas_sistema;
     $html = '';
@@ -12714,15 +12077,15 @@ function gerarSelectIdiomas($id_select, $idioma_selecionado, $onchange = '', $us
 if ($_GET['action'] == 'exportarIdioma') {
 
     /*
-      - arquivo da fonte não é exportada junto!
       - se é o dono, pode exportar dados privados ou não (artigos não publicados, campo privado em frases, textos e palavras, etc) - ter opção/flag
-      - listas de sounchanges - não aparece na lista do importado, mas tá lá (tem)
     */
 
     class LanguageExporter {
         private $mysqli;
         private $languageId;
         private $userId;
+        public $fontes;
+        public $escritas;
 
         public function __construct($mysqli, $languageId, $userId) {
             $this->mysqli = $mysqli;
@@ -12744,11 +12107,6 @@ if ($_GET['action'] == 'exportarIdioma') {
                 throw new Exception('Language not found or access denied');
             }
 
-            $data['usuarios'] = $this->fetchSingleRow(
-                "SELECT id, username, publico, data_cadastro FROM usuarios WHERE id = ?",
-                [$this->userId]
-            );
-
             // Check if language exists and user has access
             if (!$data['idiomas']) {
                 throw new Exception('Language not found or access denied');
@@ -12769,7 +12127,7 @@ if ($_GET['action'] == 'exportarIdioma') {
                 'ipaTitulos' => 'SELECT * FROM ipaTitulos WHERE id_idioma = ?',
                 'palavras' => 'SELECT * FROM palavras WHERE id_idioma = ?',
                 'sonsPersonalizados' => 'SELECT * FROM sonsPersonalizados WHERE id_idioma = ?',
-                'soundChanges' => 'SELECT * FROM soundChanges WHERE id_idioma = ?',
+                'soundChanges' => 'SELECT * FROM soundChanges WHERE id_idioma = ? AND publico = 1',
                 'studason_tests' => 'SELECT * FROM studason_tests WHERE id_idioma = ? AND num_palavras > 0',
                 'formasSilaba' => 'SELECT * FROM formasSilaba WHERE id_idioma = ?',
                 'nivelUsoPalavra' => 'SELECT * FROM nivelUsoPalavra WHERE id_idioma = ?'
@@ -12921,8 +12279,66 @@ if ($_GET['action'] == 'exportarIdioma') {
                 $data['teclas'] = [];
             }
 
+            $itens_flexoes = array_column($data['itens_flexoes'], 'id_flexao');
+            if (!empty($itens_flexoes)) {
+                $placeholders = implode(',', array_fill(0, count($itens_flexoes), '?'));
+                $data['flexoes'] = $this->fetchAll(
+                    "SELECT * FROM flexoes WHERE id IN ($placeholders)",
+                    $itens_flexoes
+                );
+            } else {
+                $data['flexoes'] = [];
+            }
+
+            $userIds = [$data['idiomas']['id_usuario']];
+            $user_collabs = array_column($data['collabs'], 'id_usuario');
+            if (!empty($user_collabs)) {
+                $userIds = array_merge($userIds, $user_collabs);
+            }
+
+            $tablesWithIdUsuario = ['wordbanks', 'studason_tests', 'soundChanges', 'palavras', 'collabs'];
+            foreach ($tablesWithIdUsuario as $table) {
+                if (!empty($data[$table])) {
+                    $ids = array_column($data[$table], 'id_usuario');
+                    $userIds = array_merge($userIds, $ids);
+                }
+            }
+            if (!empty($data['frases'])) {
+                $ids = array_column($data['frases'], 'id_criador');
+                $userIds = array_merge($userIds, $ids);
+            }
+            if (!empty($data['escritas'])) {
+                $fontesIds = array_column($data['escritas'], 'id_fonte');
+                if (!empty($fontesIds)) {
+                    $placeholders = implode(',', array_fill(0, count($fontesIds), '?'));
+                    $data['fontes'] = $this->fetchAll(
+                        "SELECT * FROM fontes WHERE id IN ($placeholders)",
+                        $fontesIds
+                    );
+                    $ids = array_column($data['fontes'], 'id_usuario');
+                    $userIds = array_merge($userIds, $ids);
+                } else {
+                    $data['fontes'] = [];
+                }
+            } else {
+                $data['fontes'] = [];
+            }
+
+            $userIds = array_unique(array_filter($userIds));
+            if (!empty($userIds)) {
+                $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+                $data['usuarios'] = $this->fetchAll(
+                    "SELECT id, username, publico, data_cadastro FROM usuarios WHERE id IN ($placeholders)",
+                    $userIds
+                );
+            } else {
+                $data['usuarios'] = [];
+            }
+
             // Ensure UTF-8 encoding for all string data
             $this->ensureUtf8($data);
+            $this->fontes = $data['fontes'];
+            $this->escritas = $data['escritas'];
 
             // Convert to JSON with error checking
             $json = json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -13012,11 +12428,49 @@ if ($_GET['action'] == 'exportarIdioma') {
         $exporter = new LanguageExporter($mysqli, $languageId, $userId);
         $json = $exporter->exportToJson();
 
-        // Set headers for file download
-        header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="language_' . $languageId . '_export.json"');
-        header('Content-Length: ' . strlen($json));
-        echo $json;
+        $fontes = $exporter->fontes;
+        $escritas = $exporter->escritas;
+
+        $tempId = generateId();
+        $jsonFile = 'dados_'.$tempId.'.json';
+        file_put_contents($jsonFile, $json);
+
+        $zip = new ZipArchive();
+        $zipFileName = $tempId . '.zip';
+
+        if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            $zip->addFile($jsonFile, $languageId.'.json');
+
+            
+            foreach ($fontes as $arquivo){
+                if (!empty($arquivo['arquivo']) && file_exists('fonts/'.$arquivo['arquivo']))
+                    $zip->addFile('fonts/' . $arquivo['arquivo']);
+            }
+            foreach ($escritas as $eid){
+                foreach (glob("writing/".$eid['id']."/*") as $arquivo){
+                    if (!empty($arquivo) && file_exists($arquivo))
+                        $zip->addFile($arquivo);
+                }
+            }
+            
+            foreach (glob("audio/$languageId/*") as $arquivo){
+                $zip->addFile($arquivo, 'audio/' . basename($arquivo));
+            }
+            foreach (glob("image/$languageId/*") as $arquivo){
+                $zip->addFile($arquivo, 'image/' . basename($arquivo));
+            }
+
+            $zip->close();
+        }
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $zipFileName . '"');
+        header('Content-Length: ' . filesize($zipFileName));
+        readfile($zipFileName);
+
+        unlink($jsonFile);
+        unlink($zipFileName);
+
     } catch (Exception $e) {
         header('HTTP/1.1 500 Internal Server Error');
         echo json_encode(['error' => $e->getMessage()]);
@@ -13026,12 +12480,7 @@ if ($_GET['action'] == 'exportarIdioma') {
     die();
 };
 
-if ($_GET['action'] == 'apagarIdioma') {
-    /*
-      - remover de asons
-      - de blocos
-      - 
-    */
+if ($_GET['action'] == 'apagarIdioma') { // apagar arquivos
     ob_start();
 
     ini_set('default_charset', 'UTF-8');
@@ -13045,7 +12494,6 @@ if ($_GET['action'] == 'apagarIdioma') {
         exit;
     }
 
-    // Ensure UTF-8 encoding for MySQL
     if (!$mysqli->set_charset('utf8mb4')) {
         error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
         $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
@@ -13060,7 +12508,6 @@ if ($_GET['action'] == 'apagarIdioma') {
         }
         $userId = (int)$_SESSION['KondisonairUzatorIDX'];
 
-        // Validate POST data
         if (!isset($_POST['id_idioma']) || !is_numeric($_POST['id_idioma']) || !isset($_POST['password'])) {
             http_response_code(400);
             echo json_encode(['error' => 'Missing or invalid language ID or password']);
@@ -13070,7 +12517,6 @@ if ($_GET['action'] == 'apagarIdioma') {
         $idIdioma = (int)$_POST['id_idioma'];
         $password = $_POST['password'];
 
-        // Verify user password
         $stmt = $mysqli->prepare("SELECT senha FROM usuarios WHERE id = ?");
         if ($stmt === false) {
             throw new Exception("Prepare failed for password check: " . $mysqli->error);
@@ -13088,7 +12534,6 @@ if ($_GET['action'] == 'apagarIdioma') {
             exit;
         }
 
-        // Check if user is creator or collaborator
         $stmt = $mysqli->prepare(
             "SELECT id FROM idiomas WHERE id = ? AND (id_usuario = ? OR EXISTS (
                 SELECT 1 FROM collabs WHERE id_idioma = ? AND id_usuario = ?
@@ -13110,7 +12555,65 @@ if ($_GET['action'] == 'apagarIdioma') {
 
         $mysqli->begin_transaction();
 
-        // Delete indirect tables first
+        $stmt = $mysqli->prepare("SELECT id FROM escritas WHERE id_idioma = ?");
+        if ($stmt === false) {
+            throw new Exception("Prepare failed for escritas IDs: " . $mysqli->error);
+        }
+        $stmt->bind_param('i', $idIdioma);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $escritasIds = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
+        $stmt->close();
+
+        $stmt = $mysqli->prepare(
+            "SELECT arquivo FROM fontes WHERE id IN (
+                SELECT id_fonte FROM escritas WHERE id_idioma = ?
+                AND id_fonte NOT IN (SELECT id_fonte FROM escritas WHERE id_idioma != ?)
+            )"
+        );
+        if ($stmt === false) {
+            throw new Exception("Prepare failed for fontes arquivo: " . $mysqli->error);
+        }
+        $stmt->bind_param('ii', $idIdioma, $idIdioma);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $fontesArquivos = array_column($result->fetch_all(MYSQLI_ASSOC), 'arquivo');
+        $stmt->close();
+
+        $dirsToDelete = [
+            "audio/$idIdioma",
+            "image/$idIdioma"
+        ];
+        foreach ($dirsToDelete as $dir) {
+            $path = "$dir";
+            if (is_dir($path)) {
+                foreach (glob("$path/*") as $arquivo) {
+                    if (file_exists($arquivo) && !unlink($arquivo)) {
+                        error_log("Failed to delete file: $arquivo", 3, '/tmp/delete_debug.txt');
+                    }
+                }
+                // Remove directory if empty
+                @rmdir($path);
+            }
+        }
+        foreach ($escritasIds as $eid) {
+            $path = "writing/$eid";
+            if (is_dir($path)) {
+                foreach (glob("$path/*") as $arquivo) {
+                    if (file_exists($arquivo) && !unlink($arquivo)) {
+                        error_log("Failed to delete file: $arquivo", 3, '/tmp/delete_debug.txt');
+                    }
+                }
+                @rmdir($path);
+            }
+        }
+        foreach ($fontesArquivos as $arquivo) {
+            $path = "fonts/" . basename($arquivo);
+            if (file_exists($path) && !unlink($path)) {
+                error_log("Failed to delete font file: $path", 3, '/tmp/delete_debug.txt');
+            }
+        }
+
         $indirectTables = [
             'gloss_itens' => "DELETE FROM gloss_itens WHERE id_item IN (SELECT id FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?))",
             'itens_flexoes' => "DELETE FROM itens_flexoes WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?) OR id_item IN (SELECT id FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)) OR id_genero IN (SELECT id FROM generos WHERE id_idioma = ?)",
@@ -13130,12 +12633,26 @@ if ($_GET['action'] == 'apagarIdioma') {
             'artyg_dest' => "DELETE FROM artyg_dest WHERE id_artyg IN (SELECT id FROM artygs WHERE id_idioma = ?)"
         ];
 
+        $stmt = $mysqli->prepare("
+            DELETE FROM flexoes 
+            WHERE id IN (
+                SELECT id_flexao 
+                FROM itens_flexoes 
+                WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)
+            )
+        ");
+        if ($stmt === false) {
+            throw new Exception("Prepare failed for flexoes: " . $mysqli->error);
+        }
+        $stmt->bind_param('i', $idIdioma);
+        $stmt->execute();
+        $stmt->close();
+
         foreach ($indirectTables as $table => $query) {
             $stmt = $mysqli->prepare($query);
             if ($stmt === false) {
                 throw new Exception("Prepare failed for $table: " . $mysqli->error);
             }
-            // Adjust bind_param based on query parameters
             if ($table === 'itens_flexoes') {
                 $stmt->bind_param('iii', $idIdioma, $idIdioma, $idIdioma);
             } else {
@@ -13145,7 +12662,6 @@ if ($_GET['action'] == 'apagarIdioma') {
             $stmt->close();
         }
 
-        // Delete fontes (only those not used by other escritas)
         $stmt = $mysqli->prepare(
             "DELETE FROM fontes WHERE id IN (
                 SELECT id_fonte FROM escritas WHERE id_idioma = ?
@@ -13191,22 +12707,317 @@ if ($_GET['action'] == 'apagarIdioma') {
         }
 
         // Delete idiomas
-        $stmt = $mysqli->prepare("DELETE FROM idiomas WHERE id = ?");
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for idiomas: " . $mysqli->error);
+        if ($idIdioma > 10000){
+            $stmt = $mysqli->prepare("DELETE FROM idiomas WHERE id = ?");
+            if ($stmt === false) {
+                throw new Exception("Prepare failed for idiomas: " . $mysqli->error);
+            }
+            $stmt->bind_param('i', $idIdioma);
+            $stmt->execute();
+            if ($stmt->affected_rows === 0) {
+                throw new Exception("Language not found");
+            }
+            $stmt->close();
         }
-        $stmt->bind_param('i', $idIdioma);
-        $stmt->execute();
-        if ($stmt->affected_rows === 0) {
-            throw new Exception("Language not found");
-        }
-        $stmt->close();
 
         $mysqli->commit();
-        echo json_encode(['message' => 'Language deleted successfully']);
+        echo json_encode(['message' => _t('Idioma apagado com sucesso')]);
     } catch (Exception $e) {
         $mysqli->rollback();
         error_log("Delete error: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+
+    ob_end_flush();
+    $mysqli->close();
+    die(); 
+};
+
+if ($_GET['action'] == 'importarIdioma') {
+
+    ob_start();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
+    if ($mysqli->connect_error) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+        ob_end_flush();
+        exit;
+    }
+
+    // Ensure UTF-8 encoding for MySQL
+    if (!$mysqli->set_charset('utf8mb4')) {
+        error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
+        $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+    }
+
+    try {
+        if (!isset($_SESSION['KondisonairUzatorIDX'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'User not authenticated']);
+            ob_end_flush();
+            exit;
+        }
+        $userId = (int)$_SESSION['KondisonairUzatorIDX'];
+
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('No valid file uploaded.');
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($_FILES['file']['tmp_name']) !== true) {
+            throw new Exception('Failed to open ZIP file.');
+        }
+
+        $jsonFile = null;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $filename = $zip->getNameIndex($i);
+            if (preg_match('/^\d+\.json$/', $filename)) {
+                $jsonFile = $filename;
+                break;
+            }
+        }
+        if (!$jsonFile) {
+            $zip->close();
+            throw new Exception('No <id_idioma>.json file found in ZIP.');
+        }
+
+        $json = $zip->getFromName($jsonFile);
+        if ($json === false) {
+            $zip->close();
+            throw new Exception('Failed to read JSON file from ZIP.');
+        }
+
+        if (!mb_check_encoding($json, 'UTF-8')) {
+            $json = mb_convert_encoding($json, 'UTF-8', 'auto');
+            if (!mb_check_encoding($json, 'UTF-8')) {
+                error_log("Failed to convert JSON to UTF-8");
+                $zip->close();
+                throw new Exception('Invalid character encoding in JSON file');
+            }
+        }
+        $data = json_decode($json, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $zip->close();
+            throw new Exception('Invalid JSON format: ' . json_last_error_msg());
+        }
+
+        $mysqli->begin_transaction();
+        $stats = ['inserted' => 0, 'updated' => 0, 'existing' => []];
+
+        function checkExistingIds($mysqli, $table, $ids) {
+            if (empty($ids)) {
+                return [];
+            }
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $query = "SELECT id FROM `$table` WHERE id IN ($placeholders)";
+            $stmt = $mysqli->prepare($query);
+            if ($stmt === false) {
+                throw new Exception("Prepare failed for $table: " . $mysqli->error);
+            }
+            $types = str_repeat('i', count($ids));
+            $stmt->bind_param($types, ...$ids);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $existing = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
+            $stmt->close();
+            return $existing;
+        }
+
+        function checkExistingCollab($mysqli, $id_usuario, $id_idioma) {
+            $query = "SELECT id FROM collabs WHERE id_usuario = ? AND id_idioma = ?";
+            $stmt = $mysqli->prepare($query);
+            if ($stmt === false) {
+                throw new Exception("Prepare failed for collabs check: " . $mysqli->error);
+            }
+            $stmt->bind_param('ii', $id_usuario, $id_idioma);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $exists = $result->num_rows > 0;
+            $stmt->close();
+            return $exists;
+        }
+
+        function upsertRecords($mysqli, $table, $records, &$stats) {
+            if (empty($records)) {
+                return;
+            }
+            $records = is_array($records) ? $records : [$records];
+            $ids = array_filter(array_column($records, 'id'), 'is_numeric');
+            $existingIds = checkExistingIds($mysqli, $table, $ids);
+            if (!empty($existingIds)) {
+                $stats['existing'][] = "$table: " . count($existingIds) . " record(s) will be overwritten";
+            }
+
+            $firstRow = $records[0];
+            $columns = array_keys($firstRow);
+            $placeholders = implode(',', array_fill(0, count($columns), '?'));
+            $updatePairs = array_map(function ($col) {
+                return "`$col` = VALUES(`$col`)";
+            }, $columns);
+            $updateSql = implode(',', $updatePairs);
+            $query = "INSERT INTO `$table` (`" . implode('`,`', $columns) . "`) VALUES ($placeholders) ON DUPLICATE KEY UPDATE $updateSql";
+            $stmt = $mysqli->prepare($query);
+            if ($stmt === false) {
+                throw new Exception("Prepare failed for $table: " . $mysqli->error);
+            }
+
+            foreach ($records as $row) {
+                $values = [];
+                $types = '';
+                $isExisting = isset($row['id']) && in_array($row['id'], $existingIds);
+                foreach ($columns as $col) {
+                    $value = $row[$col];
+                    // Ensure UTF-8 for strings
+                    if (is_string($value) && !mb_check_encoding($value, 'UTF-8')) {
+                        $original = $value;
+                        $value = mb_convert_encoding($value, 'UTF-8', 'auto');
+                        if (!mb_check_encoding($value, 'UTF-8')) {
+                            error_log("Failed to convert string in $col for $table: " . substr($original, 0, 50));
+                            $value = '';
+                        }
+                    }
+                    $values[] = $value;
+                    $types .= is_numeric($value) && !is_float($value + 0) ? 'i' : 's';
+                }
+                $stmt->bind_param($types, ...$values);
+                $stmt->execute();
+                if ($isExisting) {
+                    $stats['updated']++;
+                } else {
+                    $stats['inserted']++;
+                }
+            }
+            $stmt->close();
+        }
+
+        if (!isset($data['idiomas']) || empty($data['idiomas'])) {
+            throw new Exception('Missing idiomas data');
+        }
+        $data['idiomas']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
+        upsertRecords($mysqli, 'idiomas', [$data['idiomas']], $stats);
+        $newIdiomaId = $data['idiomas']['id'];
+
+        if ($userId != $data['usuarios'][0]['id']) { // Only add if logged-in user is not the creator
+
+            // Import usuarios (single record)
+            if (!isset($data['usuarios']) || empty($data['usuarios'])) {
+                throw new Exception('Missing usuarios data');
+            }
+            upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
+
+            // Check for existing collab record
+            if (!checkExistingCollab($mysqli, $userId, $newIdiomaId)) {
+                $collabId = generateId(); // Assuming generateId() returns a unique ID
+                $collabRecord = [
+                    'id' => $collabId,
+                    'id_idioma' => $newIdiomaId,
+                    'id_usuario' => $userId
+                ];
+                upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
+            } else {
+                $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on language $newIdiomaId)";
+            }
+        }
+
+        $allTables = [
+            'artygs',
+            'blocos',
+            'classes',
+            'classesSom',
+            'concordancias',
+            'escritas',
+            'frases',
+            'generos',
+            'inventarios',
+            'ipaTitulos',
+            'palavras',
+            'sonsPersonalizados',
+            'soundChanges',
+            'studason_tests',
+            'formasSilaba',
+            'nivelUsoPalavra',
+            'artyg_dest',
+            'fontes',
+            'autosubstituicoes',
+            'drawChars',
+            'glifos',
+            'formaSilabaComponente',
+            'itensConcordancias',
+            'gloss_itens',
+            'itens_flexoes',
+            'flexoes',
+            'itens_palavras',
+            'palavrasNativas',
+            'palavras_origens',
+            'palavras_referentes',
+            'palavras_usos',
+            'significados_idiomas',
+            'sons_classes',
+            'teclas'
+        ];
+
+        foreach ($allTables as $table) {
+            if (isset($data[$table]) && !empty($data[$table])) {
+                if ($table != 'collabs') { // Skip collabs, handled above
+                    foreach ($data[$table] as &$row) {
+                        if (isset($row['id_idioma'])) {
+                            $row['id_idioma'] = $newIdiomaId;
+                        }
+                    }
+                    upsertRecords($mysqli, $table, $data[$table], $stats);
+                }
+            }
+        }
+
+        // Dynamically build upload directories based on ZIP contents
+        $uploadDirs = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $filename = $zip->getNameIndex($i);
+            if ($filename === $jsonFile) {
+                continue;
+            }
+            
+            $parts = explode('/', $filename);
+            if (count($parts) < 1) {
+                continue; // Skip files without a directory
+            }
+            $topDir = $parts[0];
+            if (!isset($uploadDirs[$topDir])) {
+                $baseDir = in_array($topDir, ['audio', 'image']) ? "$topDir/$newIdiomaId" : $topDir;
+                $uploadDirs[$topDir] = "$baseDir/";
+                if (!is_dir($uploadDirs[$topDir]) && !mkdir($uploadDirs[$topDir], 0755, true)) {
+                    $zip->close();
+                    throw new Exception("Failed to create directory: {$uploadDirs[$topDir]}");
+                }
+            }
+            $targetDir = in_array($topDir, ['audio', 'image']) ? "$topDir/$newIdiomaId/" : '.';
+            if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true)) {
+                $zip->close();
+                throw new Exception("Failed to create directory: $targetDir");
+            }
+            if ($zip->extractTo($targetDir, $filename) === false) {
+                error_log("Failed to extract $filename");
+            } else {
+                if ( in_array($topDir, ['audio', 'image']) ) rename($targetDir.$filename, $targetDir.basename($filename));
+            }
+            rmdir($targetDir.'audio/');
+            rmdir($targetDir.'image/');
+        }
+        $zip->close();
+
+        $mysqli->commit();
+
+        $message = _t("Importado com sucesso: %1 registros inseridos, %2 registros atualizados.",[$stats['inserted'],$stats['updated']]);
+        if (!empty($stats['existing'])) {
+            $message .= " Warning: " . implode('; ', $stats['existing']);
+        }
+        echo json_encode(['message' => $message]);
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        error_log("Import error: " . $e->getMessage());
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
     }

@@ -18,7 +18,8 @@ $scriptAutoSubstituicao = '';
 $autoloader = '';
 
 if ($id_frase > 0) {
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, e.id as eid, i.nome_legivel, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, e.id as eid, i.nome_legivel, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono,
+        (SELECT nome_legivel FROM idiomas WHERE id = i.id_idioma_descricao LIMIT 1) as idioma_descricao
         FROM frases f
         LEFT JOIN idiomas i ON f.id_idioma = i.id
         LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
@@ -26,14 +27,15 @@ if ($id_frase > 0) {
     $data = mysqli_fetch_assoc($result);
     $id_idioma = $data['id_idioma'];
 } elseif ($id_idioma > 0) {
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT i.nome_legivel, e.id as eid, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT i.nome_legivel, e.id as eid, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono,
+        (SELECT nome_legivel FROM idiomas WHERE id = i.id_idioma_descricao LIMIT 1) as idioma_descricao
         FROM idiomas i
         LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
         WHERE i.id = '$id_idioma';") or die(mysqli_error($GLOBALS['dblink']));
     $data = mysqli_fetch_assoc($result);
 }
 
-if ($id_frase > 0 && $data['dono'] != $_SESSION['KondisonairUzatorIDX']) {
+if ($id_frase > 0 && $data['id_criador'] != $_SESSION['KondisonairUzatorIDX']) {
     echo '<script>window.location = "?page=phrase&id=' . $id_frase . '&iid=' . $id_idioma . '";</script>';
     exit;
 }
@@ -156,6 +158,14 @@ if ($id_frase > 0 || $id_idioma > 0) {
                         <div class="mb-3">
                             <div class="col-12">
                                 <div class="form-group">
+                                    <label class="form-label"><?=_t('Tradução no idioma da descrição (%1)',[$data['idioma_descricao']])?></label>
+                                    <textarea id="traducao" class="form-control" rows="5" onkeyup="editarPalavra()"><?=htmlspecialchars($data['descricao'] ?? '')?></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="col-12">
+                                <div class="form-group">
                                     <label class="form-label"><?=_t('Mais informações')?></label>
                                     <textarea id="info" class="form-control" rows="5" onkeyup="editarPalavra()"><?=htmlspecialchars($data['info'] ?? '')?></textarea>
                                 </div>
@@ -255,7 +265,7 @@ function gravarPalavra(ignorar = '0') {
         idioma: '<?=$id_idioma?>',
         original: '<?=$id_original?>',
         privado: $('#privado').val(),
-        traducao: $('#traducao').val(),
+        descricao: $('#traducao').val(),
         tags: $('#id_tags').val(),
         info: $('#info').val()
     }, function(data) {

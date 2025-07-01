@@ -476,7 +476,13 @@ function carregaTabela(){
                 }
             });
 
+            /*
             processarFlexoes(regras, raiz, '<?=$motor?>', '<?=$id_idioma?>', defCats, tb)
+                .then(() => console.log('Flexões processadas com sucesso'))
+                .catch(error => console.error('Erro ao processar flexões:', error));
+            */
+
+            multiProcessarFlexoes(regras, raiz, '<?=$id_idioma?>', defCats, tb)
                 .then(() => console.log('Flexões processadas com sucesso'))
                 .catch(error => console.error('Erro ao processar flexões:', error));
 
@@ -526,7 +532,7 @@ async function processarFlexoes(regras, raiz, motor, idIdioma, defCats, tb) {
                 let result = tmp === undefined || tmp === null ? raiz : tmp;
                 let teclas = checarDigitacao(idIdioma, result);
                 tb = tb.replaceAll(`%%${key}%%`, result);
-                tb = tb.replaceAll(`%%r${key}%%`, teclas + ' /' + result + '/');
+                tb = tb.replaceAll(`%%r${key}%%`, result ? teclas + ' /' + result + '/' : teclas);
                 tb = tb.replaceAll(`%%an${key}%%`, getAutoSubstituicao('<?=$escrita?>',teclas[0]) ?? '');
             });
 
@@ -535,6 +541,46 @@ async function processarFlexoes(regras, raiz, motor, idIdioma, defCats, tb) {
 
         $('#tabelaFlexoes').html(tb);
 
+        appLoad();
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+async function multiProcessarFlexoes(regras, raiz, idIdioma, defCats, tb) {
+    const formData = new FormData();
+    formData.append('id', regras);
+
+    try {
+        const response = await fetch(`api.php?action=getDetalhesFlexao&id=${regras}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.length === 0) {
+            for (let i = 0; i < data.length; i++) {
+                tb = tb.replaceAll(`%%${i}%%`, '');
+            }
+            $('#tabelaFlexoes').html(tb);
+            appLoad();
+            return;
+        }
+
+        const palavras = Array(data.length).fill(raiz); // Repetir a raiz para cada grupo
+        const lista_regras = data.map(val => val.regra_pronuncia); // Extrair regras de pronúncia
+
+        const results = await multiSonalMdason(lista_regras, palavras, idIdioma, defCats);
+
+        results.forEach((result, key) => { 
+            if (!result) result = raiz;
+            let teclas = checarDigitacao(idIdioma, result);
+            tb = tb.replaceAll(`%%${key}%%`, result);
+            tb = tb.replaceAll(`%%r${key}%%`, result ? teclas + ' <span class="nowrap">/' + result + '/</span>' : teclas);
+            tb = tb.replaceAll(`%%an${key}%%`, getAutoSubstituicao('<?=$escrita?>', teclas[0]) ?? '');
+        });
+
+        $('#tabelaFlexoes').html(tb);
         appLoad();
     } catch (error) {
         console.error('Erro:', error);
@@ -591,8 +637,6 @@ function carregaRegra(id,lin,col,i1,i2,text,gen){
         return;
     }
 };
-
-
 
 function loadCharDiv(eid,destDiv = "divInserirChars", forceReload = false, fonte = 0){
     $('#lateralEid').val(eid);
@@ -696,8 +740,8 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
                         exibirNativa(e['id'],e['palavra'],e['fonte'],e['tamanho']);
                     })
                 }else{
-                    $('#romanizacao').val( checarDigitacao('<?=$id_idioma?>', autogen) );  // ""
-                    $('#pronuncia').val(autogen); 
+                    //$('#romanizacao').val( checarDigitacao('<?=$id_idioma?>', autogen) );  // ""
+                    $('#pronuncia').val(checarDigitacao('<?=$id_idioma?>', autogen)); 
 
                     $('.escrita_nativa')/*.val(''); */.each(function(e){
                         let eid = $(this).attr('id').replace('escrita_nativa_','');

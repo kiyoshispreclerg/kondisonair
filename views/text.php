@@ -5,7 +5,6 @@
  
  	$romanizacao = 0;
 	$isOwner = false;
-	$fullartigo = '';
 
 	$sql = "SELECT t.*, e.id as eid, e.id_fonte, e.tamanho,
 		(SELECT nome_legivel FROM idiomas WHERE id = t.id_idioma) as idioma,
@@ -155,10 +154,10 @@
 						<select id="artigo" class="form-select" onchange="updateArtVinculado()">
 							<option value="0" selected><?=_t('Nenhum')?></option>
 							<?php 
-								$langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM artygs WHERE id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
+								$langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM artygs WHERE id_idioma = ".$id_idioma." AND (publico = 1 OR id_usuario = '".$_SESSION['KondisonairUzatorIDX']."');") or die(mysqli_error($GLOBALS['dblink']));
 								while ($lang = mysqli_fetch_assoc($langs)){
 									echo '<option value="'.$lang['id'].'" ';
-									if ($idartigo == $lang['id']) echo ' selected';
+									if ($e['artigo_ligado'] == $lang['id']) echo ' selected';
 									echo ' >'.$lang['nome'].'</option>';
 								}
 							?>
@@ -169,10 +168,10 @@
 					
                   </div>
                 </div>
-				<?php }else if($fullartigo != ''){ ?>
+				<?php }else if($e['artigo_texto'] != ''){ ?>
 				<div class="card">
                   <div class="card-body">
-                    <div style="overflow-y:scroll;max-height:35rem;white-space:preserve;"><?=$fullartigo?></div> 
+                    <div style="overflow-y:scroll;max-height:35rem;white-space:preserve;"><?=$e['artigo_texto']?></div> 
 					
                   </div>
                 </div>

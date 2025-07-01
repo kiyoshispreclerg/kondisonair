@@ -148,7 +148,7 @@ $tamanho = $idioma['tamanho'];
                     <div class="card-header">
                         <h3 class="card-title"><?=$bancoDados['titulo']?></h3>
 						<div class="card-actions">
-                            <?php if($idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ ?>
+                            <?php if($id_idioma>0 && $idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ ?>
                                 <a href="#" class="btn btn-primary" onclick="aplicarImportacao()">
                                 <?=_t('Importar')?>
                                 </a>

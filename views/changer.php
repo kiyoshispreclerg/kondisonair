@@ -136,35 +136,7 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                           <div class="card-actions" style="display:flex">
 
                             <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
-                                <div id="div_listasc"><select class="form-select" id="listasc" onchange="carregarLista()" >
-                                  <option value="0" title="Insira qualquer palavra" selected><?=_t('Personalizado')?></option>
-                                  <?php 
-                                      if ($_SESSION['KondisonairUzatorIDX']>0){
-
-                                          if ($idioma['nome_legivel']!=''){
-                                            $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].
-                                            ( $id_idioma > 0 ? " AND id_idioma = ".$id_idioma : "" ).";") or die(mysqli_error($GLOBALS['dblink']));
-                                            if (mysqli_num_rows($langs)>0) echo '<option disabled>'._t('Listas de %1',[$idioma['nome_legivel']]).'</option>';
-                                            while ($lang = mysqli_fetch_assoc($langs)){
-                                                echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'">'.$lang['titulo'].'</option>';
-                                            }
-                                          }
-
-                                          $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;") or die(mysqli_error($GLOBALS['dblink']));
-                                          if (mysqli_num_rows($langs)>0) echo '<option disabled>'._t('Minhas listas').'</option>';
-                                          while ($lang = mysqli_fetch_assoc($langs)){
-                                              echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'">'.$lang['titulo'].'</option>';
-                                          }
-
-                                          $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges WHERE publico = 1 ;") or die(mysqli_error($GLOBALS['dblink']));
-                                          if (mysqli_num_rows($langs)>0) echo '<option disabled>'._t('Listas públicas').'</option>';
-                                          while ($lang = mysqli_fetch_assoc($langs)){
-                                              echo '<option value="'.$lang['id'].'" title="'.$lang['descricao'].'">'.$lang['titulo'].'</option>';
-                                          }
-                                          
-                                      }
-                                  ?>
-                                </select></div>
+                                <div id="div_listasc"><select class="form-select" id="listasc" onchange="carregarLista()" ></select></div>
 
                                 <?php if($_GET['iid']>0){ ?>
                                 <div class="input-group mb-3" id="nomeLista" style="display:none" >
@@ -180,6 +152,7 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                             <?php if($_SESSION['KondisonairUzatorIDX']>0 && $_GET['iid']>0){ ?>
                             <a class="btn btn-danger" style="display:none" id="btnApagarSC" onclick="apagarLista()"><?=_t('Apagar')?></a>
                             <a class="btn btn-primary" style="display:none" id="btnSalvarSC" onclick="salvarLista()"><?=_t('Salvar')?></a>
+                            <a class="btn btn-success" style="display:none" id="btnPublicarSC" onclick="publicarLista()"><?=_t('Publicar')?></a>
                             <?php } ?>
                             
                           </div>
@@ -333,26 +306,28 @@ function carregarPalavras(){
 
 function carregarLista(){
   if ($('#listasc').val()==0){
-      editor.setValue('');//$('#schanges').val(''); 
+      editor.setValue('');
       $('#descricao').val( '' );
       $('#btnApagarSC').hide( );
       $('#sel_motor_sc').val('sca2');
-      tinymce.get('instrucoes').setContent(''); // $('#instrucoes').val( '' );
-      // 
-      //$(".chosen-select").trigger("chosen:updated");      
+      tinymce.get('instrucoes').setContent('');    
       return;
   }
   $.getJSON( "?action=ajaxCarregarListaSC&id="+ $('#listasc').val() , function(data){ 
     $.each( data, function( key, val ) {
           //$('#schanges').val(data[0].changes);
           editor.setValue(data[0].changes);
-          tinymce.get('instrucoes').setContent(data[0].instrucoes); //$('#instrucoes').val(data[0].instrucoes);
+          tinymce.get('instrucoes').setContent(data[0].instrucoes);
           $('#sel_motor_sc').val(data[0].motor);
-          //$(".chosen-select").trigger("chosen:updated");            
+          <?php if ($_SESSION['KondisonairUzatorIDX']>0){ ?> 
+                if(data[0].id_usuario==<?=$_SESSION['KondisonairUzatorIDX']?>) {
+                    if (data[0].publico=='0') $('#btnPublicarSC').show(); 
+                    else $('#btnPublicarSC').hide(); 
+                }
+          <?php } ?>         
 		});
 
     $('#descricao').val( $("#listasc option:selected").text() );
-    //$('.nomeListaSC').html( '&nbsp;"'+$("#listasc option:selected").text()+'"' );
     $('#btnSalvarSC').hide( );
     $('#nomeLista').hide( );
     $('#btnApagarSC').show( ); 
@@ -361,22 +336,66 @@ function carregarLista(){
 }
 
 function apagarLista(){ 
-  
-    //xxxxx add confirmação
     if (confirm("<?=_t('Apagar esta lista de mudanças sonoras?')?>"))
-
     $.get("?action=ajaxApagarListaSC&id="+ $('#listasc').val(), function (data){
         if ($.trim(data)=='ok'){
-            $('#btnApagarSC').hide();
-            $('#btnSalvarSC').show();
-            document.querySelector('#listasc').tomselect.removeOption( $('#listasc').val() ); //$('#listasc option[value="'+$('#listasc').val()+'"]').remove();
-            document.querySelector('#listasc').tomselect.setValue(0); // $('#listasc').val(0);
-            $('#descricao').val('');
-            
-
+            document.querySelector('#listasc').tomselect.removeOption($('#listasc').val());
+            reloadListas();
         }else alert(data);
     });
 }
+
+function publicarLista(){
+    if (confirm("<?=_t('Publicar esta lista?')?>"))
+    $.get("?action=ajaxPublicarListaSC&id="+ $('#listasc').val(), function (data){
+        if ($.trim(data)=='ok'){
+            $('#btnPublicarSC').hide( );
+        }else alert(data);
+    });
+}
+
+function reloadListas(selected = '0') {
+    $.get("?action=ajaxGetListasSC&iid=<?=$id_idioma?>", function (data) {
+        const tomSelect = document.querySelector('#listasc').tomselect;
+        tomSelect.clear();
+        tomSelect.clearOptions();
+        $("#listasc").html($.trim(data));
+        const $select = $("#listasc");
+        const options = [];
+        $select.find('option').each(function () {
+            const $option = $(this);
+            options.push({
+                value: $option.val(),
+                text: $option.text(),
+                disabled: $option.prop('disabled'),
+                'date': $option.attr('data-date')
+            });
+        });
+        tomSelect.addOptions(options);
+        tomSelect.setValue(selected);
+        $('#descricao').val('');
+        $('#btnApagarSC').hide();
+        $('#btnSalvarSC').hide();
+        $('#nomeLista').hide();
+        $('#div_listasc').show();
+    });
+}
+
+function reloadListasOld(selected = '0'){
+    $.get("?action=ajaxGetListasSC&iid=<?=$id_idioma?>", function (data){
+        //document.querySelector('#listasc').tomselect.clear(true);
+        $("#listasc").html( $.trim(data) );
+        $('#descricao').val('');
+        $('#btnApagarSC').hide();
+        $('#btnSalvarSC').hide();
+        $('#nomeLista').hide();
+        $('#div_listasc').show();
+        document.querySelector('#listasc').tomselect.sync()
+        document.querySelector('#listasc').tomselect.setValue(selected);
+    });
+}
+
+reloadListas();
 
 function changeMotor(){ // return;
     $("#jslexurgy").hide();
@@ -413,15 +432,7 @@ function salvaSC(){
           titulo: $('#descricao').val(),
           motor: $('#sel_motor_sc').val()
       }, function (data){
-          //reload lista sc select, com listasc val = este salvo
-          
-          //xxxxx reload sclist mas do tomselect
-          $("#listasc").empty().append( $.trim(data) );
-          
-          //$('#nomeSC').hide()
-          //$('#btnNomearSC').hide( );
-          $('#nomeLista').hide();
-          $('#div_listasc').show();
+          reloadListas($.trim(data));
       });
     }
 }
@@ -453,7 +464,7 @@ function loadDefCats(){
 	  });
 }
 
-formatarTablerSelect('listasc');
+formatarTablerMomentsSelect('listasc');
 
 //loadTinyEditor('instrucoes');
 document.addEventListener("DOMContentLoaded", function () {
@@ -464,7 +475,9 @@ document.addEventListener("DOMContentLoaded", function () {
       statusbar: false,
       setup: (editor) => {
           editor.on('keyup', (e) => {
-              $('#btnSalvarSC').show();$('#btnApagarSC').hide();$('#nomeLista').hide();
+              $('#btnSalvarSC').show();
+              //$('#btnApagarSC').hide();
+              $('#nomeLista').hide();
           });
       },
       plugins: [
@@ -596,7 +609,7 @@ editor.on("change", function(cm) {
         updateDeclaredClasses(cm.getValue());
         cm.refresh();
         $('#btnSalvarSC').show();
-        $('#btnApagarSC').hide();
+        //$('#btnApagarSC').hide();
         $('#nomeLista').hide();
     }, 500); // Atraso de 300ms
 
@@ -1245,7 +1258,7 @@ function generateRandomRules(numRules) {
     editor.setValue(newValue);
     updateDeclaredClasses(newValue);
     $('#btnSalvarSC').show();
-    $('#btnApagarSC').hide();
+    //$('#btnApagarSC').hide();
     $('#nomeLista').hide();
 }
 </script>

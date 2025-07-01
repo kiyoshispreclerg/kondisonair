@@ -171,6 +171,29 @@ async function sonalMdason(mdasonList, palavrList, mtor, elment, iid, defCats = 
 
 };
 
+async function multiSonalMdason(mdasonList, palavrList, iid, defCats = "") {
+    if (!palavrList || !mdasonList) return '';
+
+    const formData = new FormData();
+    formData.append('palavras', palavrList.join('\n'));
+    formData.append('regras', JSON.stringify(mdasonList));
+    formData.append('classes', defCats);
+    formData.append('v', 0);
+
+    try {
+        const response = await fetch(`?action=getMultiKSC&iid=${iid}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        return Array.isArray(data.words) ? data.words : [];
+    } catch (error) {
+        console.error('Erro:', error);
+        return [];
+    }
+}
+
 function btnJoes(val,tipo,id,div=""){
     $.get("?action=ajaxJoes&t="+tipo+"&id="+id+"&l="+val,function(data){
         $("#joesDiv"+div).html(data);
@@ -1486,7 +1509,7 @@ function importLanguage() {
     formData.append('file', fileInput.files[0]);
 
     $.ajax({
-        url: 'import_language.php',
+        url: 'api.php?action=importarIdioma',
         method: 'POST',
         data: formData,
         processData: false,
@@ -1499,6 +1522,7 @@ function importLanguage() {
                 '</div>'
             );
             fileInput.value = ''; // Reset file input
+            setTimeout(() => location.reload(), 2000);
         },
         error: function(xhr) {
             let errorMessage = 'Error importing language';
@@ -1538,7 +1562,7 @@ function excluirIdioma(idIdioma,password){
             ).removeClass('d-none');
             document.getElementById('deletePassword').value = ''; // Clear password
             document.getElementById('passwordContainer').classList.add('d-none'); // Hide password field
-            setTimeout(() => location.reload(), 3000);
+            setTimeout(() => location.reload(), 2000);
         },
         error: function(xhr) {
             let errorMessage = 'Erro ao excluir idioma';

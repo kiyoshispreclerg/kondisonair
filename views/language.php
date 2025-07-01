@@ -101,7 +101,7 @@ $romanizacao = $idioma['romanizacao'];
 
                                 <?php 
                                 $cs = mysqli_query($GLOBALS['dblink'],
-                                    "SELECT nome_completo, username FROM collabs c LEFT JOIN usuarios u ON u.id = c.id_usuario
+                                    "SELECT username FROM collabs c LEFT JOIN usuarios u ON u.id = c.id_usuario
                                     WHERE c.id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
                                 if (mysqli_num_rows($cs)>0) { ?>
 
@@ -115,22 +115,6 @@ $romanizacao = $idioma['romanizacao'];
                                 </div>
                                 </div>
                                 <?php }; ?>
-
-                                <!--div class="datagrid-title"><?=_t('Idioma da descrição')?></div>
-                                <div class="datagrid-content mb-3">-</div>
-
-                                <div class="datagrid-title"><?=_t('Status')?></div>
-                                <div class="datagrid-content mb-3">
-                                <span class="status status-green">
-                                <?=$idioma['status']?>
-                                </span>
-                                </div>
-
-                                <div class="datagrid-title">Descendente de</div>
-                                <div class="datagrid-content mb-3">–</div>
-                                
-                                <div class="datagrid-title">Família</div>
-                                <div class="datagrid-content mb-3">–</div-->
 
                             </div>
                         </div>
@@ -183,7 +167,7 @@ $romanizacao = $idioma['romanizacao'];
                                         </div></div>';
 
                                     };
-                                };
+                                }else echo '<div class="list-group-item">'._t('Nenhum texto').'</div>';;
 
                             ?>
 

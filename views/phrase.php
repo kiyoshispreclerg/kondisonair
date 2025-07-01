@@ -11,7 +11,7 @@ if ($id_frase <= 0) {
 
 // Fetch main phrase data
 $result = mysqli_query($GLOBALS['dblink'], "SELECT 
-        f.*, i.nome_legivel, i.id_usuario as dono, e.id as eid, e.tamanho, e.id_fonte as fonte, u.nome_completo as usuario_nome, e.separadores, e.binario,
+        f.*, i.nome_legivel, i.id_usuario as dono, e.id as eid, e.tamanho, e.id_fonte as fonte, u.username as usuario_nome, e.separadores, e.binario,
         f2.frase as frase2, f2.id_idioma as id_idioma2, i2.nome_legivel as nome_legivel2, e2.id as eid2, e2.tamanho as tamanho2, e2.id_fonte as fonte2
     FROM frases f
     LEFT JOIN idiomas i ON f.id_idioma = i.id
@@ -35,7 +35,7 @@ $breadcrumb = '<li class="breadcrumb-item"><a href="?page=language&iid=' . $id_i
 
 // Fetch translations
 $translations = [];
-$result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, i.nome_legivel, u.nome_completo as usuario_nome, e.id as eid, e.tamanho, e.id_fonte as fonte
+$result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, i.nome_legivel, u.username as usuario_nome, e.id as eid, e.tamanho, e.id_fonte as fonte
     FROM frases f
     LEFT JOIN idiomas i ON f.id_idioma = i.id
     LEFT JOIN usuarios u ON f.id_criador = u.id
@@ -65,7 +65,7 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                     </ol>
                 </h2>
             </div>
-            <?php if ($main_phrase['dono'] == $_SESSION['KondisonairUzatorIDX']) { ?>
+            <?php if ($main_phrase['id_criador'] == $_SESSION['KondisonairUzatorIDX']) { ?>
             <div class="col-auto ms-auto d-print-none">
                 <div class="btn-list">
                     <a href="?page=editphrase&id=<?=$id_frase?>&iid=<?=$id_idioma?>" class="btn btn-primary d-none d-sm-inline-block">
@@ -109,16 +109,13 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                                     <?php } ?>
 
                                     id="textoMarcado"><?php echo $mainPhrase; ?></div>
+
                                 
                             </div>
                             <div class="col-3">
                                 <p class="text-muted">
-                                    <a href="?page=language&iid=<?=$id_idioma?>"><?=htmlspecialchars($main_phrase['nome_legivel'])?></a><br>
-                                    <?=htmlspecialchars($main_phrase['usuario_nome'])?><br>
+                                    <a href="?page=profile&user=<?=$main_phrase['usuario_nome']?>"><?=htmlspecialchars($main_phrase['usuario_nome'])?></a><br>
                                     <?=date('d/m/Y H:i', strtotime($main_phrase['data_criacao']))?><br>
-                                    <?php if ($main_phrase['privado'] && $main_phrase['dono'] == $_SESSION['KondisonairUzatorIDX']) { ?>
-                                        <?=_t('Notas privadas')?>: <?=htmlspecialchars($main_phrase['privado'])?><br>
-                                    <?php } ?>
                                     <?php
                                     $tags_result = mysqli_query($GLOBALS['dblink'], "SELECT tag FROM tags WHERE tipo_dest = 'phrase' AND id_dest = '$id_frase';");
                                     $tags = [];
@@ -127,7 +124,14 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                                     }
                                     if ($tags) { ?>
                                         <?=_t('Tags')?>: <?=implode(', ', $tags)?>
-                                    <?php } ?>
+                                    <?php } 
+                                    $arts = mysqli_query($GLOBALS['dblink'], "SELECT a.id, a.nome FROM artyg_dest d LEFT JOIN artygs a ON a.id = d.id_artyg WHERE tipo_dest = 'phrase' AND id_dest = '$id_frase';");
+                                    if (mysqli_num_rows($arts)>0) { echo '<br>'._t('Artigos').'<br>';
+                                        while ($art = mysqli_fetch_assoc($arts)) { ?>
+                                            <?='<a href="?page=article&id='.$art['id'].'">'.$art['nome'].'</a><br>';?>
+                                    <?php }
+                                        } ?>
+                                    <?php if ($main_phrase['descricao']){ ?><?php echo '<br>'._t('Tradução original').'<br>'.$main_phrase['descricao']; ?><?php } ?>
                                 </p>
                             </div>
                         </div>
