@@ -47,4 +47,4 @@ Este projeto é licenciado sob a [GNU GPLv3](LICENSE).
 
 ---
 
-**Kondisonair** está em desenvolvimento! Fique à vontade para testar!
+**Kondisonair** é apenas um projeto de hobby em desenvolvimento! Fique à vontade para testar!

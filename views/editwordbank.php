@@ -89,9 +89,10 @@ $_SESSION['KondisonairUzatorDiom']
                         <select multiple class="form-select" id="filtro" title="Lista de referentes..." type="text" value="">
                         <?php 
 
-                            $query = "SELECT r.*, b.id_lista
+                            $query = "SELECT r.id, b.id_lista, d.descricao 
                             FROM referentes r
                             LEFT JOIN listas_referentes b  ON r.id = b.id_referente
+                                LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$_SESSION['KondisonairUzatorDiom']."'
                             ORDER BY b.ordem;"; // palavras na lingua     WHERE b.id_lista = ".$banco."
 
                             // iid pra referenciar as palavras, não referentes
@@ -100,7 +101,7 @@ $_SESSION['KondisonairUzatorDiom']
                             $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
 
                             while($r = mysqli_fetch_assoc($result)){
-                              echo '<option value="'.$r['id'].'" '.($r['id_lista']==$banco?'selected':'').' >'.$r['descricao'].'|'.$r['descricaoPort'].'</option>';
+                              echo '<option value="'.$r['id'].'" '.($r['id_lista']==$banco?'selected':'').' >'.$r['descricao'].'</option>';
                               /*
                                 echo '<div class="list-group-item">
                                     <div class="row align-items-center">

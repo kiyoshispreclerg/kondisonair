@@ -72,7 +72,7 @@ require('api.php');
                 <div class="d-none d-xl-block ps-2">
                 <?php if($_SESSION['KondisonairUzatorIDX']>0) { ?>
                   <div><?=$_SESSION['KondisonairUzatorID']?></div>
-                  <div class="mt-1 small text-secondary"><?=_t('Usuário')?></div>
+                  <div class="mt-1 small text-secondary"><?=_t($_SESSION['KondisonairUzatorNivle']<100?'Usuário':'Administrador')?></div>
                 <?php } else { ?>
                   <div><?=_t('Olá')?></div>
                   <div class="mt-1 small text-secondary"><?=_t('Visitante')?></div>

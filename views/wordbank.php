@@ -170,7 +170,7 @@ $tamanho = $idioma['tamanho'];
                                         LEFT JOIN palavras_referentes pr ON pr.id_palavra = ep.id
                                         WHERE pr.id_referente = r.id AND ep.id_idioma = ".$id_idioma." AND ep.id_forma_dicionario = 0) as palavrasExtras,";
 
-                            $query = "SELECT b.*, r.descricao,".$qxtra."
+                            $query = "SELECT b.*, d.descricao,".$qxtra."
                                 (SELECT GROUP_CONCAT(pronuncia, '*', significado, '*', romanizacao, '*', palavra SEPARATOR '|') 
                                     FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
                                     LEFT JOIN palavras_referentes pr ON pr.id_palavra = ep.id
@@ -178,6 +178,7 @@ $tamanho = $idioma['tamanho'];
 
                                 FROM listas_referentes b 
                                 LEFT JOIN referentes r ON r.id = b.id_referente
+                                LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$_SESSION['KondisonairUzatorDiom']."'
                                     WHERE b.id_lista = ".$banco."
                                 ORDER BY ordem;"; // palavras na lingua
 

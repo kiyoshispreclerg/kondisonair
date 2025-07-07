@@ -43,15 +43,7 @@ if ( $id_usuario != $_SESSION['KondisonairUzatorIDX'] && ( $id_usuario > 0 || $u
               </div-->
               <div class="col">
                 <h1 class="fw-bold"><?=$usuario['nome_completo']?></h1>
-                <div class="my-2"><?=$usuario['username']?>
-                </div>
-                <div class="list-inline list-inline-dots text-secondary">
-                  <div class="list-inline-item">
-                    <!-- Download SVG icon from http://tabler-icons.io/i/map -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
-                    <?=_t('Usuário desde')?> <?=$usuario['cadastro']?>
-                  </div>
-                </div>
+                <div><?=$usuario['username']?></div>
               </div>
 
               <div class="col-auto ms-auto">
@@ -107,6 +99,13 @@ if ( $id_usuario != $_SESSION['KondisonairUzatorIDX'] && ( $id_usuario > 0 || $u
                         <div class="mb-2">
                           <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2 text-secondary" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2" /><path d="M12 12l0 .01" /><path d="M3 13a20 20 0 0 0 18 0" /></svg>
                           <strong><?=$usuario['seguidos']?></strong> <?=_t('seguidos')?>
+                        </div>
+                        <div class="mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2 text-secondary" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
+                          <?=_t('Usuário desde')?> <?=$usuario['cadastro']?>
+                        </div>
+                        <div>
+                          <?=_t('Identificador')?>: <?=$id_usuario?>
                         </div>
                       </div>
                     </div>

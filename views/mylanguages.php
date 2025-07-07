@@ -69,7 +69,7 @@
                           ORDER BY i.data_modificacao DESC;") or die(mysqli_error($GLOBALS['dblink']));
                         
                         // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
-                      if (mysqli_num_rows($res)==0) { echo _t('<div class="col-md-6 col-lg-3">Nada aqui.</div>'); }else{
+                      if (mysqli_num_rows($res)==0) { echo '<div class="col-md-6 col-lg-3">'._t('Nada aqui.').'</div>'; }else{
                         while($r = mysqli_fetch_assoc($res)) { 
 
                           $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
@@ -113,7 +113,7 @@
           </div>
         </div>
 
-<div class="modal modal-blur fade" id="importLanguageModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal modal-blur" id="importLanguageModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -125,11 +125,13 @@
                     <label for="languageFile" class="form-label"><?=_t('Selecione o arquivo Zip')?></label>
                     <input type="file" class="form-control" id="languageFile" accept=".zip">
                 </div>
-                <div id="importStatus" class="mt-3"></div>
+                <div id="importStatus" class="mt-3">
+                  <div class="text-secondary"><?=_t('Atenção: ao importar um idioma, todos os dados existentes aqui serão substituídos pelos enviados nesse arquivo!')?></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?=_t('Fechar')?></button>
-                <button type="button" class="btn btn-primary" onclick="importLanguage()"><?=_t('Importar')?></button>
+                <button type="button" class="btn btn-primary" onclick="importLanguage(this)"><?=_t('Importar')?></button>
             </div>
         </div>
     </div>

@@ -26,17 +26,17 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
 <div class="page-body">
     <div class="container-xl">
         <div class="row row-deckx row-cards">
-            <div class="col-6">
+            <div class="col-3">
                 <div class="card">
                     <div class="card-header">
                         <div class="col">
-                            <input type="text" class="form-control" id="filtroReferentes" placeholder="<?=_t('Filtrar referentes')?>" onkeyup="filtrarReferentes()">
+                            <input type="text" class="form-control" id="filtroReferentes" placeholder="<?=_t('Filtrar')?>" onkeyup="filtrarReferentes()">
                         </div>
                         <div class="card-actions">
                             <a onclick="novoReferente()" class="btn btn-primary d-none d-sm-inline-block">
                                 <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-                                <?=_t('Novo referente')?>
+                                <?=_t('Novo')?>
                             </a>
                         </div>
                     </div>
@@ -46,10 +46,10 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
                     </div>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-9">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title"><?=_t('Informações')?></h3>
+                        <h3 class="card-title"><?=_t('Descrição')?></h3>
                         <div class="card-actions">
                             <a id="btnSalvar" onclick="gravarReferente()" class="btn btn-primary" style="display: none;">
                                 Salvar
@@ -57,26 +57,14 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
                         </div>
                     </div>
                     <div class="card-body">
+                        <?php foreach($idiomas_sistema as $id => $nome){ ?>
                         <div class="mb-3">
-                            <label class="form-label"><?=_t('Descrição em inglês')?></label>
-                            <input type="text" class="form-control" id="descricao" onchange="showGravarReferente()">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Descrição em português')?></label>
-                            <input type="text" class="form-control" id="descricaoPort" onchange="showGravarReferente()">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Descrição em esperanto')?></label>
-                            <input type="text" class="form-control" id="descricaoEo" onchange="showGravarReferente()">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Descrição em japonês')?></label>
-                            <input type="text" class="form-control" id="descricaoJp" onchange="showGravarReferente()">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Detalhes')?></label>
-                            <textarea class="form-control" id="detalhes" rows="5" onchange="showGravarReferente()"></textarea>
-                        </div>
+                            <label class="form-label"><?=$nome?></label>
+                            <div class="row">
+                            <div class="col-4"><input type="text" class="form-control descricao" id="descricao<?=$id?>" onchange="showGravarReferente()" placeholder="<?=_t('Descrição curta (Ex.: homem)')?>"></div>
+                            <div class="col-8"><input type="text" class="form-control descricao" id="detalhes<?=$id?>" onchange="showGravarReferente()" placeholder="<?=_t('Mais detalhes (Ex.: humano adulto masculino)')?>"></div>
+                        </div> </div>
+                        <?php } ?>
                     </div>
                 </div>
             </div>
@@ -86,16 +74,15 @@ if ($_SESSION['KondisonairUzatorNivle'] < 100 ) {
 
 <script>
 function gravarReferente(){
-    if ($('#descricao').val()=='') return;
-    if ($('#descricaoPort').val()=='') return;
+    <?php foreach($idiomas_sistema as $id => $nome){ ?>
+        if ($('#descricao<?=$id?>').val()=='') return;
+    <?php } ?>
 
     $.post("?action=ajaxGravarReferente&rid="+$('#idReferente').val()+"&iid=<?=$id_idioma?>", 
-    {
-        descricao: $('#descricao').val(),
-        descricaoPort: $('#descricaoPort').val(),
-        descricaoEo: $('#descricaoEo').val(),
-        descricaoJp: $('#descricaoJp').val(),
-        detalhes: $('#detalhes').val()
+    {  <?php foreach($idiomas_sistema as $id => $nome){ ?>
+        d<?=$id?>: $('#descricao<?=$id?>').val(),
+        m<?=$id?>: $('#detalhes<?=$id?>').val(),
+        <?php } ?>
     }, function(data){
         if ($.trim(data) > 0){
             $('#idReferente').val($.trim(data));
@@ -111,13 +98,13 @@ function abrirReferente(rid){
     $(".list-group-item").removeClass("card card-active bg-primary-lt");        
     $("#row_"+rid).addClass("card card-active bg-primary-lt");
     $('#idReferente').val(rid); 
+    $('.descricao').val(''); 
     $.getJSON("?action=getDetalhesReferente&rid="+rid, function(data){
         $.each(data, function(key, val){
-            $('#descricao').val(data[0].descricao); 
-            $('#descricaoPort').val(data[0].descricaoPort); 
-            $('#descricaoEo').val(data[0].descricaoEo); 
-            $('#descricaoJp').val(data[0].descricaoJp); 
-            $('#detalhes').val(data[0].detalhes); 
+            <?php foreach($idiomas_sistema as $id => $nome){ ?>
+            $('#descricao<?=$id?>').val(data.d<?=$id?>); 
+            $('#detalhes<?=$id?>').val(data.m<?=$id?>); 
+            <?php } ?>
             $('#btnSalvar').hide();
         });
     });
@@ -130,11 +117,7 @@ function showGravarReferente(){
 function novoReferente(){
     $(".list-group-item").removeClass("card card-active bg-primary-lt");   
     $('#idReferente').val(0); 
-    $('#descricao').val(''); 
-    $('#descricaoPort').val(''); 
-    $('#descricaoEo').val(''); 
-    $('#descricaoJp').val(''); 
-    $('#detalhes').val(''); 
+    $('.descricao').val('');
     $('#btnSalvar').hide(); 
     $("#referentesTable").load("?action=listReferentes&iid=<?=$id_idioma?>");
 }

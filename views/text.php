@@ -249,7 +249,7 @@ function loadTexto(){
 	});
 };
 
-function cpk(pids = '', st = 9, aid, pal = '', ps = '0',este){
+function cpk(pids = '', st = 9, aid, pal = '', ps = '0',este,refs){
 
 	// unselect all
 	// select essa pal

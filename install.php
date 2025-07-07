@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $admin_name = trim($_POST['admin_name'] ?? '');
         $admin_pass = trim($_POST['admin_pass'] ?? '');
         $def_lang = trim($_POST['def_lang'] ?? 1);
+        $id_usuario = trim($_POST['id_usuario']>0 ? $_POST['id_usuario'] : generateId());
 
         if (!preg_match('/^[a-zA-Z0-9_.-]+$/', $host)) {
             $error = "Host inválido. Use apenas letras, números, pontos, hífens ou underscores.";
@@ -45,19 +46,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Todos os campos são obrigatórios.";
         } else {
             try {
-                $pdo = new PDO("mysql:host=$host", $user, $pass);
+                $pdo = new PDO("mysql:host=$host;charset=utf8mb4", $user, $pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                $pdo->exec("CREATE DATABASE IF NOT EXISTS $dbname");
+                $pdo->exec("CREATE DATABASE IF NOT EXISTS $dbname CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
                 $pdo->exec("USE $dbname");
+                $pdo->exec("SET NAMES utf8mb4");
 
                 $schema = file_get_contents(__DIR__ . '/schema.sql');
                 $pdo->exec($schema);
 
                 $data = file_get_contents(__DIR__ . '/data.sql');
                 $pdo->exec($data);
-
-                $id_usuario = generateId();
 
                 $stmt = $pdo->prepare("INSERT INTO opcoes_sistema (id, opcao, valor) 
                     VALUES (12, 'def_lang', ?)");
@@ -160,6 +160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="col-md-6">
                                     <div class="form-label">Senha do Admin</div>
                                     <input type="password" class="form-control" name="admin_pass" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-label">ID Global (opcional)</div>
+                                    <input type="text" class="form-control" name="id_usuario" required>
                                 </div>
                             </div>
                             <h3 class="card-title">Outras configurações</h3>

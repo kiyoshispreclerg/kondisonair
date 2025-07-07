@@ -505,12 +505,19 @@ CREATE TABLE `realidades` (
 
 CREATE TABLE `referentes` (
   `id` bigint(20) UNSIGNED NOT NULL,
-  `descricao` varchar(512) NOT NULL,
-  `detalhes` text DEFAULT NULL,
-  `descricaoPort` text NOT NULL,
-  `descricaoEo` varchar(250) NOT NULL,
-  `descricaoJp` varchar(250) NOT NULL
+  `modificado` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `referentes_descricoes` ( 
+  `id` BIGINT UNSIGNED NOT NULL , 
+  `id_referente` BIGINT UNSIGNED NOT NULL , 
+  `id_idioma` BIGINT UNSIGNED NOT NULL , 
+  `descricao` VARCHAR(150) NOT NULL , 
+  `detalhes` TEXT NULL 
+) ENGINE = InnoDB; 
+
+ALTER TABLE `referentes_descricoes` 
+  ADD PRIMARY KEY (`id`); 
 
 CREATE TABLE `regrasOrdens` (
   `id` bigint(20) UNSIGNED NOT NULL,
@@ -909,10 +916,12 @@ ALTER TABLE `opcoes_sistema`
 ALTER TABLE `palavras`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idc_iid` (`id_idioma`),
+  ADD INDEX `idx_idp` (`id`),
   ADD KEY `idx_pd` (`id_forma_dicionario`);
 
 ALTER TABLE `palavrasNativas`
   ADD PRIMARY KEY (`id`),
+  ADD INDEX `idx_idpn` (`id_palavra`),
   ADD KEY `idx_pe` (`id_escrita`,`id_palavra`);
 
 ALTER TABLE `palavras_origens`
@@ -934,8 +943,7 @@ ALTER TABLE `realidades`
   ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `referentes`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `descricao` (`descricao`);
+  ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `regrasOrdens`
   ADD PRIMARY KEY (`id`);

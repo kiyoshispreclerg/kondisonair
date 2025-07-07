@@ -67,23 +67,22 @@ if (!isset($_SESSION['KondisonairUzatorIDX']) || $_SESSION['KondisonairUzatorNiv
                         </div>
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Descrição')?></label>
-                            <textarea class="form-control" id="descricao" rows="8" onchange="showGravarUsuario()"></textarea>
+                            <textarea class="form-control" id="descricao" rows="5" onchange="showGravarUsuario()"></textarea>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Data de cadastro')?></label>
+                        <div class="mb-3"><?=_t('Data de cadastro')?>
                             <p class="form-control-static" id="data_cadastro"><?=_t('N/A')?></p>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Idioma nativo')?></label>
+                        <div class="mb-3"><?=_t('Idioma nativo')?>
                             <p class="form-control-static" id="id_idioma_nativo"><?=_t('N/A')?></p>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Email')?></label>
+                        <div class="mb-3"><?=_t('Email')?>
                             <p class="form-control-static" id="email"><?=_t('N/A')?></p>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label"><?=_t('Perfil')?></label>
+                        <div class="mb-3"><?=_t('Perfil')?>
                             <p class="form-control-static" id="publico"><?=_t('N/A')?></p>
+                        </div>
+                        <div class="mb-3"><?=_t('ID Global')?>
+                            <p class="form-control-static" id="uid">-</p>
                         </div>
                     </div>
                 </div>
@@ -127,6 +126,8 @@ function abrirUsuario(uid){
             $('#id_idioma_nativo').text(idiomas[data[0].id_idioma_nativo] || '<?=_t('N/A')?>');
             $('#email').text(data[0].email || '<?=_t('N/A')?>');
             $('#publico').text(data[0].publico == 1 ? '<?=_t('Público')?>' : '<?=_t('Privado')?>');
+
+            $('#uid').text(uid);
             $('#btnSalvar').hide();
         });
     });
@@ -146,6 +147,7 @@ function novoUsuario(){
     $('#id_idioma_nativo').text('<?=_t('N/A')?>');
     $('#email').text('<?=_t('N/A')?>');
     $('#publico').text('<?=_t('N/A')?>');
+    $('#uid').text('');
     $('#btnSalvar').hide(); 
     $("#usuariosTable").load("?action=listUsuarios");
 }

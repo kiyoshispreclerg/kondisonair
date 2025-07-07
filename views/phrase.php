@@ -46,12 +46,50 @@ while ($row = mysqli_fetch_assoc($result)) {
 }
 
 $textoSentenca=$main_phrase['frase'];
-$separadorPalavras = preg_split('//u', $main_phrase['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [];
-$iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: [];
+$separadorPalavras = preg_split('//u', $main_phrase['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [" "];
+$iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: ["\n"];
 foreach ($iniciadoresPalavras as $sep){
     $textoSentenca = str_replace($sep," ".$sep,$textoSentenca);
 }
 $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$main_phrase['eid'], ($main_phrase['binario']>0?' BINARY ':''),$main_phrase['fonte'],$main_phrase['tamanho']  )[0];
+
+// frases para comparação
+
+function removerParametro($param, $valorRemover) {
+    $url = $_SERVER['REQUEST_URI'];
+    $query = parse_url($url, PHP_URL_QUERY);
+    $params = [];
+    
+    if ($query) {
+        parse_str($query, $params);
+    }
+    
+    if (isset($params[$param])) {
+        $params[$param] = array_diff((array)$params[$param], [$valorRemover]);
+        if (empty($params[$param])) {
+            unset($params[$param]);
+        }
+    }
+    
+    if (empty($params)) {
+        return strtok($url, '?');
+    }
+    return strtok($url, '?') . '?' . http_build_query($params);
+}
+
+function adicionarParametro($param, $valor) {
+    $url = $_SERVER['REQUEST_URI'];
+    $query = parse_url($url, PHP_URL_QUERY);
+    $params = [];
+    
+    if ($query) {
+        parse_str($query, $params);
+    }
+    
+    $params[$param][] = $valor; // Suporta múltiplos valores
+    return strtok($url, '?') . '?' . http_build_query($params);
+}
+
 ?>
 
 <div class="page-header d-print-none">
@@ -97,10 +135,10 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                             <div class="col-9">
                                 
                                 <div style="white-space:preserve;
-                                    transform: scale(2);
+                                    transform: scale(1.5);
                                     transform-origin: top left;
-                                    width: 50%;
-                                    display: block;"
+                                    width: 62%;
+                                    display: block; margin-bottom:10%"
 
                                     <?php if ($main_phrase['fonte'] == 3) { ?>
                                         class="editable-drawchar custom-font-<?=$main_phrase['eid']?>"
@@ -135,6 +173,83 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                                 </p>
                             </div>
                         </div>
+                        
+                        <?php 
+
+                        if (isset($_GET['compara'])) {
+                            $comps = array_unique((array)$_GET['compara']);
+                            foreach ($comps as $comp) {
+
+                                $result = mysqli_query($GLOBALS['dblink'], "SELECT 
+                                        f.*, i.nome_legivel, i.id_usuario as dono, e.id as eid, e.tamanho, e.id_fonte as fonte, u.username as usuario_nome, e.separadores, e.binario,
+                                        f2.frase as frase2, f2.id_idioma as id_idioma2, i2.nome_legivel as nome_legivel2, e2.id as eid2, e2.tamanho as tamanho2, e2.id_fonte as fonte2
+                                    FROM frases f
+                                    LEFT JOIN idiomas i ON f.id_idioma = i.id
+                                    LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
+                                    LEFT JOIN usuarios u ON f.id_criador = u.id
+                                    LEFT JOIN frases f2 ON f.id_original = f2.id
+                                    LEFT JOIN idiomas i2 ON f2.id_idioma = i2.id
+                                    LEFT JOIN escritas e2 ON e2.id_idioma = i2.id AND e2.padrao = 1
+                                    WHERE f.id = '$comp';") or die(mysqli_error($GLOBALS['dblink']));
+                                $frase = mysqli_fetch_assoc($result);
+
+                                $textoSentenca=$frase['frase'];
+                                $separadorPalavras = preg_split('//u', $frase['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [" "];
+                                $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: ["\n"];
+                                foreach ($iniciadoresPalavras as $sep){
+                                    $textoSentenca = str_replace($sep," ".$sep,$textoSentenca);
+                                }
+                                $frase_texto = getStudySentence($separadorPalavras,$textoSentenca,$frase['id_idioma'],$frase['eid'], ($frase['binario']>0?' BINARY ':''),$frase['fonte'],$frase['tamanho']  )[0];
+
+                        ?>
+                        <div class="mb-3 row">
+                            <div class="col-9">
+                                
+                                <div style="white-space:preserve;
+                                    transform: scale(1.5);
+                                    transform-origin: top left;
+                                    width: 62%;
+                                    display: block; margin-bottom:10%"
+
+                                    <?php if ($frase['fonte'] == 3) { ?>
+                                        class="editable-drawchar custom-font-<?=$frase['eid']?>"
+                                    <?php } else { ?>
+                                        class="custom-font-<?=$frase['eid']?>"
+                                    <?php } ?>
+
+                                    id="textoMarcado"><?php echo $frase_texto; ?></div>
+
+                                
+                            </div>
+                            <div class="col-3">
+                                <p class="text-muted">
+                                    <a href="?page=profile&user=<?=$frase['usuario_nome']?>"><?=htmlspecialchars($frase['usuario_nome'])?></a><br>
+                                    <?=date('d/m/Y H:i', strtotime($frase['data_criacao']))?><br>
+                                    <?php
+                                    $tags_result = mysqli_query($GLOBALS['dblink'], "SELECT tag FROM tags WHERE tipo_dest = 'phrase' AND id_dest = '$id_frase';");
+                                    $tags = [];
+                                    while ($tag = mysqli_fetch_assoc($tags_result)) {
+                                        $tags[] = htmlspecialchars($tag['tag']);
+                                    }
+                                    if ($tags) { ?>
+                                        <?=_t('Tags')?>: <?=implode(', ', $tags)?>
+                                    <?php } 
+                                    $arts = mysqli_query($GLOBALS['dblink'], "SELECT a.id, a.nome FROM artyg_dest d LEFT JOIN artygs a ON a.id = d.id_artyg WHERE tipo_dest = 'phrase' AND id_dest = '$id_frase';");
+                                    if (mysqli_num_rows($arts)>0) { echo '<br>'._t('Artigos').'<br>';
+                                        while ($art = mysqli_fetch_assoc($arts)) { ?>
+                                            <?='<a href="?page=article&id='.$art['id'].'">'.$art['nome'].'</a><br>';?>
+                                    <?php }
+                                        } ?>
+                                    <?php if ($frase['descricao']){ ?><?php echo '<br>'._t('Tradução original').'<br>'.$frase['descricao']; ?><?php } ?>
+
+                                    <a class="text-muted text-secondary" href="?page=language&iid=<?=$frase['id_idioma']?>"><?=htmlspecialchars($frase['nome_legivel'])?></a>
+                                    <a href="<?php echo removerParametro('compara', $comp); ?>" class="btn btn-sm">Remover</a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <?php   }  } ?>
+
                     </div>
                 </div>
             </div>
@@ -171,7 +286,8 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                                             <span class="custom-font-<?=$main_phrase['eid2']?>"><?=htmlspecialchars($main_phrase['frase2'])?></span>
                                         <?php } ?>
                                         <p>
-                                            <a class="text-muted text-secondary" href="?page=language&iid=<?=$translation['id_idioma']?>"><?=_t('%1 (frase original)',[$main_phrase['nome_legivel2']])?></a>
+                                            <a class="text-muted text-secondary" href="?page=language&iid=<?=$main_phrase['id_idioma2']?>"><?=_t('%1 (frase original)',[$main_phrase['nome_legivel2']])?></a>
+                                            <a href="<?php echo adicionarParametro('compara', $main_phrase['id_original']); ?>" class="btn btn-sm"><?=_t('Comparar')?></a>
                                         </p>
                                     </a>
                                 <?php } ?>
@@ -187,6 +303,7 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
                                     <?php } ?>
                                     <p>
                                         <a class="text-muted text-secondary" href="?page=language&iid=<?=$translation['id_idioma']?>"><?=htmlspecialchars($translation['nome_legivel'])?></a>
+                                        <a href="<?php echo adicionarParametro('compara', $translation['id']); ?>" class="btn btn-sm"><?=_t('Comparar')?></a>
                                     </p>
                                 </a>
                                 <?php } ?>
@@ -202,4 +319,11 @@ $mainPhrase = getStudySentence($separadorPalavras,$textoSentenca,$id_idioma,$mai
 $(document).ready(function() {
     $('.pstud').tooltip({html:true});  
 });
+function cpk(pids = '', st = 9, aid, pal = '', ps = '0',este,refs){
+	$(".pstud").removeClass('palSelected');
+    if (!refs) return;
+    refs.split('.').forEach(element => {
+        $(".r"+refs).addClass('palSelected');
+    });
+}
 </script>

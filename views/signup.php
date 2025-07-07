@@ -21,7 +21,7 @@
             <img src="logo.png" width="110" height="32" alt="Tabler" class="navbar-brand-image">
           </a>
         </div>
-        <form class="card card-md" action="?action=signup" method="post" autocomplete="off" novalidate>
+        <form class="card card-md" id="signupForm" action="?action=signup" method="post" autocomplete="off" novalidate>
           <div class="card-body">
             <h2 class="card-title text-center mb-4"><?=_t('Criar conta')?></h2>
             <div class="mb-3">
@@ -31,15 +31,21 @@
             <div class="mb-3">
               <label class="form-label"><?=_t('Usuário')?></label>
               <input type="text" name="usr" class="form-control <?php if ($_GET['error']=='usr') echo 'is-invalid'; ?>" placeholder="">
+              <span class="text-secondary"><?=_t('Apenas letras e números, sem espaços nem pontuações')?></span>
             </div>
             <div class="mb-3">
               <label class="form-label"><?=_t('Email')?></label>
               <input type="email" name="email" class="form-control <?php if ($_GET['error']=='email') echo 'is-invalid'; ?>" placeholder="">
             </div>
             <div class="mb-3">
+              <label class="form-label"><?=_t('Perfil anterior (opcional)')?></label>
+              <input type="text" name="profile" id="profile" class="form-control <?php if ($_GET['error']=='profile') echo 'is-invalid'; ?>" placeholder="">
+              <span class="text-secondary"><?=_t('Para recuperar o mesmo usuário de outra instância, insira abaixo a mesma senha.')?></span>
+            </div>
+            <div class="mb-3">
               <label class="form-label"><?=_t('Senha')?></label>
               <div class="input-group input-group-flat">
-                <input type="password" name="pass" class="form-control"  placeholder=""  autocomplete="off">
+                <input type="password" name="pass" id="pass" class="form-control <?php if ($_GET['error']=='pass') echo 'is-invalid'; ?>"  placeholder=""  autocomplete="off">
                 <span class="input-group-text">
                   <a href="#" class="link-secondary" title="Show password" data-bs-toggle="tooltip"><!-- Download SVG icon from http://tabler-icons.io/i/eye -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" /></svg>
@@ -47,11 +53,9 @@
                 </span>
               </div>
             </div>
+            <input type="hidden" name="uid" id="uid">
             <div class="form-footer">
-              <button type="submit" class="btn btn-primary w-100 mb-3"><?=_t('Criar conta')?></button>
-              <div class="mb-3">
-                <span class="form-check-label">Ao clicar em "Criar conta" você está concordando com os <a href="?page=tos" tabindex="-1">termos</a>.</span>
-              </div>
+              <button type="submit" class="btn btn-primary w-100"><?=_t('Criar conta')?></button>
             </div>
           </div>
         </form>
@@ -67,5 +71,58 @@
     <!-- Tabler Core -->
     <script src="./dist/js/tabler.min.js?1692870487" defer></script>
     <script src="./dist/js/demo.min.js?1692870487" defer></script>
+
+    <script>
+      document.getElementById('signupForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const profileInput = document.getElementById('profile').value.trim();
+        const form = this;
+
+        if (profileInput) {
+          try {
+            // Derive API endpoint from profile URL
+            const profileUrl = new URL(profileInput);
+            const apiUrl = `${profileUrl.origin}${profileUrl.pathname.replace('index','external')}`;
+
+            // Get username and password
+            const username = document.querySelector('input[name="usr"]').value;
+            const password = document.getElementById('pass').value;
+
+            // Make API request
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                username: username,
+                password: password
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('API validation failed');
+            }
+
+            const data = await response.json();
+            if (data.number && data.token) {
+              // Set the uid field with the number from the API
+              document.getElementById('uid').value = data.number;
+              // Submit the form
+              form.submit();
+            } else {
+              throw new Error('Invalid API response');
+            }
+          } catch (error) {
+            console.error('Error during API validation:', error);
+            alert('Failed to validate credentials with the provided profile URL.');
+            return;
+          }
+        } else {
+          // If no profile URL, submit the form as is
+          form.submit();
+        }
+      });
+    </script>
   </body>
 </html>

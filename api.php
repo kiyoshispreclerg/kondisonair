@@ -23,7 +23,7 @@ if (!isset($_SESSION)) session_start();
 
 if (!isset($_SESSION['KondisonairUzatorIDX'])) $_SESSION['KondisonairUzatorIDX'] = 0;
 
-if ($_COOKIE["KondisonairUzatorToken"]) {
+if (isset($_COOKIE["KondisonairUzatorToken"])&&$_COOKIE["KondisonairUzatorToken"]) {
   $logged = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE token = '".$_COOKIE["KondisonairUzatorToken"]."';") or die(mysqli_error($GLOBALS['dblink']));
   $logged = mysqli_fetch_assoc($logged);
 
@@ -71,7 +71,7 @@ function userLoginAPI($usuario, $senha){
     $r = mysqli_query($GLOBALS['dblink'],"SELECT senha, confirmacao FROM usuarios WHERE username = '".$b[3]."';");
     $a = mysqli_fetch_row($r);
     
-    if( password_verify($senha, $a[0]) && $a[1] == '1' ) {
+    if( password_verify($senha, $a[0]) /*&& $a[1] == '1'*/ ) {
       if (!isset($_SESSION)) session_start();
       session_regenerate_id(true);
       $_SESSION['KondisonairUzatorID']            = trim($usuario);
@@ -106,53 +106,90 @@ if($_GET['action']=='login'){
 
 if($_GET['action']=='signup'){
 
-  // checar se tá aberto o cadastro
   $r = mysqli_query($GLOBALS['dblink'],"SELECT * FROM opcoes_sistema WHERE opcao = 'inscr_aberta' AND valor = '1';");
 	if ( mysqli_num_rows($r) == 0 ){
     header('Location: index.php?page=signup&error=closed');
     exit;
   };
-  if ($_POST['usr']==''){ // email pass
-		header('Location: index.php?page=signup&error=empty');
-		 exit;
-  };
 
-  // checar se email já tá cadastrado  POST email
-  $r = mysqli_query($GLOBALS['dblink'],"SELECT username, email FROM usuarios WHERE email = '".$_POST['email']."';");
-    
-  if ( mysqli_num_rows($r) > 0 ){
-		header('Location: index.php?page=signup&error=email');
-		 exit;
+  $name = $_POST['name'] ?? '';
+  $usr = $_POST['usr'] ?? '';
+  $email = $_POST['email'] ?? '';
+  $profile = $_POST['profile'] ?? '';
+  $pass = $_POST['pass'] ?? '';
+  $uid = $_POST['uid'] ?? 0;
+
+  if (empty($usr)) {
+    header('Location: index.php?page=signup&error=empty');
+    exit;
+  }
+  if (empty($pass)) {
+    header('Location: index.php?page=signup&error=pass');
+    exit;
+  }
+  if (empty($email)) {
+    header('Location: index.php?page=signup&error=email');
+    exit;
   }
 
-  // checar se username já existe  POST usr
-  $r = mysqli_query($GLOBALS['dblink'],"SELECT username, email FROM usuarios WHERE username = '".$_POST['usr']."';");
-    
-  if ( mysqli_num_rows($r) > 0 ){
-		header('Location: index.php?page=signup&error=usr');
-		 exit;
+  $stmt = mysqli_prepare($GLOBALS['dblink'], "SELECT email FROM usuarios WHERE email = ?");
+  mysqli_stmt_bind_param($stmt, "s", $email);
+  mysqli_stmt_execute($stmt);
+  $result = mysqli_stmt_get_result($stmt);
+  if (mysqli_num_rows($result) > 0) {
+    header('Location: index.php?page=signup&error=email');
+    exit;
   }
-
-  // avisar que email foi enviado para confirmar
+  mysqli_stmt_close($stmt);
   
-  $usuario = $_POST['usr'];
-  $senha = $_POST['pass'];
-  $rkey = bin2hex( random_bytes(64) );
+  $stmt = mysqli_prepare($GLOBALS['dblink'], "SELECT username, email, id, senha FROM usuarios WHERE username = ?");
+  mysqli_stmt_bind_param($stmt, "s", $usr);
+  mysqli_stmt_execute($stmt);
+  $result = mysqli_stmt_get_result($stmt);
 
-  mysqli_query($GLOBALS['dblink'],"INSERT INTO usuarios SET 
-      username = '".$usuario."',
-      id = ".generateId().",
-      senha = '".password_hash($senha, PASSWORD_DEFAULT)."',
-      nome_completo = '".$_POST['name']."',
-      descricao = '',
-      id_idioma_nativo = 1,
-      data_cadastro = now(),
-      acesso = 1,
-      email = '".$_POST['email']."',
-      confirmacao = '".$rkey."'
-            ;");
-        //$idUsuario = mysql_insert_id();
+  $gid = generateId();
+  
+  if (mysqli_num_rows($result) > 0) {
+    $user = mysqli_fetch_assoc($result);
+    if ($user['id'] > 10000 && empty($user['senha'])) { // tá no sistema por importação, não se cadastrou
+      
+      if (!empty($profile) && !empty($uid)) {
 
+          if ($uid <= 10000 || $uid >= $gid) {
+            header('Location: index.php?page=signup&error=profile&message=uid');
+            exit;
+          }
+
+          if ($uid <= 10000) {
+            header('Location: index.php?page=signup&error=profile&message=system');
+            exit;
+          }
+      } else {
+        header('Location: index.php?page=signup&error=profile');
+        exit;
+      }
+
+    } else {
+      header('Location: index.php?page=signup&error=usr');
+      exit;
+    }
+  }
+  mysqli_stmt_close($stmt);
+
+  $uid = $uid == 0 ? $gid : $uid;
+
+  $rkey = bin2hex(random_bytes(64));
+  $stmt = mysqli_prepare($GLOBALS['dblink'], "INSERT INTO usuarios (username, id, senha, nome_completo, descricao, id_idioma_nativo, data_cadastro, acesso, email, confirmacao) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
+  $desc = '';
+  $id_idioma_nativo = 1;
+  $acesso = 1;
+  $hashed_pass = password_hash($pass, PASSWORD_DEFAULT);
+  mysqli_stmt_bind_param($stmt, "sissisiss", $usr, $uid, $hashed_pass, $name, $desc, $id_idioma_nativo, $acesso, $email, $rkey);
+  mysqli_stmt_execute($stmt);
+  mysqli_stmt_close($stmt);
+
+  // Redirect to success (or send confirmation email)
+  $usuario = $email;
   $r = mysqli_query($GLOBALS['dblink'],"SELECT username, id FROM usuarios WHERE email = '".$usuario."';");
   $b = mysqli_fetch_row($r);
 
@@ -163,7 +200,7 @@ if($_GET['action']=='signup'){
   $subject = "Cadastro Kondisonair";
   $message = "Olá, pessoa dessa realidade! Use o link a seguir para validar este e-mail e acessar o Kondisonair: ".$url."/login/api.php?validar=".$rkey."&email=".$usuario;
   $headers = "From: Kondisonair <" . $from . ">";
-  mail($to,$subject,$message, $headers);
+  //mail($to,$subject,$message, $headers);
 
   // autologin enquanto email nao funciona
   if (!isset($_SESSION)) session_start();
@@ -180,7 +217,7 @@ if($_GET['action']=='signup'){
 
   header('Location: index.php?page=confirmation');
   die();
-};
+}
 
 if($_GET['action']=='validateMail'){
   
@@ -273,6 +310,7 @@ switch($page){
     case 'phrases': $tituloPagina .= ' - '._t('Frases'); break;
     case 'editphrase': $tituloPagina .= ' - '._t('Frase'); break;
     case 'phrase': $tituloPagina .= ' - '._t('Frase'); break;
+    // case 'confirmation': $tituloPagina .= ' - '._t('Confirmação'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -964,8 +1002,8 @@ function getInfoPalavraFromID($pid){
   else $mylang = 1; //1=ptbr 5=id_eng ?
 
 
-  $qry = "SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-        r.detalhes as refDesc, g.gloss as cgloss, c.nome as cnome,
+  $qry = "SELECT p.* d.descricao as referente, r.id as refid, c.id as clid,
+        d.detalhes as refDesc, g.gloss as cgloss, c.nome as cnome,
       (SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$pid." AND id_escrita = 
           (SELECT id FROM escritas WHERE padrao = 1 AND id_idioma = p.id_idioma LIMIT 1) 
           LIMIT 1) as nativa  
@@ -974,13 +1012,14 @@ function getInfoPalavraFromID($pid){
       LEFT JOIN classes c ON p.id_classe = c.id
       LEFT JOIN glosses g ON c.id_gloss = g.id
       LEFT JOIN referentes r ON pr.id_referente = r.id  
+      LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$mylang."'
       WHERE p.id = ".$pid."  
       AND p.id_forma_dicionario = 0;";
   $a = mysqli_query($GLOBALS['dblink'],$qry) or die(mysqli_error($GLOBALS['dblink']));
 
   if (mysqli_num_rows($a)<1){
-    $qry = "SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-            r.detalhes as refDesc, g.gloss as cgloss, c.nome as cnome,
+    $qry = "SELECT p.*,d.descricao as referente, r.id as refid, c.id as clid,
+            d.detalhes as refDesc, g.gloss as cgloss, c.nome as cnome,
           (SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$pid." AND id_escrita = 
                 (SELECT id FROM escritas WHERE padrao = 1 AND id_idioma = p.id_idioma LIMIT 1) 
                 LIMIT 1) as nativa  
@@ -990,6 +1029,7 @@ function getInfoPalavraFromID($pid){
             LEFT JOIN glosses g ON c.id_gloss = g.id
           LEFT JOIN palavras_referentes pr ON pr.id_palavra = dic.id 
             LEFT JOIN referentes r ON pr.id_referente = r.id 
+            LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$mylang."'
         WHERE p.id = ".$pid." ;";
             
     $a = mysqli_query($GLOBALS['dblink'],$qry) or die(mysqli_error($GLOBALS['dblink']));
@@ -1665,26 +1705,28 @@ function getInfoPalavra($res,$entrada,$geto){
     $pnd = "";
     $pnq = "";
   };
-  $a = mysqli_query($GLOBALS['dblink'],"SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-        r.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome  
+  $a = mysqli_query($GLOBALS['dblink'],"SELECT p.*,d.descricao as referente, r.id as refid, c.id as clid,
+        d.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome  
       FROM palavras p
       LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
       LEFT JOIN classes c ON p.id_classe = c.id
       LEFT JOIN glosses g ON c.id_gloss = c.id
       LEFT JOIN referentes r ON pr.id_referente = r.id ".$pnp." 
+      LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$mylang."'
       WHERE ".$filtroTipo." p.id_idioma = ".$geto."  
       AND p.id_forma_dicionario = 0;") or die(mysqli_error($GLOBALS['dblink']));
       
   //não achou a palavra exata: buscar formas derivadas
   if (mysqli_num_rows($a)<1){
-    $sql = "SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-            r.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome  
+    $sql = "SELECT p.*,d.descricao as referente, r.id as refid, c.id as clid,
+            d.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome  
             FROM palavras p
             LEFT JOIN palavras dic ON p.id_forma_dicionario = dic.id
             LEFT JOIN classes c ON p.id_classe = c.id
             LEFT JOIN glosses g ON c.id_gloss = c.id
           LEFT JOIN palavras_referentes pr ON pr.id_palavra = dic.id 
             LEFT JOIN referentes r ON pr.id_referente = r.id ".$pnd." 
+          LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$mylang."'
         WHERE ".$filtroDeriv." dic.id_idioma = ".$geto." 
             AND dic.id_forma_dicionario = 0;";
             
@@ -1694,13 +1736,14 @@ function getInfoPalavra($res,$entrada,$geto){
   //ainda não achou a palavra exata: buscar outras parecidas
   if (mysqli_num_rows($a)<1){
     $orig['exata'] = 0;
-    $sql = "SELECT p.*,r.descricao as referente, r.id as refid, c.id as clid,
-            r.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome 
+    $sql = "SELECT p.*,d.descricao as referente, r.id as refid, c.id as clid,
+            d.detalhes as refDesc, ".$pnq." g.gloss as cgloss, c.nome as cnome 
         FROM palavras p
         LEFT JOIN palavras_referentes pr ON pr.id_palavra = p.id 
         LEFT JOIN classes c ON p.id_classe = c.id
         LEFT JOIN glosses g ON c.id_gloss = c.id
         LEFT JOIN referentes r ON pr.id_referente = r.id ".$pnp." 
+        LEFT JOIN referentes_descricoes d ON d.id_referente = r.id AND id_idioma = '".$mylang."'
         WHERE ".$filtroLike." p.id_idioma = ".$geto."  
         ORDER BY p.id_forma_dicionario;";
     $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
@@ -3310,7 +3353,9 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
                     LEFT JOIN gloss_itens gi ON gi.id_item = i.id
                     LEFT JOIN glosses g ON gi.id_gloss = g.id 
                   WHERE ip.id_palavra = p.id AND usar = 1 ) as flexgloss,
-              (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
+              (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic,
+              (SELECT GROUP_CONCAT(pr.id_referente SEPARATOR '.') FROM palavras_referentes pr
+                  WHERE pr.id_palavra = p.id) as refs 
             FROM palavras p
               LEFT JOIN classes c ON p.id_classe = c.id 
               LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
@@ -3329,6 +3374,7 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
           $minigloss = '?';  // $minigloss : minigloss
           $palDesc++;
           $pids = '0,';
+          $refs = '';
         }else{
           $palCon++;
           // if > 1, pegar todos os pid com vírgula
@@ -3343,6 +3389,7 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
             $sig = $qpid['significado'];
             $dic = $qpid['dic'];
             $ggen = $gen = '';
+            $refs = $qpid['refs'];
 
             if ($qpid['genero'] != '') $gen = ' '.$qpid['genero'];
             if ($qpid['ggloss'] != '') $ggen = '.'.$qpid['ggloss'];
@@ -3405,9 +3452,9 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
         //if($e['id_fonte']==3) $pnat = getSpanPalavraNativa($p,$e['eid'],$e['id_fonte'],$e['tamanho']); else $pnat = $p;
         $pnat = getSpanPalavraNativa($p,$eid,$fonte,$tamanho);
 
-        $textoLinha .= '<div onclick="cpk(\''.substr($pids,0,-1).'\','.$pst.','.$aid.',\''.$p.'\',\''.str_replace(',','-',$pid).'\',this)" 
+        $textoLinha .= '<div onclick="cpk(\''.substr($pids,0,-1).'\','.$pst.','.$aid.',\''.$p.'\',\''.str_replace(',','-',$pid).'\',this,\''.$refs.'\')" 
            title="'.$popup.'"
-          class="pstat-'.$pst.' pstud pstud-'.str_replace(',','-',$pid).'">'.$pnat.'<div class="sGl">'.$minigloss.'</div></div>';
+          class="pstat-'.$pst.' pstud pstud-'.str_replace(',','-',$pid).' r'.str_replace('.'," r",$refs).'">'.$pnat.'<div class="sGl">'.$minigloss.'</div></div>';
       } // data-bs-html="true" data-bs-trigger="hover" data-bs-toggle="popover"
       
 
@@ -3458,9 +3505,9 @@ function getFullStudyText($id) {
 
   $textoSentencas = $e['texto'];
 
-  $separadorPalavras = preg_split('//u', $e['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [];
+  $separadorPalavras = preg_split('//u', $e['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [" "];
 
-  $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: [];
+  $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: ["\n"];
   foreach ($iniciadoresPalavras as $sep){
     $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
   }
@@ -3932,26 +3979,64 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   }
 
   if ($_GET['action'] == 'ajaxGravarReferente') {
-      if ($_GET['rid'] > 0) {
-          $sql = "UPDATE referentes SET
-              descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
-              descricaoPort = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoPort'])."',
-              descricaoEo = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoEo'])."',
-              descricaoJp = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoJp'])."',
-              detalhes = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['detalhes'])."'
-              WHERE id = ".$_GET['rid'].";";
-      } else {
-          $sql = "INSERT INTO referentes SET
-              id = ".generateId().",
-              descricao = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'])."',
-              descricaoPort = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoPort'])."',
-              descricaoEo = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoEo'])."',
-              descricaoJp = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricaoJp'])."',
-              detalhes = '".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['detalhes'])."';";
+    $rid = intval($_GET['rid']);
+    mysqli_begin_transaction($GLOBALS['dblink']);
+
+      foreach ($_POST as $key => $value) {
+          if (strpos($key, 'd') === 0 && $value !== '') {
+              $id_idioma = intval(substr($key, 1));
+              $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $value);
+              $detalhes = $_POST['m'.$id_idioma] ? mysqli_real_escape_string($GLOBALS['dblink'], $_POST['m'.$id_idioma]) : null;
+
+              $check_sql = "SELECT id FROM referentes_descricoes WHERE id_referente = ? AND id_idioma = ?";
+              $stmt = mysqli_prepare($GLOBALS['dblink'], $check_sql);
+              mysqli_stmt_bind_param($stmt, 'ii', $rid, $id_idioma);
+              mysqli_stmt_execute($stmt);
+              $result = mysqli_stmt_get_result($stmt);
+
+              if (mysqli_num_rows($result) > 0) {
+                  $update_sql = "UPDATE referentes_descricoes SET descricao = ?, detalhes = ? WHERE id_referente = ? AND id_idioma = ?";
+                  $stmt = mysqli_prepare($GLOBALS['dblink'], $update_sql);
+                  mysqli_stmt_bind_param($stmt, 'ssii', $descricao, $detalhes, $rid, $id_idioma);
+                  mysqli_stmt_execute($stmt);
+              } else {
+                  $insert_sql = "INSERT INTO referentes_descricoes (id, id_referente, id_idioma, descricao, detalhes) VALUES (?, ?, ?, ?, ?)";
+                  $stmt = mysqli_prepare($GLOBALS['dblink'], $insert_sql);
+                  mysqli_stmt_bind_param($stmt, 'iiiss', generateId(), $rid, $id_idioma, $descricao, $detalhes);
+                  mysqli_stmt_execute($stmt);
+              }
+              mysqli_stmt_close($stmt);
+          }
       }
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo mysqli_insert_id($GLOBALS['dblink']) ?: $_GET['rid'];
-      exit();
+
+      $idiomas_enviados = [];
+      foreach ($_POST as $key => $value) {
+          if (strpos($key, 'd') === 0 && $value !== '') {
+              $idiomas_enviados[] = intval(substr($key, 1));
+          }
+      }
+      $idiomas_enviados_str = empty($idiomas_enviados) ? '0' : implode(',', $idiomas_enviados);
+      $delete_sql = "DELETE FROM referentes_descricoes WHERE id_referente = ? AND id_idioma NOT IN ($idiomas_enviados_str)";
+      $stmt = mysqli_prepare($GLOBALS['dblink'], $delete_sql);
+      mysqli_stmt_bind_param($stmt, 'i', $rid);
+      mysqli_stmt_execute($stmt);
+      mysqli_stmt_close($stmt);
+
+      if ($rid > 0) {
+          $update_referente_sql = "UPDATE referentes SET modificado = NOW() WHERE id = ?";
+          $stmt = mysqli_prepare($GLOBALS['dblink'], $update_referente_sql);
+          mysqli_stmt_bind_param($stmt, 'i', $rid);
+          mysqli_stmt_execute($stmt);
+          mysqli_stmt_close($stmt);
+      } else {
+          $insert_referente_sql = "INSERT INTO referentes (modificado) VALUES (NOW())";
+          mysqli_query($GLOBALS['dblink'], $insert_referente_sql) or die(mysqli_error($GLOBALS['dblink']));
+          $rid = mysqli_insert_id($GLOBALS['dblink']);
+      }
+
+      mysqli_commit($GLOBALS['dblink']);
+      echo $rid;
+      die();
   }
 
   if ($_GET['action']=='ajaxGravarPalavra') {
@@ -4636,23 +4721,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die('ok');
   };
 
-  if ($_GET['action'] == 'ajaxImportarListaReferentes') {
-
-    $refs = explode("\n",$_POST['lista']);
-    $query = "INSERT INTO referentes (id,descricao,descricaoPort) VALUES ";
-    foreach($refs as $ref){
-      //echo $ref;
-      $query .= " (".generateId().",'".$ref."','".$ref."'),";
-      /*mysqli_query($GLOBALS['dblink'],"INSERT IGNORE INTO referentes SET 
-          descricao = '".$ref."',
-          descricaoPort = '".$ref."';");*/
-    }
-    $query = substr($query,0,strlen($query)-1).';';
-    mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
-
-    die('ok');
-  };
-
   if ($_GET['action'] == 'ajaxImportarListaPalavrasDicionario') {  die('0');
 
     $refs = explode("\n",$_POST['lista']);
@@ -4935,9 +5003,19 @@ if($_SESSION['KondisonairUzatorIDX']>0){
                   ('',".$_GET['iid'].",4,".generateId().");") or die(mysqli_error($GLOBALS['dblink']));
       }else{
 
-          mysqli_query($GLOBALS['dblink'],"DELETE FROM formasSilaba 
-              WHERE id_idioma = ".$_GET['iid']." 
-              AND tipo <> 0;") or die(mysqli_error($GLOBALS['dblink']));
+          mysqli_query($GLOBALS['dblink'], "
+                DELETE FROM formasSilaba 
+                WHERE id_idioma = " . intval($_GET['iid']) . " 
+                AND (tipo <> 0 OR id NOT IN (
+                    SELECT id 
+                    FROM (
+                        SELECT MIN(id) as id 
+                        FROM formasSilaba 
+                        WHERE id_idioma = " . intval($_GET['iid']) . " 
+                        AND tipo = 0
+                    ) AS sub
+                ))
+            ") or die(mysqli_error($GLOBALS['dblink']));
           mysqli_query($GLOBALS['dblink'],"DELETE FROM formaSilabaComponente 
               WHERE id_formaSilaba NOT IN(SELECT id FROM formasSilaba WHERE id_idioma = ".$_GET['iid'].");") or die(mysqli_error($GLOBALS['dblink']));
 
@@ -5004,35 +5082,16 @@ if($_SESSION['KondisonairUzatorIDX']>0){
               $snds++; $usnd = $r['id'];
               if ($r['obrigatorio']==1) 
                   echo '<a class="form-selectgroup-item btn" title="'.$r['nome'].'" draggable="true" ondragstart="dragstartHandler(event)" 
-                      onclick="rmC('.$r['id'].')" id="'.$r['simbolo'].$r['id'].'">'.$r['simbolo'].'</a>';
-                  //echo ' <a class="btn btn-success btn-rounded"  onclick="showAdicionarComp('.$r['id'].','.$f['id'].',1)">'.$r['simbolo'].'</a> ';
+                      onclick="rmC(\''.$r['id'].'\')" id="'.$r['simbolo'].$r['id'].'">'.$r['simbolo'].'</a>';
               else
                   echo '<a class="form-selectgroup-item btn" title="'.$r['nome'].'" draggable="true" ondragstart="dragstartHandler(event)" 
-                      onclick="rmC('.$r['id'].')" id="'.$r['simbolo'].$r['id'].'">('.$r['simbolo'].')</a>';
-                  //echo ' <a class="btn btn-success btn-rounded"  onclick="showAdicionarComp('.$r['id'].','.$f['id'].',0)">('.$r['simbolo'].')</a> ';
+                      onclick="rmC(\''.$r['id'].'\')" id="'.$r['simbolo'].$r['id'].'">('.$r['simbolo'].')</a>';
           }
-          if ($snds > 0) echo '<a onclick="clrS('.$usnd.')" class="form-selectgroup-item btn btn-sm btn-danger">x</a>';
+          if ($snds > 0) echo '<a onclick="clrS(\''.$usnd.'\')" class="form-selectgroup-item btn btn-sm btn-danger">x</a>';
       }
 
       echo'</div></div></div>';
       echo'</div></div>';
-
-      /*
-      $result = mysqli_query($GLOBALS['dblink'],"SELECT f.*, c.simbolo FROM formaSilabaComponente f
-          LEFT JOIN classesSom c ON ( f.id_classeSom = c.id )
-        WHERE f.id_formaSilaba = ".$f['id']." ORDER BY f.ordem;") or die(mysqli_error($GLOBALS['dblink']));
-      //0=geral, 1=inicial, 2=medial, 3=final, 4=monosilabas
-      if(mysqli_num_rows($result)>0){ //0=geral, 1=inicial, 2=medial, 3=final, 4=monosilabas
-        //echo 'Principal ';
-        while($r = mysqli_fetch_assoc($result)) { 
-          if ($r['obrigatorio']==1) 
-            echo ' <a class="btn btn-success btn-rounded"  onclick="showAdicionarComp('.$r['id'].','.$f['id'].',1)">'.$r['simbolo'].'</a> ';
-          else
-            echo ' <a class="btn btn-success btn-rounded"  onclick="showAdicionarComp('.$r['id'].','.$f['id'].',0)">('.$r['simbolo'].')</a> ';
-        }
-        echo '<a class="btn btn-xs btn-info btn-rounded btnAddComp"  onClick="showAdicionarComp(0,'.$f['id'].',1)">Adicionar</a>';
-      }
-      */
 
     }
 
@@ -5040,6 +5099,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   };
 
   if ($_GET['action'] == 'ajaxSetComponenteSilaba') { 
+
+      if($_POST['to']>5) die('ok');
 
       // if tipo == r > remover pelo GET id
       if($_GET['tipo']=='r'){
@@ -5268,7 +5329,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     if($fonte == 3) echo '<div class="mt-3">
           <div id="tmpdrawchar"></div>
-          <button class="btn btn-primary" type="button" data-bs-dismiss="offcanvas" onclick="exibirNativa('.$eid.',$(\'#tempNat\').val(),'.$fonte.',\''.$tamanho.'\')">
+          <button class="btn btn-primary" type="button" data-bs-dismiss="offcanvas" onclick="exibirNativa(\''.$eid.'\',$(\'#tempNat\').val(),\''.$fonte.'\',\''.$tamanho.'\')">
           '._t('Ok').'
           </button>
         </div>';
@@ -6272,20 +6333,14 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   };
 
   if ($_GET['action'] == 'getOptionsReferentes') {
-      $sql = "SELECT r.*, 
-          (SELECT GROUP_CONCAT(p.significado SEPARATOR ';') FROM palavras p LEFT JOIN palavras_referentes pr ON p.id = pr.id_palavra
-            WHERE pr.id_referente = r.id
-            AND p.id_idioma = ".$_SESSION['KondisonairUzatorDiom']." AND p.id_forma_dicionario = 0) as significado 
-          FROM referentes r;";
+      $sql = "SELECT r.id, d.descricao, d.detalhes
+          FROM referentes r
+          LEFT JOIN referentes_descricoes d ON d.id_referente = r.id
+          WHERE id_idioma = '".$_SESSION['KondisonairUzatorDiom']."';";
 
       $result = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
       while($r = mysqli_fetch_assoc($result)){
-
-          //echo '<option value="'.$r['id'].'"  title="'.$r['significado'].'">'.$r['romanizacao'].' ('.$r['descricao'].')<option>';
-          if ($r['significado']!='')
-              echo '<option value="'.$r['id'].'" title="'.$r['detalhes'].'">'.$r['significado'].' ('.$r['descricao'].')</option>';
-          else 
-              echo '<option value="'.$r['id'].'" title="'.$r['detalhes'].'">'.$r['descricao'].'</option>';
+          echo '<option value="'.$r['id'].'" title="'.$r['detalhes'].'">'.$r['descricao'].'</option>';
       };
       die();
   };
@@ -7826,7 +7881,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action'] == 'salvarPalavraNativa') die('not_user');
   if ($_GET['action'] == 'ajaxGravarOpcaoPadrao')  die('not_user');
   if ($_GET['action'] == 'ajaxApagarListaSC') die('not_user');
-  if ($_GET['action'] == 'ajaxImportarListaReferentes')  die('not_user');
   if ($_GET['action'] == 'ajaxImportarListaPalavrasDicionario')  die('not_user');
   if ($_GET['action'] == 'ajaxImportarListaDicionario')  die('not_user');
   if ($_GET['action'] == 'ajaxResetarRegras')  die('not_user');
@@ -8045,8 +8099,12 @@ function getLastChange($tipo,$id = null) { // lastupdated
       return $l['d'] ? $l['d'] : 0;
   }else if($tipo=='ref'){
 
-      // geral
-      return '1';
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(modificado, '%Y%m%d%H%i%s') as d 
+              FROM referentes
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
 
   }else if($tipo=='entities'){ //xxxxx falta
 
@@ -8620,24 +8678,6 @@ if ($_GET['action'] == 'listarConcordancias') { // otimizar sql queries
     die();
 };
 
-if ($_GET['action'] == 'listarReferentes') {
-  $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM referentes;") or die(mysqli_error($GLOBALS['dblink']));
-  echo '<table id="tabelaPalavras" data-ride="datatables" class="table table-m-b-none">
-        <thead><tr><th>English</th><th>Português</th><th>X</th></tr></thead><tbody>';
-  while($r = mysqli_fetch_assoc($result)){
-
-    echo "<tr id='row_".$r['id']."'><td onClick='abrirPalavra(\"".$r['id']."\")'>".$r['descricao']."</td>
-            <td onClick='abrirPalavra(\"".$r['id']."\")'>".$r['descricaoPort']."</td>
-        <td><a class='btn btn-sm btn-primary' onClick='apagarPalavra(\"".$r['id']."\")'>X</a></td></tr>";
-  };
-  echo '</tbody></table><script>$("#tabelaPalavras").DataTable({
-          paging: false,
-          "scrollY": "500px",
-          "scrollCollapse": true 
-      });</script>';
-    die();
-};
-
 if ($_GET['action'] == 'ajaxGetRaizes') {
   $romanizacao = 0;
   $result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, (SELECT e.id FROM escritas e WHERE e.id_idioma = i.id AND e.padrao = 1) as escrita FROM idiomas i WHERE i.id = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
@@ -8668,32 +8708,6 @@ if ($_GET['action'] == 'ajaxGetRaizes') {
       }
 
   }
-  die();
-};
-
-if ($_GET['action'] == 'ajaxGetReferentes') {
-  $sql = "SELECT r.*, p.significado FROM referentes r
-              LEFT JOIN palavras_referentes pr ON r.id = pr.id_referente
-                LEFT JOIN palavras p ON p.id = pr.id_palavra
-            WHERE p.id_idioma = ".$_SESSION['KondisonairUzatorDiom']." AND p.id_forma_dicionario = 0;";
-
-  $sql = "SELECT r.*, 
-      (SELECT p.significado FROM palavras p LEFT JOIN palavras_referentes pr ON p.id = pr.id_palavra
-        WHERE pr.id_referente = r.id
-        AND p.id_idioma = ".$_SESSION['KondisonairUzatorDiom']." AND p.id_forma_dicionario = 0) as significado 
-      FROM referentes r;";
-  //$sql = "SELECT * FROM referentes;";
-  
-  $result = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-  while($r = mysqli_fetch_assoc($result)){
-
-    //echo '<option value="'.$r['id'].'"  title="'.$r['significado'].'">'.$r['romanizacao'].' ('.$r['descricao'].')<option>';
-    if ($r['significado']!='')
-      echo '<option value="'.$r['id'].'" title="'.$r['detalhes'].'">'.$r['significado'].' ('.$r['descricao'].')</option>';
-    else 
-      echo '<option value="'.$r['id'].'" title="'.$r['detalhes'].'">'.$r['descricao'].'</option>';
-  };
-
   die();
 };
 
@@ -8992,28 +9006,31 @@ if ($_GET['action'] == 'getSintazBazic') {
 
 if ($_GET['action'] == 'getDetalhesReferente') {
 
-  $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM referentes 
-    WHERE id = ".$_GET['rid']." LIMIT 1;");
+  $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM referentes_descricoes 
+    WHERE id_referente = ".$_GET['rid'].";");
   $rows = array();
     while($r = mysqli_fetch_assoc($result)) {
-      $rows[] = $r;
+      $rows['d'.$r['id_idioma']] = $r['descricao'];
+      $rows['m'.$r['id_idioma']] = $r['detalhes'];
     }
 
   print json_encode($rows);
   die();
 };
 
-if ($_GET['action'] == 'listReferentes') {
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM referentes;") or die(mysqli_error($GLOBALS['dblink']));
+if ($_GET['action'] == 'listReferentes') { //xxxxx remover descricao een e ptbr
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT r.id, d.detalhes, d.descricao FROM referentes r 
+          LEFT JOIN referentes_descricoes d ON d.id_referente = r.id
+          AND id_idioma = '".$_SESSION['KondisonairUzatorDiom']."';") or die(mysqli_error($GLOBALS['dblink']));
     while ($r = mysqli_fetch_assoc($result)) {
         echo '<div class="list-group-item" id="row_'.$r['id'].'"><div class="row">
           <div class="col" onClick="abrirReferente(\''.$r['id'].'\')">
-            <a href="#" >'.$r['descricao'].' - '.$r['descricaoPort'].'</a> 
+            <a href="#" >'.$r['descricao'].'</a> 
             <a class="text-body text-secondary">'.$r['detalhes'].'</a> 
           </div><div class="col-auto"><a class="btn btn-sm btn-danger" onclick="delReferente(\''.$r['id'].'\')">X</a></div>
         </div></div>';
   } 
-    die();
+  die();
 }
 
 if ($_GET['action'] == 'getDetalhesClasse') {
@@ -12076,10 +12093,6 @@ function gerarSelectIdiomas($id_select, $idioma_selecionado, $onchange = '', $us
 
 if ($_GET['action'] == 'exportarIdioma') {
 
-    /*
-      - se é o dono, pode exportar dados privados ou não (artigos não publicados, campo privado em frases, textos e palavras, etc) - ter opção/flag
-    */
-
     class LanguageExporter {
         private $mysqli;
         private $languageId;
@@ -12112,9 +12125,12 @@ if ($_GET['action'] == 'exportarIdioma') {
                 throw new Exception('Language not found or access denied');
             }
 
+            // se é o dono, pode exportar tudinho, senão só dados públicos
+            if ( $this->userId == $data['idiomas']['id_usuario']) $isOwner = true;
+
             // Direct relations (tables with id_idioma)
             $directTables = [
-                'artygs' => 'SELECT * FROM artygs WHERE id_idioma = ? AND publico = 1',
+                'artygs' => 'SELECT * FROM artygs WHERE id_idioma = ?' . ( $isOwner ? '' : ' AND publico = 1' ),
                 'blocos' => 'SELECT * FROM blocos WHERE id_idioma = ?',
                 'classes' => 'SELECT * FROM classes WHERE id_idioma = ?',
                 'classesSom' => 'SELECT * FROM classesSom WHERE id_idioma = ?',
@@ -12127,7 +12143,7 @@ if ($_GET['action'] == 'exportarIdioma') {
                 'ipaTitulos' => 'SELECT * FROM ipaTitulos WHERE id_idioma = ?',
                 'palavras' => 'SELECT * FROM palavras WHERE id_idioma = ?',
                 'sonsPersonalizados' => 'SELECT * FROM sonsPersonalizados WHERE id_idioma = ?',
-                'soundChanges' => 'SELECT * FROM soundChanges WHERE id_idioma = ? AND publico = 1',
+                'soundChanges' => 'SELECT * FROM soundChanges WHERE id_idioma = ?' . ( $isOwner ? '' : ' AND publico = 1' ) ,
                 'studason_tests' => 'SELECT * FROM studason_tests WHERE id_idioma = ? AND num_palavras > 0',
                 'formasSilaba' => 'SELECT * FROM formasSilaba WHERE id_idioma = ?',
                 'nivelUsoPalavra' => 'SELECT * FROM nivelUsoPalavra WHERE id_idioma = ?'
@@ -12222,7 +12238,7 @@ if ($_GET['action'] == 'exportarIdioma') {
                 $placeholdersItens = !empty($itensConcordancias) ? implode(',', array_fill(0, count($itensConcordancias), '?')) : '0';
                 $placeholdersGeneros = !empty($generos) ? implode(',', array_fill(0, count($generos), '?')) : '0';
                 $data['itens_flexoes'] = $this->fetchAll(
-                    "SELECT * FROM itens_flexoes WHERE id_concordancia IN ($placeholdersConc) OR id_item IN ($placeholdersItens) OR id_genero IN ($placeholdersGeneros)",
+                    "SELECT * FROM itens_flexoes WHERE id_concordancia IN ($placeholdersConc) AND id_item IN ($placeholdersItens) AND (id_genero IN ($placeholdersGeneros) OR id_genero = 0)",
                     array_merge($concordancias, $itensConcordancias, $generos)
                 );
             } else {
@@ -12288,6 +12304,17 @@ if ($_GET['action'] == 'exportarIdioma') {
                 );
             } else {
                 $data['flexoes'] = [];
+            }
+
+            $generos = array_column($data['generos'], 'id');
+            if (!empty($generos)) {
+                $placeholders = implode(',', array_fill(0, count($generos), '?'));
+                $data['classesGeneros'] = $this->fetchAll(
+                    "SELECT * FROM classesGeneros WHERE id_genero IN ($placeholders)",
+                    $generos
+                );
+            } else {
+                $data['classesGeneros'] = [];
             }
 
             $userIds = [$data['idiomas']['id_usuario']];
@@ -12480,7 +12507,7 @@ if ($_GET['action'] == 'exportarIdioma') {
     die();
 };
 
-if ($_GET['action'] == 'apagarIdioma') { // apagar arquivos
+if ($_GET['action'] == 'apagarIdioma') {
     ob_start();
 
     ini_set('default_charset', 'UTF-8');
@@ -12630,7 +12657,8 @@ if ($_GET['action'] == 'apagarIdioma') { // apagar arquivos
             'significados_idiomas' => "DELETE FROM significados_idiomas WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
             'sons_classes' => "DELETE FROM sons_classes WHERE id_classeSom IN (SELECT id FROM classesSom WHERE id_idioma = ?)",
             'teclas' => "DELETE FROM teclas WHERE id_inventario IN (SELECT id FROM inventarios WHERE id_idioma = ?)",
-            'artyg_dest' => "DELETE FROM artyg_dest WHERE id_artyg IN (SELECT id FROM artygs WHERE id_idioma = ?)"
+            'artyg_dest' => "DELETE FROM artyg_dest WHERE id_artyg IN (SELECT id FROM artygs WHERE id_idioma = ?)",
+            'classesGeneros' => "DELETE FROM classesGeneros WHERE id_genero IN (SELECT id FROM generos WHERE id_idioma = ?)"
         ];
 
         $stmt = $mysqli->prepare("
@@ -12896,35 +12924,19 @@ if ($_GET['action'] == 'importarIdioma') {
         if (!isset($data['idiomas']) || empty($data['idiomas'])) {
             throw new Exception('Missing idiomas data');
         }
-        $data['idiomas']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
+        // $data['idiomas']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
         upsertRecords($mysqli, 'idiomas', [$data['idiomas']], $stats);
         $newIdiomaId = $data['idiomas']['id'];
 
-        if ($userId != $data['usuarios'][0]['id']) { // Only add if logged-in user is not the creator
-
-            // Import usuarios (single record)
-            if (!isset($data['usuarios']) || empty($data['usuarios'])) {
-                throw new Exception('Missing usuarios data');
-            }
-            upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
-
-            // Check for existing collab record
-            if (!checkExistingCollab($mysqli, $userId, $newIdiomaId)) {
-                $collabId = generateId(); // Assuming generateId() returns a unique ID
-                $collabRecord = [
-                    'id' => $collabId,
-                    'id_idioma' => $newIdiomaId,
-                    'id_usuario' => $userId
-                ];
-                upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
-            } else {
-                $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on language $newIdiomaId)";
-            }
+        if (!isset($data['usuarios']) || empty($data['usuarios'])) {
+            throw new Exception('Missing usuarios data');
         }
+        upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
 
         $allTables = [
             'artygs',
             'blocos',
+            'collabs',
             'classes',
             'classesSom',
             'concordancias',
@@ -12956,23 +12968,35 @@ if ($_GET['action'] == 'importarIdioma') {
             'palavras_usos',
             'significados_idiomas',
             'sons_classes',
-            'teclas'
+            'teclas',
+            'classesGeneros'
         ];
 
         foreach ($allTables as $table) {
             if (isset($data[$table]) && !empty($data[$table])) {
-                if ($table != 'collabs') { // Skip collabs, handled above
-                    foreach ($data[$table] as &$row) {
-                        if (isset($row['id_idioma'])) {
-                            $row['id_idioma'] = $newIdiomaId;
-                        }
+                foreach ($data[$table] as &$row) {
+                    if (isset($row['id_idioma'])) {
+                        $row['id_idioma'] = $newIdiomaId;
                     }
-                    upsertRecords($mysqli, $table, $data[$table], $stats);
                 }
+                upsertRecords($mysqli, $table, $data[$table], $stats);
             }
         }
 
-        // Dynamically build upload directories based on ZIP contents
+        if ($userId != $data['idiomas']['id_usuario']) {
+            if (!checkExistingCollab($mysqli, $userId, $newIdiomaId)) {
+                $collabId = generateId();
+                $collabRecord = [
+                    'id' => $collabId,
+                    'id_idioma' => $newIdiomaId,
+                    'id_usuario' => $userId
+                ];
+                upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
+            } else {
+                $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on language $newIdiomaId)";
+            }
+        }
+
         $uploadDirs = [];
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $filename = $zip->getNameIndex($i);

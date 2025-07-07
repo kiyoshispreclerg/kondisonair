@@ -156,7 +156,7 @@
                           ORDER BY i.data_modificacao DESC LIMIT 4;") or die(mysqli_error($GLOBALS['dblink']));
                         
                         // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
-                        if (mysqli_num_rows($res)==0) { echo _t('<div class="col-md-6 col-lg-3">Nada aqui.</div>'); }else{
+                        if (mysqli_num_rows($res)==0) { echo '<div class="col-md-6 col-lg-3">'._t('Nada aqui.').'</div>'; }else{
                           while($r = mysqli_fetch_assoc($res)) { 
 
                             $nat=''; $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';

@@ -59,23 +59,23 @@ while($r = mysqli_fetch_assoc($result)) {
                     <div class="row g-3">
                       <div class="col-md">
                         <div class="form-label"><?=_t('Nome')?></div>
-                        <input type="text" class="form-control" id="nome_completo"  value="<?=$usuario['nome_completo']?>">
+                        <input type="text" class="form-control" id="nome_completo"  value="<?=$usuario['nome_completo']?>" onchange="$('#btnSalvar').show()">
                       </div>
                       <div class="col-md">
                         <div class="form-label"><?=_t('Usuário')?></div>
-                        <input type="text" class="form-control" id="usuario" value="<?=$usuario['username']?>">
+                        <input type="text" class="form-control" id="usuario" value="<?=$usuario['username']?>" onchange="$('#btnSalvar').show()">
                       </div>
                       <div class="col-md">
                         <div class="form-label"><?=_t('Idioma')?></div>
                         <?php
-                          echo gerarSelectIdiomas('nativo', $usuario['id_idioma_nativo'], 'gravarOpsons()', true);
+                          echo gerarSelectIdiomas('nativo', $usuario['id_idioma_nativo'], '$(\'#btnSalvar\').show()"', true);
                         ?>
                       </div>
                     </div>
 
                     <div class="col-md mt-4">
                       <div class="form-label"><?=_t('Sobre')?></div>
-                      <input type="text" class="form-control" id="descricao"  value="<?=$usuario['descricao']?>">
+                      <input type="text" class="form-control" id="descricao"  value="<?=$usuario['descricao']?>" onchange="$('#btnSalvar').show()">
                     </div>
 
                     <h3 class="card-title mt-4"><?=_t('Senha')?></h3>
@@ -95,7 +95,7 @@ while($r = mysqli_fetch_assoc($result)) {
                   </div>
                   <div class="card-footer bg-transparent mt-auto">
                     <div class="btn-list justify-content-end">
-                      <a href="#" class="btn btn-primary" onclick="gravarOpsons()">
+                      <a href="#" class="btn btn-primary" id="btnSalvar" onclick="gravarOpsons()">
                         <?=_t('Salvar')?>
                       </a>
                     </div>
@@ -119,7 +119,7 @@ function gravarOpsons(){
             email: $('#email').val()
         }, function (data){
         if ($.trim(data) == 'ok'){
-            //alert('ok');//window.location = "dash.php?ason=opsons";
+            $('#btnSalvar').hide();
         }else{
           if ($.trim(data)=='user') alert('<?=_t('Nome de usuário já existe')?>');
           else alert(data);
@@ -149,6 +149,8 @@ function changePassword(){
         }
     });
 };
+
+$('#btnSalvar').hide();
 </script>
 
 

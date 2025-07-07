@@ -89,7 +89,7 @@ if ($id_frase > 0 || $id_idioma > 0) {
         $languages[] = $row;
     }
 }
-    $id_original = $dadosFrase['id_original'] ?? $_GET['original'] ?? 0;
+$id_original = $data['id_original'] ?? $_GET['original'] ?? 0;
 ?>
 
 <?php if ($id_frase > 0 || $id_idioma > 0) { ?>
@@ -150,7 +150,7 @@ if ($id_frase > 0 || $id_idioma > 0) {
                             } else {
                                 echo '<div class="mb-3">
                                         <label class="form-label">' . _t('Frase original em %1', [$data_original['nome_legivel']]) . '</label>
-                                        <input value="'.$data_original['frase'].'" readonly type="text" class="form-control escrita_nativa custom-font-' . $data_original['eid'] . '" id="escrita_nativa_' . $data_original['eid'] . '"></div>';
+                                        <input value="'.$data_original['frase'].'" readonly disabled type="text" class="form-control escrita_nativa custom-font-' . $data_original['eid'] . '" id="escrita_nativa_' . $data_original['eid'] . '"></div>';
                             }
                         ?>
                         <?php } ?>

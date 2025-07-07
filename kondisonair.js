@@ -1493,7 +1493,7 @@ function checarDigitacao(iid, ipaInput) {
     return uniqueResults.length > 0 ? uniqueResults : [ipaInput];
 }
 
-function importLanguage() {
+function importLanguage(el) {
     const fileInput = document.getElementById('languageFile');
     if (!fileInput.files || fileInput.files.length === 0) {
         $('#importStatus').html(
@@ -1504,6 +1504,9 @@ function importLanguage() {
         );
         return;
     }
+
+    $('#importStatus').html('<div class="loaderSpin"></div>');
+    $(el).parent().hide();
 
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
@@ -1535,6 +1538,7 @@ function importLanguage() {
                 '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
                 '</div>'
             );
+             $(el).parent().show(); 
         }
     });
 }

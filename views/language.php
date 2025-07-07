@@ -234,7 +234,7 @@ function listFormat(json){
               </div>
           </div></div>`;
     });
-    return html ? html : 'Nenhuma palavra.';
+    return html ? html : '<div class="list-group-item">Nenhuma palavra.</div>';
 }
 function loadWords(){
 
@@ -263,7 +263,7 @@ function phrasesFormat(json){
                         </div>
                     </div></div>`;
     });
-    return html ? html : 'Nenhuma frase.';
+    return html ? html : '<div class="list-group-item">Nenhuma frase.</div>';
 };
 
 function loadFrases(){
