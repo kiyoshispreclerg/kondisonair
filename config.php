@@ -26,7 +26,7 @@ function generateId($tabela = null) { // se vier tabela, conferir q id não exis
 $tituloPagina = 'Kondisonair';
 $versaoK1 = 0; // release
 $versaoK2 = 1; // major step
-$versaoK3 = 12; // fixes
+$versaoK3 = 14; // fixes
 
 $idiomas_sistema = [
     1 => 'Português brasileiro',

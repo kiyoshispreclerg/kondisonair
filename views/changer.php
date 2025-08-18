@@ -96,16 +96,16 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                       
                       <div class="mb-3">
                         <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" onchange="$('.text_classes').toggle()" <?php if (!$id_idioma > 0) echo 'checked'; ?> id="check_classes">
+                          <input class="form-check-input" type="checkbox" onchange="toggleClasses()" <?php if (!$id_idioma > 0) echo 'checked'; ?> id="check_classes">
                           <span class="form-check-label"><?=_t('Editar classes')?></span>
                         </label>
-                        <?php if ($id_idioma > 0){?><div class="text_classes"><?php echo formatCategoriesAsButtons(getSCHeader('ksc',$id_idioma,'cats')); ?></div><?php } ?>
-                        <textarea class="form-control text_classes nowrap" id="text_classes" spellcheck="false" onchange="updateDeclaredClasses('')" style="height: 12rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?php 
+                        <?php if ($id_idioma > 0){?><div class="text_classes classes_auto"><?php echo formatCategoriesAsButtons(getSCHeader('ksc',$id_idioma,'cats')); ?></div><?php } ?>
+                        <textarea class="form-control text_classes classes_input nowrap" id="text_classes" spellcheck="false" onchange="updateDeclaredClasses('')" style="height: 12rem !important;<?php if ($id_idioma > 0) echo 'display:none'; ?>"><?php 
                          echo $getClasses; ?></textarea>
                       </div>
                       <div class="mb-3">
                         <label class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" onchange="$('.text_rewrites').toggle()" <?php if (!$id_idioma > 0) echo 'checked'; ?> id="check_rewrites">
+                          <input class="form-check-input" type="checkbox" onchange="toggleRewrites()" <?php if (!$id_idioma > 0) echo 'checked'; ?> id="check_rewrites">
                           <span class="form-check-label"><?=_t('Editar substituições')?></span>
                         </label>
                         <?php if ($id_idioma > 0){?><div class="text_rewrites"></div><?php } ?>
@@ -314,11 +314,34 @@ function carregarLista(){
       return;
   }
   $.getJSON( "?action=ajaxCarregarListaSC&id="+ $('#listasc').val() , function(data){ 
-    $.each( data, function( key, val ) {
-          //$('#schanges').val(data[0].changes);
-          editor.setValue(data[0].changes);
-          tinymce.get('instrucoes').setContent(data[0].instrucoes);
-          $('#sel_motor_sc').val(data[0].motor);
+        $.each( data, function( key, val ) {
+            //$('#schanges').val(data[0].changes);
+            editor.setValue(data[0].changes);
+            tinymce.get('instrucoes').setContent(data[0].instrucoes);
+            $('#sel_motor_sc').val(data[0].motor);
+            if (data[0].substituicoes.length > 1){
+                    $('#text_rewrites').val(data[0].substituicoes);
+                    document.getElementById('check_rewrites').checked = true;
+                    //$('.text_rewrites').show();
+            }else{
+                    $('#text_rewrites').val('');
+                    document.getElementById('check_rewrites').checked = false;
+                    //$('.text_rewrites').hide();
+            }
+            if (data[0].classes.length > 1){
+                    $('#text_classes').val(data[0].classes);
+                    document.getElementById('check_classes').checked = true;
+                    //$('.text_classes').show();
+            }else{
+                    $('#text_classes').val('');
+                    document.getElementById('check_classes').checked = false;
+                    //$('.text_classes').hide();
+            }
+            toggleClasses()
+            toggleRewrites()
+          // data[0].id_momento_final
+          // data[0].id_momento_inicial
+
           <?php if ($_SESSION['KondisonairUzatorIDX']>0){ ?> 
                 if(data[0].id_usuario==<?=$_SESSION['KondisonairUzatorIDX']?>) {
                     if (data[0].publico=='0') $('#btnPublicarSC').show(); 
@@ -381,20 +404,6 @@ function reloadListas(selected = '0') {
     });
 }
 
-function reloadListasOld(selected = '0'){
-    $.get("?action=ajaxGetListasSC&iid=<?=$id_idioma?>", function (data){
-        //document.querySelector('#listasc').tomselect.clear(true);
-        $("#listasc").html( $.trim(data) );
-        $('#descricao').val('');
-        $('#btnApagarSC').hide();
-        $('#btnSalvarSC').hide();
-        $('#nomeLista').hide();
-        $('#div_listasc').show();
-        document.querySelector('#listasc').tomselect.sync()
-        document.querySelector('#listasc').tomselect.setValue(selected);
-    });
-}
-
 reloadListas();
 
 function changeMotor(){ // return;
@@ -430,6 +439,8 @@ function salvaSC(){
           l: editor.getValue(),
           ins: tinymce.get('instrucoes').getContent(), //$('#instrucoes').val(),
           titulo: $('#descricao').val(),
+          classes: document.getElementById('check_classes').checked ? $('#text_classes').val() : '',
+          rewrites: document.getElementById('check_rewrites').checked ? $('#text_rewrites').val() : '',
           motor: $('#sel_motor_sc').val()
       }, function (data){
           reloadListas($.trim(data));
@@ -1260,5 +1271,14 @@ function generateRandomRules(numRules) {
     $('#btnSalvarSC').show();
     //$('#btnApagarSC').hide();
     $('#nomeLista').hide();
+}
+
+function toggleClasses(){
+    $('.text_classes').hide()
+    if (document.getElementById('check_classes').checked) $('.classes_input').show()
+    else $('.classes_auto').show()
+}
+function toggleRewrites(){
+    $('.text_rewrites').toggle()
 }
 </script>

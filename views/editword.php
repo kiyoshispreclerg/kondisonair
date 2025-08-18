@@ -637,10 +637,11 @@
 						
 						$('#id_uso').val(data[0].id_uso); 
 						$('#significado').val(data[0].significado); 
-						tinymce.get('detalhes').setContent(data[0].detalhes);//$('#detalhes').val(data[0].detalhes); 
 						$('#privado').val(data[0].privado); 
 						//$("#modaltitle").html(data[0].pronuncia);
 						//$(".chosen-select").trigger("chosen:updated");
+
+						$('#detalhes').val(data[0].detalhes); 
 
 						$('#btnMSalvar').hide();
 
@@ -662,6 +663,7 @@
 
 						setTimeout(() => {
 							createTablerSelectNativeWords('id_forma_dicionario','<?=$fonte?>','<?=$tamanho?>');
+							tinymce.get('detalhes').setContent(data[0].detalhes);
 						}, 1000);
 				}); 
 			});

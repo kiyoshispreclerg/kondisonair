@@ -23,6 +23,7 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Separar código dinâmico do estático para permitir uso offline via Service Worker
 - Usar termos linguísticos mais corretos
 - KSC: ignorar linhas terminadas com dois pontos
+- Criador de paradigmas baseado em alterações sonoras
 
 ## Em consideração
 - Tabelas de sons personalizadas

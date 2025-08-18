@@ -575,9 +575,10 @@ async function multiProcessarFlexoes(regras, raiz, idIdioma, defCats, tb) {
         results.forEach((result, key) => { 
             if (!result) result = raiz;
             let teclas = checarDigitacao(idIdioma, result);
+            let autoSub = getAutoSubstituicao('<?=$escrita?>', teclas[0])
             tb = tb.replaceAll(`%%${key}%%`, result);
             tb = tb.replaceAll(`%%r${key}%%`, result ? teclas + ' <span class="nowrap">/' + result + '/</span>' : teclas);
-            tb = tb.replaceAll(`%%an${key}%%`, getAutoSubstituicao('<?=$escrita?>', teclas[0]) ?? '');
+            tb = tb.replaceAll(`%%an${key}%%`, autoSub?autoSub+'<br>': '');
         });
 
         $('#tabelaFlexoes').html(tb);

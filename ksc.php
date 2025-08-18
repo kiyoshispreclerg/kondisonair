@@ -98,7 +98,7 @@ function applySoundChanges($lines, $rules, $substitutions = [], $classes = [], $
     if ($rulesPerLines !== null && (!is_int($rulesPerLines) || $rulesPerLines < 1)) {
         throw new InvalidArgumentException("rulesPerLines deve ser um inteiro positivo ou null.");
     }
-    if (count($lines) > 1000 || count($rules) > 1000 || count($substitutions) > 1000 || count($classes) > 1000) {
+    if (count($lines) > 10000 || count($rules) > 1000 || count($substitutions) > 1000 || count($classes) > 1000) {
         throw new InvalidArgumentException("Número excessivo de linhas, regras, substituições ou classes.");
     }
 
@@ -384,7 +384,7 @@ function applySingleRule($word, $rule, $classes) {
                 foreach ($exclusions as $exclusion) {
 
                     $contextValid = !checkContexts($exclusion, $classes, $capturedValues, $word, $i, $srcLen, $len, $targetValue);
-                    if ($contextValid) break;
+                    if (!$contextValid) break;
                 }
             }
 
@@ -613,7 +613,7 @@ function processSource($source, $classes) {
 }
 
 function processTarget($target, $sourceGroups, $captureGroups, $source, $classes) {
-    if ($target === '~' || $target === '') {
+    if ($target === '~' || $target === '' || $target === 'ø' || $target === '0' || $target === '∅') {
         return '';
     }
 
@@ -648,8 +648,6 @@ function processTarget($target, $sourceGroups, $captureGroups, $source, $classes
                 }
             }
         }
-
-
     }
 
     if ($hasCapture || !empty($classMapping)) {
@@ -658,6 +656,8 @@ function processTarget($target, $sourceGroups, $captureGroups, $source, $classes
 
     $mapping = [];
     $targetIndex = 0;
+
+
 
     foreach ($sourceGroups as $srcGroup) {
         if ($targetIndex >= count($targetGroups) || count($sourceGroups) != count($targetGroups)) {
@@ -710,44 +710,34 @@ function processTarget($target, $sourceGroups, $captureGroups, $source, $classes
         return $mapping;
     }
 
-    if (count($sourceGroups) === count($targetGroups) && !$hasInsertion) {
-        $mapping = [];
+    // Novo mapeamento para lidar com classes e literais
+    if (count($sourceGroups) === count($targetGroups)) {
         for ($i = 0; $i < count($sourceGroups); $i++) {
             $srcGroup = $sourceGroups[$i];
             $tgtGroup = $targetGroups[$i];
 
-            if (empty($srcGroup['value']) || empty($tgtGroup['value'])) {
-                $erros[] = "KSC: Erro: Grupo vazio no source ou target. Source: " . print_r($srcGroup, true) . ", Target: " . print_r($tgtGroup, true);
-                continue;
-            }
-
-            if ($tgtGroup['type'] === 'insertion' || ($tgtGroup['type'] === 'literal' && $tgtGroup['value'][0] === '~')) {
-                $mapping[$srcGroup['value'][0]] = '';
-            } elseif ($srcGroup['type'] === 'insertion' || ($srcGroup['type'] === 'literal' && $srcGroup['value'][0] === '~')) {
-                $mapping['~'] = $tgtGroup['value'][0];
-            } elseif ($srcGroup['type'] === 'class' && $tgtGroup['type'] === 'class') { 
-                if (count($srcGroup['value']) === count($tgtGroup['value'])) {
-                    for ($j = 0; $j < count($srcGroup['value']); $j++) {
-                        $mapping[$srcGroup['value'][$j]] = $tgtGroup['value'][$j];
-                    }
-                } else {
-                    for ($j = 0; $j < count($srcGroup['value']); $j++) {
-                        $mapping[$srcGroup['value'][$j]] = $tgtGroup['value'][0];
-                    }
+            if ($srcGroup['type'] === 'class' && $tgtGroup['type'] === 'class') {
+                $srcValues = $srcGroup['value'];
+                $tgtValues = $tgtGroup['value'];
+                for ($j = 0; $j < count($srcValues); $j++) {
+                    $mapping[$srcValues[$j]] = $tgtValues[$j] ?? $srcValues[$j];
                 }
             } elseif ($srcGroup['type'] === 'literal' && $tgtGroup['type'] === 'literal') {
                 $mapping[$srcGroup['value'][0]] = $tgtGroup['value'][0];
+            } elseif ($srcGroup['type'] === 'literal' && $tgtGroup['type'] === 'insertion') {
+                $mapping[$srcGroup['value'][0]] = '';
             } elseif ($srcGroup['type'] === 'class' && $tgtGroup['type'] === 'literal') {
                 for ($j = 0; $j < count($srcGroup['value']); $j++) {
                     $mapping[$srcGroup['value'][$j]] = $tgtGroup['value'][0];
                 }
             } else {
-                $mapping[$srcGroup['value'][0]] = $tgtGroup['value'][0];
+                $erros[] = "KSC: Erro: Mapeamento inválido entre source e target. Source: " . print_r($srcGroup, true) . ", Target: " . print_r($tgtGroup, true);
             }
         }
         return $mapping;
     }
 
+    // Fallback para caso de classes não alinhadas
     if (preg_match('/^\{([^\}]+)\}(\p{M}*)$/u', $target, $match)) {
         $elements = array_map('trim', explode(',', $match[1]));
         $modifier = $match[2] ?? '';
@@ -1244,7 +1234,7 @@ function applySoundChangesByGroup($lines, $rules, $substitutions = [], $classes 
     if (count($lines) !== count($rules)) {
         throw new InvalidArgumentException("O número de linhas (" . count($lines) . ") deve ser igual ao número de grupos de regras (" . count($rules) . ").");
     }
-    if (count($lines) > 10000 || count($rules) > 10000 || count($substitutions) > 10000 || count($classes) > 10000) {
+    if (count($lines) > 10000 || count($rules) > 1000 || count($substitutions) > 1000 || count($classes) > 1000) {
         throw new InvalidArgumentException("Número excessivo de linhas, regras, substituições ou classes.");
     }
 

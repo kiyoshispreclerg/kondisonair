@@ -183,7 +183,7 @@ if ($id_idioma>0){
                                         </div>
                                     </div>
 
-                                    <div class="col-3">
+                                    <div class="col-4">
                                         <div class="mb-3">
                                             <div class="form-label"><?=_t('Romanização')?></div>
                                             <select class="form-select" id="romanizacao" onchange="showGravarDados()">

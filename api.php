@@ -310,7 +310,9 @@ switch($page){
     case 'phrases': $tituloPagina .= ' - '._t('Frases'); break;
     case 'editphrase': $tituloPagina .= ' - '._t('Frase'); break;
     case 'phrase': $tituloPagina .= ' - '._t('Frase'); break;
+    case 'changer_full': $tituloPagina .= ' - '._t('Outros alteradores'); break;
     // case 'confirmation': $tituloPagina .= ' - '._t('Confirmação'); break;
+    case 'paradigmer': $tituloPagina .= ' - '._t('Gerador de paradigma'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -2565,7 +2567,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
   $tryauto = true; // tentar autoconjugações - configuravel s/n
 
-  $escrita = 1;
+  $escrita = -1;
   $fonte = 'notosans';
   $langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
       LEFT JOIN fontes f ON f.id = e.id_fonte
@@ -2704,13 +2706,13 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 }
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
                 else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho);
+                $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%', $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.($p['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.$nclass.'" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$dicionario.'"  
                   onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
-                  '.$spanNativo.'<br>'.$spanSec.'</td>';
+                  '.$spanNativo.$spanSec.'</td>';
             }
           }else{ // tem dado extra, 3a dimensão, TO DO ?
             
@@ -2786,13 +2788,13 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 }
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
                 else $spanSec = '<span class="text-secondary">'.$pal['romanizacao'].' '.($pal['pronuncia']!=''?'<span class="nowrap">/'.$pal['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($pal['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho);
+                $spanNativo = getSpanPalavraNativa($pal['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho, $pal['nativa']?'<br>':'');
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.($pal['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.$nclass.'" 
                   id="'.(0+$pal['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$pal['id_forma_dicionario'].'" 
                   onclick="abrirPalavra(\''.(0+$pal['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
-                  '.$spanNativo.'<br>'.$spanSec.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
+                  '.$spanNativo.$spanSec.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
             }
 
           }
@@ -2852,13 +2854,13 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 }
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
                 else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho);
+                $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.($p['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0 '.$nclass.'" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$dicionario.'" 
                   onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
-                  '.$spanNativo.'<br>'.$spanSec.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
+                  '.$spanNativo.$spanSec.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
             }
     }
 
@@ -3280,8 +3282,9 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
   echo '</table></div>';
 };
 
-function getSpanPalavraNativa($palavra = '',$eid,$fonte,$tamanho){
+function getSpanPalavraNativa($palavra = '',$eid,$fonte,$tamanho,$suffix = ''){
     $ret = '';
+    if ($palavra=='') $suffix = '';
     //if (mb_strlen($palavra)>0){
       if($fonte== 3 && mb_strlen($palavra)>0){
           $cs = explode(",",$palavra);
@@ -3291,7 +3294,7 @@ function getSpanPalavraNativa($palavra = '',$eid,$fonte,$tamanho){
           $ret = '<span class="custom-font-'.$eid.'">'.$palavra.'</span>';
       }
     //}
-    return $ret;
+    return $ret.$suffix;
 }
   
 function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,$tamanho){
@@ -3900,6 +3903,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     //tratar entrada
     $changes = str_replace("\\","\\\\",$_POST['l']);
     $instrucoes = str_replace("\\","\\\\",$_POST['ins']);
+    $classes = str_replace("\\","\\\\",$_POST['classes']);
+    $rewrites = str_replace("\\","\\\\",$_POST['rewrites']);
 
     $res2 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM soundChanges 
       WHERE id = '".$_GET['id']."' AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';") or die(mysqli_error($GLOBALS['dblink']));
@@ -3908,6 +3913,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $sqlQuerys = "UPDATE soundChanges SET 
         instrucoes = '".str_replace("'",'"',$instrucoes)."' ,
           changes = \"".$changes."\" ,
+          classes = \"".$classes."\" ,
+          substituicoes = \"".$rewrites."\" ,
           id_idioma = ".$idioma.",
           data_modificacao = now(),
           titulo = \"".$_POST['titulo']."\", 
@@ -3940,6 +3947,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         $sqlQuerys = "INSERT INTO soundChanges SET 
           instrucoes = '".str_replace("'",'"',$instrucoes)."' ,
           changes = \"".$changes."\" ,
+          classes = \"".$classes."\" ,
+          substituicoes = \"".$rewrites."\" ,
           descricao = '',
           id_idioma = ".$idioma.",
           titulo = \"".$_POST['titulo']."\" ,
@@ -5756,7 +5765,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $sqlQuerys =  "SELECT e.* FROM escritas e 
         WHERE id_idioma = ".$_GET['iid']." ORDER BY padrao DESC;";
       $escritas = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      for ($i=0; $i < count($_POST['nativo']); $i++) {
+      if (isset($_POST['nativo'])) for ($i=0; $i < count($_POST['nativo']); $i++) {
           $esc = mysqli_fetch_assoc($escritas);
           if ($_POST['nativo'][$i]==''){
             $sqlQuerys = "DELETE FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";";

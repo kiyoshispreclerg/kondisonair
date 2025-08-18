@@ -514,7 +514,7 @@ CREATE TABLE `referentes_descricoes` (
   `id_idioma` BIGINT UNSIGNED NOT NULL , 
   `descricao` VARCHAR(150) NOT NULL , 
   `detalhes` TEXT NULL 
-) ENGINE = InnoDB; 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci; 
 
 ALTER TABLE `referentes_descricoes` 
   ADD PRIMARY KEY (`id`); 
@@ -602,7 +602,11 @@ CREATE TABLE `soundChanges` (
   `motor` varchar(15) NOT NULL DEFAULT 'sca2',
   `publico` tinyint(4) NOT NULL DEFAULT 0,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `substituicoes` TEXT NOT NULL DEFAULT '',
+  `classes` TEXT NOT NULL DEFAULT '',
+  `id_momento_inicial` BIGINT UNSIGNED NOT NULL DEFAULT '0',
+  `id_momento_final` BIGINT UNSIGNED NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `stats` (
