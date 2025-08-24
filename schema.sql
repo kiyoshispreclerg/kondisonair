@@ -71,7 +71,8 @@ CREATE TABLE `classes` (
   `proto_tipo` tinyint(4) NOT NULL DEFAULT 0,
   `superior` bigint(20) UNSIGNED NOT NULL,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `paradigma` tinyint(4) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `classesGeneros` (

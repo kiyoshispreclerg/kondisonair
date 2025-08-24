@@ -160,6 +160,9 @@ require('api.php');
                         <a class="dropdown-item" href="?page=wordgen">
                         <?=_t('Gerador de palavras')?>
                         </a>
+                        <a class="dropdown-item" href="?page=paradigmer">
+                        <?=_t('Criador de paradigma')?>
+                        </a>
                       </div>
                     </div>
                   </div>

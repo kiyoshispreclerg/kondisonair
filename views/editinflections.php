@@ -37,7 +37,7 @@ if ($id_subclasse=='x') {
 }
 
 $idioma = array();   
-$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, c.nome AS nomeClasse,
+$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, c.nome AS nomeClasse, c.paradigma, 
     (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab
     FROM classes c LEFT JOIN idiomas i ON c.id_idioma = i.id 
                WHERE c.id = ".$id_classe.";") or die(mysqli_error($GLOBALS['dblink']));
@@ -179,16 +179,17 @@ if ($idioma['nome_legivel']=='' || ( $idioma['id_usuario'] != $_SESSION['Kondiso
                         </div>
 
 
-
+                        <?php if ($idioma['paradigma']==0) { ?>
                         <div class="mb-3" id="divBtnFormas">
                         <div class="form-group" >
                                 <a class='btn btn-primary' href='index.php?page=editforms&iid=<?=$id_idioma?>&k=<?=$_GET['k']?>&d=<?=$_GET['d']?>&c=<?=$_GET['d']?>'><?=_t('Editar formas')?></a>
                         </div>
                         </div>
+                        <?php }; ?>
 
                         <div class="mb-3">
                             <div class="form-group" >
-                                <label class="control-label"><?=_t('Possíveis valores')?></label>
+                                <h3><?=_t('Possíveis valores')?></h3>
                                     <div id="listaOpcoes">
                                         
                                     </div>
@@ -458,7 +459,7 @@ $(document).ready(function(){
                     <select id="padrao" class="form-select">
                         <option value="1" selected><?=_t('Padrão (desmarcado)')?></option>
                         <option value="0"><?=_t('Plano (forma única)')?></option>
-                        <option value="2"><?=_t('Flexionar')?></option>
+                        <?php if ($idioma['paradigma']==0) { ?><option value="2"><?=_t('Flexionar')?></option><?php }; ?>
                     </select>
                 </div>
                 <div class="mb-3" >

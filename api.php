@@ -2546,7 +2546,8 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
   $result = mysqli_query($GLOBALS['dblink'],"SELECT *, 
       (SELECT pronuncia FROM palavras WHERE id = p.id_forma_dicionario) as pronDicionario,
       (SELECT g.id_genero FROM classesGeneros g WHERE g.id_palavra = p.id_forma_dicionario LIMIT 1) as genDicionario,
-      (SELECT g.id_genero FROM classesGeneros g WHERE g.id_palavra = p.id LIMIT 1) as gen
+      (SELECT g.id_genero FROM classesGeneros g WHERE g.id_palavra = p.id LIMIT 1) as gen,
+      (SELECT paradigma FROM classes c WHERE c.id = p.id_classe LIMIT 1) as paradigma
       FROM palavras p 
       WHERE p.id = ".$pid.";") or die('1834'.mysqli_error($GLOBALS['dblink']));
   $r = mysqli_fetch_assoc($result);
@@ -2555,6 +2556,13 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
   $fdic = $r['id_forma_dicionario'] > 0 ? $r['id_forma_dicionario'] : $pid;
   $pronDic = $r['id_forma_dicionario'] > 0 ? $r['pronDicionario'] : $r['pronuncia'];
   $gen = $r['id_forma_dicionario'] > 0 ? 0+$r['genDicionario'] : 0+$r['gen'];
+  $parad = (int)$r['paradigma'];
+
+  $paradigma = "";    // paradigma 1: palavras únicas  
+  if ($parad == 0) {  // paradigma 0: derivação da forma de dicionario
+      $paradigma = " AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") ";
+      //$fdic = 0;
+  }
     
   if ($lin>0) {
     $linhas = $lin; //id da concordancia
@@ -2679,14 +2687,14 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                   LEFT JOIN itens_palavras ip2 ON ip2.id_palavra = p.id  
                   WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
                   AND (ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$y2['id']." AND ip2.usar = 1) 
-                  AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
+                  $paradigma
                   AND p.id_idioma = ".$idioma.";";
               //echo $sql;
                 $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('1972'.mysqli_error($GLOBALS['dblink']));
                 $p = mysqli_fetch_assoc($ps); // se tem 2 palavras aqui dentro, há algum erro????
 
                 $dicionario = $p['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
-                $autogen = ""; if (! $p['id'] > 0 && $tryauto) {  $autogencount++; $dicionario = 0; $nclass = 'text-muted';
+                $autogen = ""; if (! $p['id'] > 0 && $tryauto && $parad == 0) {  $autogencount++; $dicionario = 0; $nclass = 'text-muted';
 
                     $sql = "SELECT f.* FROM flexoes f 
                         LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
@@ -2704,12 +2712,22 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$regra."\n";
 
                 }
-                if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
-                else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%', $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
 
+                $irregClass = $p['irregular'] == 1 ? 'text-warning' : ( $p['pronuncia'] ? ( $dicionario == 0 && $parad == 0 ? 'text-info' : '') : 'text-secondary' );
+                if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="'.$irregClass.'">%%r'.$autogen.'</span>';
+                else $spanSec = '<span class="'.$irregClass.'">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
+                ///$spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%', $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
+                $spanNativo = getSpanPalavraNativa($p['nativa'] ? $p['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null), $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
+
+                /*if ($parad == 1) 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
-                  class="'.($p['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.$nclass.'" 
+                  class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'" 
+                  id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$dicionario.'"  
+                  onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
+                  '.$spanNativo.$spanSec.'ASD</td>';
+                else*/
+                echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
+                  class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$dicionario.'"  
                   onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
                   '.$spanNativo.$spanSec.'</td>';
@@ -2760,13 +2778,13 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                   WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
                     AND (ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$y2['id']." AND ip2.usar = 1) 
                     AND (ip3.id_concordancia = ".$extra[0]['did']." AND ip3.id_item = ".$extra[0]['val']." AND ip3.usar = 1)
-                    AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
+                    $paradigma 
                     AND p.id_idioma = ".$idioma." ;";
                     
                 $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('1972'.mysqli_error($GLOBALS['dblink']));
                 $pal = mysqli_fetch_assoc($ps);
 
-                $dicionario = $p['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
+                $dicionario = $pal['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
                 $autogen = ""; if (! $pal['id'] > 0 && $tryauto) { $autogencount++; $dicionario = 0; $nclass = 'text-muted';
 
                     $sql = "SELECT f.* FROM flexoes f 
@@ -2786,12 +2804,14 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$regra."\n";
 
                 }
-                if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
-                else $spanSec = '<span class="text-secondary">'.$pal['romanizacao'].' '.($pal['pronuncia']!=''?'<span class="nowrap">/'.$pal['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($pal['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho, $pal['nativa']?'<br>':'');
+
+                $irregClass = $pal['irregular'] == 1 ? 'text-warning' : ( $pal['pronuncia'] ? ( $dicionario == 0 && $parad == 0 ? 'text-info' : '') : 'text-secondary' );
+                if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="'.$irregClass.'">%%r'.$autogen.'</span>';
+                else $spanSec = '<span class="'.$irregClass.'">'.$pal['romanizacao'].' '.($pal['pronuncia']!=''?'<span class="nowrap">/'.$pal['pronuncia'].'/</span>':'&nbsp;').'</span>';
+                $spanNativo = getSpanPalavraNativa($pal['nativa'] ? $pal['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null),$escrita,$id_fonte,$tamanho, $pal['nativa']?'<br>':'');
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
-                  class="'.($pal['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' '.$nclass.'" 
+                  class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'" 
                   id="'.(0+$pal['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$pal['id_forma_dicionario'].'" 
                   onclick="abrirPalavra(\''.(0+$pal['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
                   '.$spanNativo.$spanSec.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
@@ -2830,7 +2850,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                   LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
                   LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = ".$escrita."
                   WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
-                  AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.") 
+                  $paradigma
                   AND p.id_idioma = ".$idioma.";";
                   //echo $sql;
                 $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
@@ -2852,12 +2872,14 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$regra."\n";
 
                 }
-                if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="text-secondary">%%r'.$autogen.'</span>';
-                else $spanSec = '<span class="text-secondary">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%',$escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
+
+                $irregClass = $p['irregular'] == 1 ? 'text-warning' : ( $p['pronuncia'] ? ( $dicionario == 0 && $parad == 0 ? 'text-info' : '') : 'text-secondary' );
+                if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="'.$irregClass.'">%%r'.$autogen.'</span>';
+                else $spanSec = '<span class="'.$irregClass.'">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
+                $spanNativo = getSpanPalavraNativa($p['nativa'] ? $p['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null),$escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
-                  class="'.($p['irregular']==1?'text-warning':'').' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0 '.$nclass.'" 
+                  class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$dicionario.'" 
                   onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
                   '.$spanNativo.$spanSec.'</td>'; //abr tb da palavra, mesmo link colocar no dicionrio tbm
@@ -2867,36 +2889,30 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
     echo '</tr>';
   }
   echo '</table></div>';
-  echo '%%%'.$autogenlist.$pronDic.'%%%'; //.$fdic;
+  echo '%%%'.$autogenlist.$pronDic.'%%%';
 
-  $orfas = '';
-  
-  $sql = "SELECT p.*, pn.palavra as nativa,
+  if ($parad == 0){
+            
+      $sql = "SELECT p.*, pn.palavra as nativa,
+              (SELECT GROUP_CONCAT(ic.nome SEPARATOR ', ' ) 
+                  FROM itens_palavras ip 
+                  LEFT JOIN concordancias c ON ip.id_concordancia = c.id 
+                  LEFT JOIN itensConcordancias ic ON ip.id_item = ic.id
+              WHERE id_palavra = p.id) as concs,
           (SELECT COUNT(id) FROM itens_palavras WHERE id_palavra = p.id) as ips FROM palavras p 
             LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = ".$escrita."
             WHERE p.id_forma_dicionario = ".$pid." 
-            AND p.id_idioma = ".$idioma.";";
-            
-  $sql = "SELECT p.*, pn.palavra as nativa,
-          (SELECT GROUP_CONCAT(ic.nome SEPARATOR ', ' ) 
-              FROM itens_palavras ip 
-              LEFT JOIN concordancias c ON ip.id_concordancia = c.id 
-              LEFT JOIN itensConcordancias ic ON ip.id_item = ic.id
-           WHERE id_palavra = p.id) as concs,
-      (SELECT COUNT(id) FROM itens_palavras WHERE id_palavra = p.id) as ips FROM palavras p 
-        LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = ".$escrita."
-        WHERE p.id_forma_dicionario = ".$pid." 
-        AND p.id_idioma = ".$idioma."
-        -- AND p.id NOT IN (SELECT id_palavra FROM itens_palavras);";
-  // echo $sql;
+            AND p.id_idioma = ".$idioma."
+            -- AND p.id NOT IN (SELECT id_palavra FROM itens_palavras);";
 
-  $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
-  while($p = mysqli_fetch_assoc($ps)){
-      // if ips < num concords q deveria ter
-      
-        echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="'.($p['ips']>0?'nao-vazio':'').'"
-                id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
-                $p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
+      $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
+      while($p = mysqli_fetch_assoc($ps)){
+          // if ips < num concords q deveria ter
+          
+            echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="'.($p['ips']>0?'nao-vazio':'').'"
+                    id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
+                    $p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
+      }
   }
 
 };
@@ -3284,7 +3300,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
 function getSpanPalavraNativa($palavra = '',$eid,$fonte,$tamanho,$suffix = ''){
     $ret = '';
-    if ($palavra=='') $suffix = '';
+    if ($palavra=='') return ''; //$suffix = '';
     //if (mb_strlen($palavra)>0){
       if($fonte== 3 && mb_strlen($palavra)>0){
           $cs = explode(",",$palavra);
@@ -4191,6 +4207,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         nome = '".$_POST['nome']."',
         id_gloss = ".$_POST['gloss'].",
         superior = ".$_POST['superior'].",
+        paradigma = ".$_POST['paradigma'].",
         data_modificacao = now(),
         proto_tipo = '".$_POST['proto_tipo']."',
         descricao = '".str_replace("'",'"',$_POST['descricao'])."'
@@ -4380,7 +4397,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
         
         $sqlQuerys = "INSERT INTO itensConcordancias SET 
-          nome = '"._t("Valor padrão")."',
+          nome = '"._t("Valor padrão")."', id = $cid,
           ordem = 1,
           padrao = 1,
           id_concordancia = ".$cid.";";
@@ -5661,6 +5678,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   };
 
   if ($_GET['action'] == 'salvarPalavraFlexionada') { // otimizar sql queries
+      $dicionario = (int)$_GET['dic'] ?? 0;
+      if (!$_GET['iid'] > 0) die('-1');
 
       if($_POST['pid']>0){ 
         $sqlQuerys = "UPDATE palavras SET 
@@ -5674,25 +5693,41 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
         $idPalavra = $_POST['pid'];
       } else {  
-          $sqlQuerys = "SELECT * FROM palavras WHERE id = ".$_GET['dic']." LIMIT 1;";
-          $re = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-          $r = mysqli_fetch_assoc($re);
-          
           $idPalavra = generateId();
-          $sqlQuerys = "INSERT INTO palavras SET id = $idPalavra,
-            romanizacao = '".$_POST['romanizacao']."',
-            irregular = ".$_POST['irregular'].",
-            id_classe = ".$r['id_classe'].",
-            pronuncia = \"".$_POST['pronuncia']."\",
-            significado = '".$_POST['significado']."',
-            id_forma_dicionario = ".$_GET['dic'].",
-            detalhes = '".$r['detalhes']."',
-            id_uso = 0,
-            publico = 1,
-            data_criacao = now(),
-            data_modificacao = now(),
-            id_usuario = ".$_SESSION['KondisonairUzatorIDX'].",
-            id_idioma = ".$_GET['iid'].";";
+          if ($_GET['paradigma']=='1') { // paradigma 1: palavras únicas
+              $sqlQuerys = "INSERT INTO palavras SET id = $idPalavra,
+                romanizacao = '".$_POST['romanizacao']."',
+                irregular = ".$_POST['irregular'].",
+                id_classe = ".$_GET['classe'].",
+                pronuncia = \"".$_POST['pronuncia']."\",
+                significado = '".$_POST['significado']."',
+                id_forma_dicionario = 0,
+                detalhes = '',
+                id_uso = 0,
+                publico = 1,
+                data_criacao = now(),
+                data_modificacao = now(),
+                id_usuario = ".$_SESSION['KondisonairUzatorIDX'].",
+                id_idioma = ".$_GET['iid'].";";
+          }else{            // paradigma 0: palavra flexiona linkada à forma de dicionario
+              $sqlQuerys = "SELECT * FROM palavras WHERE id = $dicionario LIMIT 1;";
+              $re = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+              $r = mysqli_fetch_assoc($re);
+              $sqlQuerys = "INSERT INTO palavras SET id = $idPalavra,
+                romanizacao = '".$_POST['romanizacao']."',
+                irregular = ".$_POST['irregular'].",
+                id_classe = ".$r['id_classe'].",
+                pronuncia = \"".$_POST['pronuncia']."\",
+                significado = '".$_POST['significado']."',
+                id_forma_dicionario = $dicionario,
+                detalhes = '".$r['detalhes']."',
+                id_uso = 0,
+                publico = 1,
+                data_criacao = now(),
+                data_modificacao = now(),
+                id_usuario = ".$_SESSION['KondisonairUzatorIDX'].",
+                id_idioma = ".$_GET['iid'].";";
+          }
             
           //echo $sqlQuerys;
           mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
@@ -5733,13 +5768,9 @@ if($_SESSION['KondisonairUzatorIDX']>0){
               mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
               
           }
-
-          //xxxxx loop em dependências, pra gravar flexões acima tbm
-          // testando verbo nogesê: depende = 95 (tempo e pessoa, para encontrar acima o modo) > item 95 e concordancia 47, e usar não zerar!
           
-          
-          $il = 0;
-          while($dependencia > 0){ // echo 'find dep '.$dependencia.' ';
+          $il = 0; // limite de subtabelas
+          while($dependencia > 0){ 
               $ccs = mysqli_query($GLOBALS['dblink'],"SELECT *, c.nome as titulo FROM concordancias c 
                   LEFT JOIN itensConcordancias ic ON ic.id_concordancia = c.id 
                   WHERE ic.id = ".$dependencia.";") or die(mysqli_error($GLOBALS['dblink']));
@@ -5756,10 +5787,9 @@ if($_SESSION['KondisonairUzatorIDX']>0){
               else $dependencia = 0;
               
               $il++; if($il>10) $dependencia = 0;
-          }
-          
-          
-      }; 
+          }  
+      };
+
       echo $idPalavra;
 
       $sqlQuerys =  "SELECT e.* FROM escritas e 
@@ -8866,6 +8896,7 @@ if ($_GET['action'] == 'getDetalhesPalavra') {
     //get palavras com mesmos referente:
     //pegar referentes da palavra
     //listar palavras com referente in
+    if (! $_GET['pid'] > 0) die();
 
     $refs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavras_referentes 
       WHERE id_palavra = ".$_GET['pid'].";");

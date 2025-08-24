@@ -24,7 +24,7 @@ if($_GET['d']>0) $id_depende = $_GET['d'] ; // apenas para criação na primeira
 $id_subclasse = $_GET['c']; //esse é o id
 
 $idioma = array();   
-$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, c.nome AS nomeClasse,
+$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, c.nome AS nomeClasse, c.paradigma,
         (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab
         FROM classes c LEFT JOIN idiomas i ON c.id_idioma = i.id 
                WHERE c.id = ".$id_classe.";") or die(mysqli_error($GLOBALS['dblink']));
@@ -55,7 +55,8 @@ if (!$id_subclasse>0) {
     };
 }
 
-if ($idioma['nome_legivel']=='' || ( $idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'] && !$idioma['collab'] > 0 )) {
+if ($idioma['nome_legivel']=='' || ( $idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'] && !$idioma['collab'] > 0 )
+    || ( $idioma['paradigma'] == 1 && ! $_GET['pid'] > 0 ) ) {
     echo '<script>window.location = "index.php";</script>';
 		exit;
 }
@@ -402,7 +403,7 @@ function gravarPalavra(){
         cex.push( { val : $(this).val(), did : $(this).attr('id').replace("dimExtra","")} ); 
     });
 
-    $.post("api.php?action=salvarPalavraFlexionada&dic=<?=$_GET['pid']?>&iid=<?=$id_idioma?>", 
+    $.post("api.php?action=salvarPalavraFlexionada&dic=<?=$_GET['pid']?>&iid=<?=$id_idioma?>&paradigma=<?=$idioma['paradigma']?>&classe=<?=$id_classe?>", // classe enviado só se for paradigma 1, que nao tem dependencias
     {   <?php if ($romanizacao){ ?> romanizacao:$('#romanizacao').val(), <?php } ?>
         pronuncia:$('#pronuncia').val(),
         significado:$('#significado').val(),
@@ -457,7 +458,7 @@ function carregaTabela(){
             var res = data.split("%%%");
             var tb = res[0]; //.replaceAll("%%a%%","");
             $("#tabelaFlexoes").html( tb.replaceAll("%%a%%","") );
-            var orfas = res[2];
+            var orfas = res[2] ?? null;
 
             var autogenlist = res[1]; //data.substring( data.indexOf("") );
             var linhas = autogenlist.split("\n");
@@ -580,7 +581,7 @@ async function multiProcessarFlexoes(regras, raiz, idIdioma, defCats, tb) {
             tb = tb.replaceAll(`%%r${key}%%`, result ? teclas + ' <span class="nowrap">/' + result + '/</span>' : teclas);
             tb = tb.replaceAll(`%%an${key}%%`, autoSub?autoSub+'<br>': '');
         });
-
+        tb = tb.replaceAll(`%%an-1%%`,'');
         $('#tabelaFlexoes').html(tb);
         appLoad();
     } catch (error) {
@@ -722,14 +723,22 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
         });
     }else{
 
-        // opcao de abrir forma dic pra editar/salvar
-
-        // alert(dic);
         $('#idPalavra').val(0); 
+    <?php if ($idioma['paradigma'] == 1) { ?>
         $(".escrita_nativa").each(function(){
             let eid = $(this).attr('id').replace("escrita_nativa_",'');
             exibirNativa(eid,'',null,null);
         });
+
+        $('#romanizacao').val(''); 
+        $('#pronuncia').val(''); 
+
+        $('#idFormaDicionario').val('0');
+        $('#irregular').val('0'); 
+        $('#significado').val(''); 
+
+    <?php } else { ?>
+
         $.getJSON( "api.php?action=getDetalhesPalavra&pid=" +dic , function(data){ 
             $.each( data, function( key, val ) {
 
@@ -757,6 +766,8 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
             showGravarPalavra();
             checarPronuncia("#pronuncia", '<?=$id_idioma?>', 0);
         });
+        
+    <?php }; ?>
     }
     $("#detalhesPalavra").show();
 };

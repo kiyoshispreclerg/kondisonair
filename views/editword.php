@@ -930,8 +930,8 @@
 		setTimeout(() => {
 			createTablerSelect('id_idsig',null);
 			createTablerSelect('id_tags',null,true);
-			appLoad();
 		}, 1000);
+		appLoad();
 		
 	}); 
 

@@ -96,29 +96,39 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                           </select>
                       </div>
                       
-                      <div class="mb-3" >
-                          <label class="form-label"><?=_t('Tipo semântico')?></label>
-                          <select id="proto_tipo" class="form-select " onchange="showGravarPalavra()" >
-                              <option value="0" selected><?=_t('Nenhuma')?></option>
-                              <option value="1" selected><?=_t('Ações/Verbos')?></option>
-                              <option value="2" selected><?=_t('Estados/Substantivos')?></option>
-                          </select>
-                      </div>
-                      
-                      <div class="mb-3" >
-                          <label class="form-label"><?=_t('Classe pai')?></label>
-                          <select id="superior" onchange="showGravarPalavra()" type="text" class="form-select" value="">
-                              <option value="0" selected><?=_t('Nenhuma')?></option>
-                              <?php 
-                              $langs = mysqli_query($GLOBALS['dblink'],"SELECT c.*, g.gloss FROM classes c 
-                                  LEFT JOIN glosses g ON g.id = c.id_gloss WHERE c.id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
-                              while ($lang = mysqli_fetch_assoc($langs)){
-                                  echo '<option value="'.$lang['id'].'"';
-                                  //if ($idioma['id_classe'] == $lang['id']) echo ' selected';
-                                  echo '>'.$lang['gloss'].' - '.$lang['nome'].'</option>';
-                              }
-                              ?>
-                          </select>
+                      <div class="row mb-3" >
+                          <div class="col-4" >
+                              <label class="form-label"><?=_t('Tipo semântico')?></label>
+                              <select id="proto_tipo" class="form-select " onchange="showGravarPalavra()" >
+                                  <option value="0" selected><?=_t('Nenhuma')?></option>
+                                  <option value="1" selected><?=_t('Ações/Verbos')?></option>
+                                  <option value="2" selected><?=_t('Estados/Substantivos')?></option>
+                              </select>
+                          </div>
+                          
+                          <div class="col-4" >
+                              <label class="form-label"><?=_t('Classe pai')?></label>
+                              <select id="superior" onchange="showGravarPalavra()" type="text" class="form-select" value="">
+                                  <option value="0" selected><?=_t('Nenhuma')?></option>
+                                  <?php 
+                                  $langs = mysqli_query($GLOBALS['dblink'],"SELECT c.*, g.gloss FROM classes c 
+                                      LEFT JOIN glosses g ON g.id = c.id_gloss WHERE c.id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
+                                  while ($lang = mysqli_fetch_assoc($langs)){
+                                      echo '<option value="'.$lang['id'].'"';
+                                      //if ($idioma['id_classe'] == $lang['id']) echo ' selected';
+                                      echo '>'.$lang['gloss'].' - '.$lang['nome'].'</option>';
+                                  }
+                                  ?>
+                              </select>
+                          </div>
+                          <div class="col-4" >
+                              <label class="form-label"><?=_t('Palavras do paradigma')?></label>
+                              <select id="paradigma" class="form-select " onchange="showGravarPalavra()" >
+                                  <option value="0" selected><?=_t('Derivadas')?></option>
+                                  <option value="1" selected><?=_t('Únicas')?></option>
+                              </select>
+                          </div>
+
                       </div>
                       <div class="mb-3" >
                           <label class="form-label"><?=_t('Descrição')?></label>
@@ -163,6 +173,7 @@ function gravarPalavra(){
     { nome:$('#nome').val(),
     gloss:$('#gloss').val(),
     proto_tipo:$('#proto_tipo').val(),
+    paradigma:$('#paradigma').val(),
     superior:$('#superior').val(),
     descricao:$('#descricao').val()
     }, function (data){
@@ -186,6 +197,7 @@ function abrirPalavra(pid){
         $('#gloss').val(data[0].id_gloss); 
         updateTablerSelect('gloss',data[0].id_gloss);
         $('#proto_tipo').val(data[0].proto_tipo); 
+        $('#paradigma').val(data[0].paradigma); 
         $('#superior').val(data[0].superior); 
         updateTablerSelect('superior',data[0].superior);
         if(data[0].superior==0)
@@ -214,6 +226,7 @@ function novaPalavra(){
     updateTablerSelect('gloss','');
     
     $('#proto_tipo').val(0); 
+    $('#paradigma').val(0); 
 
     $('#superior').val(0); 
     updateTablerSelect('superior',0);
