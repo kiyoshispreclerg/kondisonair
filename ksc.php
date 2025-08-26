@@ -495,7 +495,7 @@ function applySingleRule($word, $rule, $classes) {
             }
 
             if ($contextValid) {
-                $newWord .= $targetValue['~'];
+                $newWord .= is_string($targetValue) ? $targetValue : ( $targetValue['~'] ?? '');
                 $insertionApplied[$len] = true;
                 break;
             }

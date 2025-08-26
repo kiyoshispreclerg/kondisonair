@@ -12,6 +12,7 @@ if (!file_exists(DB_CONFIG)) {
 mb_internal_encoding('UTF-8');
 require(DB_CONFIG);
 $maxSilabas = 10;
+$separadorRomanizacao = " .,;:?!-()/";
 
 error_reporting(E_ERROR);
 $GLOBALS['dblink'] =  mysqli_connect($mysql_host, $mysql_user, $mysql_pass) or die('DATABASE: mysql_connect: ' . mysqli_error($GLOBALS['dblink']));
@@ -2671,7 +2672,6 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 $xx = mysqli_fetch_assoc($deps);
                 if ($xx['padrao1']==2) $valx = $xx['id1'];
                 if ($xx['padrao2']==2)  $valx = $xx['id2'];
-                //tem dep, abrir link  // draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                 echo '<td 
                   class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"  
                   id="0-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-0"  
@@ -2696,17 +2696,8 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 $dicionario = $p['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
                 $autogen = ""; if (! $p['id'] > 0 && $tryauto && $parad == 0) {  $autogencount++; $dicionario = 0; $nclass = 'text-muted';
 
-                    $sql = "SELECT f.* FROM flexoes f 
-                        LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                        LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id  
-        
-                        WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") 
-                            AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") 
-                        AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen."
-                        ;";
-                    $psx = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
-                    $px = mysqli_fetch_assoc($psx);
-                    if ($px['id']>0) $regra = $px['id'];
+                    $px = fetchFlexao($gen, $linhas, $x['id'], $colunas, $y2['id']);
+                    if ($px>0) $regra = $px;
                     
                     $autogen = $autogencount."%%";
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$regra."\n";
@@ -2717,15 +2708,8 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="'.$irregClass.'">%%r'.$autogen.'</span>';
                 else $spanSec = '<span class="'.$irregClass.'">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
                 ///$spanNativo = getSpanPalavraNativa($p['nativa'] ?? '%%an'.$autogencount.'%%', $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
-                $spanNativo = getSpanPalavraNativa($p['nativa'] ? $p['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null), $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
+                $spanNativo = $escrita>0 ? getSpanPalavraNativa($p['nativa'] ? $p['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null), $escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':''):null;
 
-                /*if ($parad == 1) 
-                echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
-                  class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'" 
-                  id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$dicionario.'"  
-                  onclick="abrirPalavra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$fdic.'\',`%%'.$autogen.'`)">
-                  '.$spanNativo.$spanSec.'ASD</td>';
-                else*/
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'" 
                   id="'.(0+$p['id']).'-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$dicionario.'"  
@@ -2786,20 +2770,9 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
                 $dicionario = $pal['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
                 $autogen = ""; if (! $pal['id'] > 0 && $tryauto) { $autogencount++; $dicionario = 0; $nclass = 'text-muted';
-
-                    $sql = "SELECT f.* FROM flexoes f 
-                          LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                          LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id 
-                          LEFT JOIN itens_flexoes if3 ON if3.id_flexao = f.id   
-
-                          WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") 
-                          AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") 
-                          AND (if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") 
-                          AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen."
-                          ;";
-                    $psx = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
-                    $px = mysqli_fetch_assoc($psx);
-                    if ($px['id']>0) $regra = $px['id'];
+                  
+                    $px = fetchFlexao($gen, $linhas, $x['id'], $colunas, $y2['id'], $extra[0]['did'], $extra[0]['val']);
+                    if ($px>0) $regra = $px;
                     $autogen = $autogencount."%%";
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$regra."\n";
 
@@ -2808,7 +2781,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 $irregClass = $pal['irregular'] == 1 ? 'text-warning' : ( $pal['pronuncia'] ? ( $dicionario == 0 && $parad == 0 ? 'text-info' : '') : 'text-secondary' );
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="'.$irregClass.'">%%r'.$autogen.'</span>';
                 else $spanSec = '<span class="'.$irregClass.'">'.$pal['romanizacao'].' '.($pal['pronuncia']!=''?'<span class="nowrap">/'.$pal['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($pal['nativa'] ? $pal['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null),$escrita,$id_fonte,$tamanho, $pal['nativa']?'<br>':'');
+                $spanNativo = $escrita>0 ? getSpanPalavraNativa($pal['nativa'] ? $pal['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null),$escrita,$id_fonte,$tamanho, $pal['nativa']?'<br>':''):null;
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'" 
@@ -2823,25 +2796,17 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
             $concs = 1;
             $regra = 0;
 
-            //if tem mais 1 dimensao, abrir mais LI dentro das celulas, ou mini tabelinha
-
-            //xxxxx mostrar subformas ou abrir outra tabela se houver dependente ????
             $sql = "SELECT * FROM itensConcordancias i1
                     WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
                     AND i1.padrao = 2;";
-                    /*"SELECT * FROM concordancias 
-                WHERE id_idioma = ".$idioma." AND id_classe = ".$class." 
-                AND depende = ".$x['id'].";"*/
             
             $deps = mysqli_query($GLOBALS['dblink'],$sql) or die('2082'.mysqli_error($GLOBALS['dblink']));
 
             if (mysqli_num_rows($deps)>0){
-                //tem dep, abrir link // draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                 echo '<td 
                   class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0" 
                   id="0-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-0"
                   onclick="alert("teste")">';
-                //echo '<a href="api.php?action=fleksons&pid='.$pid.'&d='.$x['id'].'&c='.$x['id'].'">Abrir tabela3</a></td>';
                 echo '<a class="btn btn-primary" href="?page=editforms&pid='.$pid.'&d='.$x['id'].'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
 
             }else{
@@ -2858,16 +2823,9 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 
                 $dicionario = $p['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
                 $autogen = ""; if (! $p['id'] > 0 && $tryauto) { $autogencount++; $dicionario = 0; $nclass = 'text-muted';
-
-                    $sql = "SELECT f.* FROM flexoes f 
-                        LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                        WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].")
-                        AND if1.id_genero = ".$gen." 
-                        ;";
-                    //echo $sql;
-                    $psx = mysqli_query($GLOBALS['dblink'],$sql) or die('2156'.mysqli_error($GLOBALS['dblink']));
-                    $px = mysqli_fetch_assoc($psx);
-                    if ($px['id'] > 0) $regra = $px['id'];
+                    
+                    $px = fetchFlexao($gen, $linhas, $x['id']);
+                    if ($px > 0) $regra = $px;
                     $autogen = $autogencount."%%";
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$regra."\n";
 
@@ -2876,7 +2834,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
                 $irregClass = $p['irregular'] == 1 ? 'text-warning' : ( $p['pronuncia'] ? ( $dicionario == 0 && $parad == 0 ? 'text-info' : '') : 'text-secondary' );
                 if ($autogen != "") $spanSec = '<span id="ag'.$autogencount.'" class="'.$irregClass.'">%%r'.$autogen.'</span>';
                 else $spanSec = '<span class="'.$irregClass.'">'.$p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').'</span>';
-                $spanNativo = getSpanPalavraNativa($p['nativa'] ? $p['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null),$escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':'');
+                $spanNativo = $escrita>0 ? getSpanPalavraNativa($p['nativa'] ? $p['nativa'] : ( $parad == 0 ? '%%an'.$autogencount.'%%' : null),$escrita,$id_fonte,$tamanho,$p['nativa']?'<br>':''):null;
                 
                 echo '<td draggable="true" ondrop="dropHandler(event)" ondragover="dragoverHandler(event)"  ondragstart="dragstartHandler(event)" 
                   class="'.$irregClass.' cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0" 
@@ -2916,6 +2874,79 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
   }
 
 };
+
+function inserirFlexao($gen = 0, $linhas, $x = 0, $colunas = null, $y = 0, $extra = null, $z = 0){
+    $idPalavra = generateId();
+    $insf = "INSERT INTO flexoes SET
+        nome = 'Sem nome',
+        id = $idPalavra,
+        ordem = 0, motor = '',
+        regra_romanizacao = '',
+        regra_pronuncia = '';";
+    mysqli_query($GLOBALS['dblink'],$insf) or die(mysqli_error($GLOBALS['dblink']));
+
+    if ($linhas && $x > 0) {
+        $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
+          id_flexao = ".$idPalavra.",
+          id_concordancia = ".$linhas.",
+          id_genero = ".$gen.",
+          id_item = ".$x.";";
+        mysqli_query($GLOBALS['dblink'],$insf) or die('2043'.mysqli_error($GLOBALS['dblink']));
+    }
+    if ($colunas && $y > 0) {
+      $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
+          id_flexao = ".$idPalavra.",
+          id_concordancia = ".$colunas.",
+          id_genero = ".$gen.",
+          id_item = ".$y.";";
+        mysqli_query($GLOBALS['dblink'],$insf) or die('2048'.mysqli_error($GLOBALS['dblink']));
+    }
+    if ($extra && $z > 0) {
+      $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
+          id_flexao = ".$idPalavra.",
+          id_concordancia = ".$extra.",
+          id_genero = ".$gen.",
+          id_item = ".$z.";";
+        mysqli_query($GLOBALS['dblink'],$insf) or die('2048'.mysqli_error($GLOBALS['dblink']));
+    }
+    return $idPalavra;
+}
+
+function fetchFlexao($gen = 0, $linhas, $x = 0, $colunas = null, $y = 0, $extra = null, $z = 0){
+
+    if ($extra && $z > 0)
+        $sql = "SELECT f.* FROM flexoes f 
+            LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
+            LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id 
+            LEFT JOIN itens_flexoes if3 ON if3.id_flexao = f.id   
+
+            WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x.") 
+            AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y.") 
+            AND (if3.id_concordancia = ".$extra." AND if3.id_item = ".$z.") 
+            AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen."
+            ;";
+    else if($colunas && $y > 0) 
+        $sql = "SELECT f.* FROM flexoes f 
+            LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
+            LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id  
+
+            WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x.") 
+                AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y.") 
+            AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen."
+            ;";
+    else 
+        $sql = "SELECT f.* FROM flexoes f 
+            LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
+            WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x.")
+            AND if1.id_genero = ".$gen." 
+            ;";
+                      
+    $psx = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
+    if( mysqli_num_rows($psx) == 0 ){
+        return inserirFlexao($gen, $linhas, $x, $colunas, $y, $extra, $z);
+    }else
+        return mysqli_fetch_assoc($psx)['id'];
+}
 
 function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { // otimizar sql queries
   //pegar lista dos itens/concordancias nesse nivel
@@ -3058,31 +3089,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                     $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
                     if (mysqli_num_rows($ps)==0) {
                       $semflexao = true;
-
-                      // insert
-                      $idPalavra = generateId();
-                      $insf = "INSERT INTO flexoes SET
-                        nome = 'Sem nome',
-                        id = $idPalavra,
-                        ordem = 0, motor = '',
-                        regra_romanizacao = '',
-                        regra_pronuncia = '';";
-
-                      mysqli_query($GLOBALS['dblink'],$insf) or die('2036'.mysqli_error($GLOBALS['dblink']));
-                      
-                      $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
-                        id_flexao = ".$idPalavra.",
-                        id_concordancia = ".$linhas.",
-                        id_genero = ".$gen.",
-                        id_item = ".$x['id'].";";
-                      mysqli_query($GLOBALS['dblink'],$insf) or die('2043'.mysqli_error($GLOBALS['dblink']));
-                      $insf = "INSERT INTO itens_flexoes SET  id = ".generateId().",
-                        id_flexao = ".$idPalavra.",
-                        id_concordancia = ".$colunas.",
-                        id_genero = ".$gen.",
-                        id_item = ".$y2['id'].";";
-                      mysqli_query($GLOBALS['dblink'],$insf) or die('2048'.mysqli_error($GLOBALS['dblink']));
-
+                      inserirFlexao($gen, $linhas, $x['id'], $colunas, $y2['id']);
                     }else{
                       $semflexao = false;
                     }
@@ -3091,15 +3098,11 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$gen.'"  
                   onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">';
-                //echo '<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br><b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']).'</td>';
-                //echo ($p['regra_pronuncia']!=''?'<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br>':' ') ;
                 echo ($p['regra_pronuncia']!=''?nl2br($p['regra_pronuncia']).'<br>':' ') ;
-                //echo ($p['regra_romanizacao']!=''?'<b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']):' ') ;
                 echo '</td>';
             }}
           }else{  // tabela 3d, com extra combobox
             
-            //if (esta for forma desmarcada em ambos x e y) skip, carregaRegra(-1)
             $sql = "SELECT * FROM itensConcordancias i1
                     JOIN itensConcordancias i2
                     JOIN itensConcordancias i3
@@ -3107,7 +3110,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                     AND i2.id_concordancia = ".$colunas." AND i2.id = ".$y2['id']."
                     AND i3.id_concordancia = ".$extra[0]['did']." AND i3.id = ".$extra[0]['val']."
                     AND i1.padrao = 1 AND i2.padrao = 1 AND i3.padrao = 1;"; //  AND i3.padrao = 1
-            //echo $sql;
             $defs = mysqli_query($GLOBALS['dblink'],$sql) or die('1991'.mysqli_error($GLOBALS['dblink']));
 
             if (mysqli_num_rows($defs)>0 && $d == 0){
@@ -3133,18 +3135,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                 echo '<a class="btn btn-primary" href="?page=editforms&iid='.$iid.'&k='.$k.'&d='.$x['id'].'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
               }else{
                 $semflexao = true;
-
-                //=== TESTE FORA DO WHILE, EM TEORIA CORRETO
-                
-                $sql = "SELECT f.* FROM flexoes f
-                    WHERE 
-                        (SELECT if1.id FROM itens_flexoes if1 WHERE if1.id_flexao = f.id AND if1.id_concordancia = ".$linhas." 
-                          AND if1.id_item = ".$x['id']." AND if1.id_genero = ".$gen.") IS NOT NULL 
-                      AND (SELECT if2.id FROM itens_flexoes if2 WHERE if2.id_flexao = f.id AND if2.id_concordancia = ".$colunas." 
-                          AND if2.id_item = ".$y2['id']." AND if2.id_genero = ".$gen.") IS NOT NULL 
-                      AND (SELECT if3.id FROM itens_flexoes if3 WHERE if3.id_flexao = f.id AND if3.id_concordancia = ".$extra[0]['did']." 
-                          AND if3.id_item = ".$extra[0]['val']." AND if3.id_genero = ".$gen.") IS NOT NULL 
-                      LIMIT 1;";
                 
                 $sql = "SELECT f.* FROM flexoes f 
                       LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
@@ -3156,60 +3146,18 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                       AND (if3.id_concordancia = ".$extra[0]['did']." AND if3.id_item = ".$extra[0]['val'].") 
                       AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." AND if3.id_genero = ".$gen." 
                       ;";
-                //echo $sql.'<br>';
 
                 $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
                 if (mysqli_num_rows($ps)==0) {
                   $semflexao = true;
-
-                  // insert
-                  $idPalavra = generateId();
-                  $insf = "INSERT INTO flexoes SET
-                    nome = 'Sem nome',
-                    id = $idPalavra,
-                    ordem = 0, motor = '',
-                    regra_romanizacao = '',
-                    regra_pronuncia = '';";
-
-                  //echo  $insf.'<br>';
-                  
-                  
-                  mysqli_query($GLOBALS['dblink'],$insf) or die('2036'.mysqli_error($GLOBALS['dblink']));
-                  
-                  $insf = "INSERT INTO itens_flexoes SET id = ".generateId().",
-                    id_flexao = ".$idPalavra.",
-                    id_concordancia = ".$linhas.",
-                    id_genero = ".$gen.",
-                    id_item = ".$x['id'].";";
-                  mysqli_query($GLOBALS['dblink'],$insf) or die('2043'.mysqli_error($GLOBALS['dblink']));
-
-                  $insf = "INSERT INTO itens_flexoes SET id = ".generateId().",
-                    id_flexao = ".$idPalavra.",
-                    id_concordancia = ".$colunas.",
-                    id_genero = ".$gen.",
-                    id_item = ".$y2['id'].";";
-                  mysqli_query($GLOBALS['dblink'],$insf) or die('2048'.mysqli_error($GLOBALS['dblink']));
-
-                  $insf = "INSERT INTO itens_flexoes SET id = ".generateId().",
-                    id_flexao = ".$idPalavra.",
-                    id_concordancia = ".$extra[0]['did'].",
-                    id_genero = ".$gen.",
-                    id_item = ".$extra[0]['val'].";";
-                  mysqli_query($GLOBALS['dblink'],$insf) or die('2048'.mysqli_error($GLOBALS['dblink']));
-
-                  $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
-            
+                  inserirFlexao($gen, $linhas, $x['id'], $colunas, $y2['id'], $extra[0]['did'], $extra[0]['val']);
                 }
                 
-
                 $p = mysqli_fetch_assoc($ps);
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$gen.'"  
                   onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">';
-                //echo '<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br><b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']).'</td>';
-                //echo ($p['regra_pronuncia']!=''?'<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br>':' ') ;
                 echo ($p['regra_pronuncia']!=''?nl2br($p['regra_pronuncia']).'<br>':' ') ;
-                //echo ($p['regra_romanizacao']!=''?'<b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']):' ') ;
                 echo '</td>';
             }}
           }
@@ -3219,7 +3167,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
             $sql = "SELECT * FROM itensConcordancias i1
                     WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
                     AND i1.padrao = 1;";
-            //echo $sql;
             $defs = mysqli_query($GLOBALS['dblink'],$sql) or die('2117'.mysqli_error($GLOBALS['dblink']));
 
             if (mysqli_num_rows($defs)>0 && $d == 0){
@@ -3236,7 +3183,6 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
               $deps = mysqli_query($GLOBALS['dblink'],$sql) or die('2136'.mysqli_error($GLOBALS['dblink']));
 
               if (mysqli_num_rows($deps)>0){
-                  //tem dep, abrir link
                   echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"  
                     onclick="alert("teste")">';
                   echo '<a class="btn btn-primary" href="?page=editforms&iid='.$iid.'&k='.$k.'&d='.$x['id'].'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
@@ -3256,26 +3202,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
                     $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2156'.mysqli_error($GLOBALS['dblink']));
                     if (mysqli_num_rows($ps)==0) {
                       $semflexao = true;
-
-                      // insert
-                      $idPalavra = generateId();
-                      $insf = "INSERT INTO flexoes SET
-                        nome = 'Sem nome',
-                        ordem = 0,
-                        id = $idPalavra,
-                        regra_romanizacao = '',
-                        motor = '',
-                        regra_pronuncia = '';";
-
-                      mysqli_query($GLOBALS['dblink'],$insf) or die('2167'.mysqli_error($GLOBALS['dblink']));
-                      
-                      $insf = "INSERT INTO itens_flexoes SET id = ".generateId().",
-                        id_flexao = ".$idPalavra.",
-                        id_concordancia = ".$linhas.",
-                        id_genero = ".$gen.",
-                        id_item = ".$x['id'].";";
-                      mysqli_query($GLOBALS['dblink'],$insf) or die('2174'.mysqli_error($GLOBALS['dblink']));
-
+                      inserirFlexao($gen, $linhas, $x['id']);
                     }else{
                       $semflexao = false;
                     }
@@ -3284,10 +3211,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$gen.'"  
                   onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$gen.'\')">';
-                //echo '<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br><b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']).'</td>';
-                //echo ($p['regra_pronuncia']!=''?'<b>Pronúncia:</b><br>'.nl2br($p['regra_pronuncia']).'<br>':' ') ;
                 echo ($p['regra_pronuncia']!=''?nl2br($p['regra_pronuncia']).'<br>':' ') ;
-                //echo ($p['regra_romanizacao']!=''?'<b>Romanização:</b><br>'.nl2br($p['regra_romanizacao']):' ') ;
                 echo '</td>';
               }
             }
@@ -3356,7 +3280,19 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
 
         $palTotal++;
 
-        $sql = "SELECT p.*, c.id as clid, pn.palavra as nativa, c.nome as cnome, 
+        if ($eid > 0){
+            $pnp = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id";
+            //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
+            $pnq = "pn.palavra as nativa, ";
+            $pno = "pn.palavra ";
+        }else{
+            $pnp = "";
+            //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
+            $pnq = "p.romanizacao as nativa, ";
+            $pno = "p.romanizacao ";
+        }
+
+        $sql = "SELECT p.*, c.id as clid, $pnq c.nome as cnome, 
               (SELECT gloss FROM glosses WHERE id = c.id_gloss LIMIT 1) as cgloss,
               (SELECT g.nome FROM classesGeneros cg LEFT JOIN generos g ON g.id = cg.id_genero
                 WHERE cg.id_palavra = p.id) as genero,
@@ -3377,8 +3313,8 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
                   WHERE pr.id_palavra = p.id) as refs 
             FROM palavras p
               LEFT JOIN classes c ON p.id_classe = c.id 
-              LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
-            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." -- AND pn.id_escrita = ".$eid."
+              $pnp 
+            WHERE $bin $pno = '$p' AND p.id_idioma = $id_idioma -- AND pn.id_escrita = $eid
             ORDER BY p.id_forma_dicionario DESC;"; 
             // AND p.id_forma_dicionario = 0
         //echo $sql;
@@ -3523,8 +3459,9 @@ function getFullStudyText($id) {
   if ($e['uidioma'] == $_SESSION['KondisonairUzatorIDX']) $isOwner = true;
 
   $textoSentencas = $e['texto'];
+  global $separadorRomanizacao;
 
-  $separadorPalavras = preg_split('//u', $e['separadores'], null, PREG_SPLIT_NO_EMPTY) ?: [" "];
+  $separadorPalavras = preg_split('//u', $e['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY) ?: [" "];
 
   $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: ["\n"];
   foreach ($iniciadoresPalavras as $sep){
@@ -3816,7 +3753,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     } else {  
 
       
-      $res2 = mysqli_query($GLOBALS['dblink'],"SELECT (SELECT COUNT(*) FROM idiomas WHERE id_usuario = ".$_GET['iid'].") as idiomas,
+      $res2 = mysqli_query($GLOBALS['dblink'],"SELECT (SELECT COUNT(*) FROM idiomas WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX'].") as idiomas,
         (SELECT valor FROM opcoes_sistema WHERE opcao = 'limite_langs') as limite;") or die(mysqli_error($GLOBALS['dblink']));
 			$r2 = mysqli_fetch_assoc($res2);
 
@@ -4131,8 +4068,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         detalhes = '".str_replace("'",'"',$_POST['detalhes'])."',
         privado = '".str_replace("'",'"',$_POST['privado'])."',
         id_uso = '".$_POST['id_uso']."',
-        id_forma_dicionario = '".$_POST['id_forma_dicionario']."',
-        id_derivadora = '".$_POST['id_derivadora']."',
+        id_forma_dicionario = '".((int)$_POST['id_forma_dicionario']??0)."',
+        id_derivadora = '".((int)$_POST['id_derivadora']??0)."',
         id_classe = ".$_POST['id_classe'].",
         data_criacao = now(), data_modificacao = now(),
         id_usuario = ".$_SESSION['KondisonairUzatorIDX'].",
@@ -10222,22 +10159,6 @@ if($_GET['gason']!=''&& $_SESSION['KondisonairUzatorIDX']>0){
   die();
 };
 
-if ($_GET['action'] == 'getAcessoColaborador') {
-  $iid = (int)$_GET['iid'];
-  $existentes = mysqli_query($GLOBALS['dblink'],
-        "SELECT * FROM collabs WHERE 
-          id_idioma = ".$iid." AND
-          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
-  if (mysqli_num_rows($existentes) > 0) die('ok');
-  if ($iid > 0){
-    mysqli_query($GLOBALS['dblink'],
-        "INSERT INTO collabs SET 
-          id_idioma = ".$iid.", id = ".generateId().",
-          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
-  };
-  die('ok');
-};
-
 if ($_GET['action'] == 'ajaxGravarStat') {
   $sid = (int)$_GET['sid'];
   $rid = (int)$_GET['rid'];
@@ -10269,6 +10190,22 @@ if ($_GET['action'] == 'ajaxGravarStat') {
   echo $sid;
   die();
 }
+
+if ($_GET['action'] == 'getAcessoColaborador') {
+  $iid = (int)$_GET['iid'];
+  $existentes = mysqli_query($GLOBALS['dblink'],
+        "SELECT * FROM collabs WHERE 
+          id_idioma = ".$iid." AND
+          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
+  if (mysqli_num_rows($existentes) > 0) die('ok');
+  if ($iid > 0){
+    mysqli_query($GLOBALS['dblink'],
+        "INSERT INTO collabs SET 
+          id_idioma = ".$iid.", id = ".generateId().",
+          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
+  };
+  die('ok');
+};
 
 if ($_GET['action'] == 'listStats') {
   $rule = strlen($_GET['et']) > 0 ? $_GET['et'] : 'other';

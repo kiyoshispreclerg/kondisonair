@@ -16,7 +16,7 @@
         $idioma  = $r;
     };
     $romanizacao = $idioma['romanizacao'];
-    $eid = $idioma['eid'];
+    $eid = $idioma['eid'] ?? 0;
     $fonte = $idioma['fonte'];
     $tamanho = $idioma['tamanho'];
     $substituicao = $idioma['substituicao'];
@@ -204,98 +204,111 @@
 
                         $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
                         
-                        if($mdason == 'mdason'){
+                        
                             
-                            while($r = mysqli_fetch_assoc($result)){
+                        while($r = mysqli_fetch_assoc($result)){
+                            $textoSentencas = $r['texto'];
+                            if ($r['binario']>0) $bin = ' BINARY ';
 
-                                $textoSentencas = $r['texto'];
-                                if ($r['binario']>0) $bin = ' BINARY ';
+                            $separadorPalavras = preg_split('//u', $r['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
 
-                                $separadorPalavras = preg_split('//u', $r['separadores'], null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
+                            $iniciadoresPalavras = preg_split('//u', $r['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
+                            foreach ($iniciadoresPalavras as $sep){
+                                $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
+                            }
 
-                                $iniciadoresPalavras = preg_split('//u', $r['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
-                                foreach ($iniciadoresPalavras as $sep){
-                                    $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
+                            $palDesc = 0;
+                            $palCon = 0;
+                            $palTotal = 0;
+                            $palStud = 0;
+                            $palNovas = 0;
+                            $palOk = 0;
+
+                            $btnConferir = '';
+
+                            $listaPalavrasUnicas = array();
+
+                            $linhas = multiexplode($separadorLinhas,$textoSentencas);
+                            
+                            
+                            foreach ($linhas as $linha){
+
+                                $palavras = multiexplode($separadorPalavras,$linha);
+                                
+                                //$listaPalavrasUnicas = array();
+
+                                // ver se o idioma do texto tem eid
+                                if ($eid > 0){
+                                    $pnp = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id";
+                                    //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
+                                    $pnq = "pn.palavra as nativa, ";
+                                    $pno = "pn.palavra ";
+                                }else{
+                                    $pnp = "";
+                                    //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
+                                    $pnq = "p.romanizacao as nativa, ";
+                                    $pno = "p.romanizacao ";
                                 }
 
-                                $palDesc = 0;
-                                $palCon = 0;
-                                $palTotal = 0;
-                                $palStud = 0;
-                                $palNovas = 0;
-                                $palOk = 0;
-
-                                $btnConferir = '';
-
-                                $listaPalavrasUnicas = array();
-
-                                $linhas = multiexplode($separadorLinhas,$textoSentencas);
-                                                
-                                // loop de explodes com todos separadores da lingua, incl pontuações
-
-                                //$palavras = explode($separador,$r['texto']);
-                                // array_merge($separadorLinhas,$separadorPalavras)
-                                foreach ($linhas as $linha){
-
-                                    $palavras = multiexplode($separadorPalavras,$linha);
-                                    
-                                    //$listaPalavrasUnicas = array();
-
-                                    // ver se o idioma do texto tem escrita nativa ou romanizacao {
-                                        $pnp = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id";
-                                        //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
-                                        $pnq = "pn.palavra as nativa, ";
-                                        //}
-
-                                    foreach ($palavras as $p){
-                                        if ($p == '') continue;
-                                        $pids = '';
-                                    
-                                        $sql = "SELECT p.*, c.id as clid, ".$pnq." c.nome as cnome,
+                                foreach ($palavras as $p){
+                                    if ($p == '') continue;
+                                    $pids = '';
+                                
+                                    if($mdason == 'mdason'){
+                                        $sql = "SELECT p.*, c.id as clid, $pnq c.nome as cnome,
                                                 (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
                                             FROM palavras p
-                                            LEFT JOIN classes c ON p.id_classe = c.id ".$pnp." 
-                                            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." 
+                                            LEFT JOIN classes c ON p.id_classe = c.id $pnp 
+                                            WHERE $bin $pno = '$p' AND p.id_idioma = $id_idioma 
                                             ORDER BY p.id_forma_dicionario DESC;"; 
-                                            // AND p.id_forma_dicionario = 0
-                                        //echo $sql;
-                                        $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-                                        $palTotal++;
-                                        if (mysqli_num_rows($a)<1){
-                                            $palDesc++;
-                                        }else{
-                                            $palCon++;
-                                            
-                                            while($qpid = mysqli_fetch_assoc($a)){
-                                                $pids .= $qpid['id'].',';
-                                            }
-                                            
-                                            if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
-                                            else $listaPalavrasUnicas[$p]['q'] = 1;
-                                            
-                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0).";";
-                                            $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
-                                            if (mysqli_num_rows($qpstres)<1){
-                                                $palNovas++;
-                                            }else{
-                                                $qpst = mysqli_fetch_assoc($qpstres);
-                                                $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
-
-                                                $listaPalavrasUnicas[$p]['s'] = $pst;
-
-                                                if ($qpst['status_aprendido']==5) $palOk++;
-                                                else if ($qpst['status_aprendido']>0) $palStud++;
-                                                else $palNovas++;
-                                            }
-                                        }
-                                        // echo ' '.$p.' ';
+                                    }else{
+                                        $sql = "SELECT p.*, c.id as clid, $pnq c.nome as cnome,
+                                                (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
+                                            FROM palavras p
+                                            LEFT JOIN classes c ON p.id_classe = c.id $pnp 
+                                            WHERE $bin $pno = '$p' AND p.id_idioma = ".(
+                                                $id_idioma > 0 ? $id_idioma : $r['id_idioma']
+                                            )." ORDER BY p.id_forma_dicionario DESC;"; 
                                     }
+                                    $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+                                    $palTotal++;
+                                    if (mysqli_num_rows($a)<1){
+                                        $palDesc++;
+                                    }else{
+                                        $palCon++;
+                                        
+                                        while($qpid = mysqli_fetch_assoc($a)){
+                                            $pids .= $qpid['id'].',';
+                                        }
+                                        
+                                        if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
+                                        else $listaPalavrasUnicas[$p]['q'] = 1;
+                                        
+                                        if($mdason == 'mdason'){
+                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0).";";
+                                        }else{
+                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';";
+                                        }
+                                        $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
+                                        if (mysqli_num_rows($qpstres)<1){
+                                            $palNovas++;
+                                        }else{
+                                            $qpst = mysqli_fetch_assoc($qpstres);
+                                            $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
+
+                                            $listaPalavrasUnicas[$p]['s'] = $pst;
+
+                                            if ($qpst['status_aprendido']==5) $palOk++;
+                                            else if ($qpst['status_aprendido']>0) $palStud++;
+                                            else $palNovas++;
+                                        }
+                                    }
+                                    // echo ' '.$p.' ';
                                 }
+                            }
 
-                                $novasUnicas = 0;
+                            if($mdason == 'mdason'){
                                 $btnPublicar = '';
-                                foreach($listaPalavrasUnicas as $pal => $pu){if ($pu['s']<1) { $novasUnicas++; } };
-
                                 if ($r['num_palavras']>0) $descs = _t('Publicado');
                                 else $descs = _t('Não publicado');
 
@@ -310,111 +323,26 @@
                                 $btnPublicar .= "<a onclick='apagarTexto(\"".$r['id']."\",".$r['imports'].")' class='btn btn-danger'>"._t('Apagar')."</a>";
                                 $langName = ''; // nome idioma, caso nao tenha iid
                                 
+                            }
+                            $novasUnicas = 0;
+                            foreach($listaPalavrasUnicas as $pal => $pu){if ($pu['s']<1) { $novasUnicas++; } };
 
+                            if($mdason == 'mdason'){
                                 echo '<div class="list-group-item"><div class="row">
-                                        <div class="col">
-                                            <a href="?page=text&id='.$r['id'].'">'.$r['titulo'].$langName.' </a>
-                                            <div class="text-secondary mt-n1">'.count($listaPalavrasUnicas)." "._t('palavras')." - ".$novasUnicas." "._t('novas')." (".round($novasUnicas/ (count($listaPalavrasUnicas) > 0 ? count($listaPalavrasUnicas) : 1)*100).'%)</div>
-                                        </div>
-                                        <div class="col">
-                                            <a href="#" onClick="editTexto(\''.$r['id'].'\',\''.$r['titulo'].'\')" class="btn btn-primary">'._t('Editar').'</a>
-                                            <div class="text-secondary mt-n1">'.
-                                                ($r['imports']>0?_t('Edição do texto indisponível'):'').
-                                            '</div>
-                                        </div>
-                                        <div class="col">'.$descs.$btnPublicar.
+                                    <div class="col">
+                                        <a href="?page=text&id='.$r['id'].'">'.$r['titulo'].$langName.' </a>
+                                        <div class="text-secondary mt-n1">'.count($listaPalavrasUnicas)." "._t('palavras')." - ".$novasUnicas." "._t('novas')." (".round($novasUnicas/ (count($listaPalavrasUnicas) > 0 ? count($listaPalavrasUnicas) : 1)*100).'%)</div>
+                                    </div>
+                                    <div class="col">
+                                        <a href="#" onClick="editTexto(\''.$r['id'].'\',\''.$r['titulo'].'\')" class="btn btn-primary">'._t('Editar').'</a>
+                                        <div class="text-secondary mt-n1">'.
+                                            ($r['imports']>0?_t('Edição do texto indisponível'):'').
                                         '</div>
-                                    </div></div>';
-                            }; // loop texto
-                        
-                        }else{
-                            while($r = mysqli_fetch_assoc($result)){
-
-                                $textoSentencas = $r['texto'];
-                                if ($r['binario']>0) $bin = ' BINARY ';
-
-                                $separadorPalavras = preg_split('//u', $r['separadores'], null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
-
-                                $iniciadoresPalavras = preg_split('//u', $r['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
-                                foreach ($iniciadoresPalavras as $sep){
-                                    $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
-                                }
-
-                                $palDesc = 0;
-                                $palCon = 0;
-                                $palTotal = 0;
-                                $palStud = 0;
-                                $palNovas = 0;
-                                $palOk = 0;
-
-                                $btnConferir = '';
-
-                                $listaPalavrasUnicas = array();
-
-                                $linhas = multiexplode($separadorLinhas,$textoSentencas);
-                                                
-                                // loop de explodes com todos separadores da lingua, incl pontuações
-
-                                //$palavras = explode($separador,$r['texto']);
-                                // array_merge($separadorLinhas,$separadorPalavras)
-                                foreach ($linhas as $linha){
-
-                                    $palavras = multiexplode($separadorPalavras,$linha);
-                                
-                                    // ver se o idioma do texto tem escrita nativa ou romanizacao {
-                                        $pnp = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id";
-                                        //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
-                                        $pnq = "pn.palavra as nativa, ";
-                                        //}
-
-                                    foreach ($palavras as $p){
-                                        if ($p == '') continue;
-                                        $pids = '';
-                                    
-                                        $sql = "SELECT p.*, c.id as clid, ".$pnq." c.nome as cnome,
-                                                (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
-                                            FROM palavras p
-                                            LEFT JOIN classes c ON p.id_classe = c.id ".$pnp." 
-                                            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".(
-                                                $id_idioma > 0 ? $id_idioma : $r['id_idioma']
-                                            )." ORDER BY p.id_forma_dicionario DESC;"; 
-                                            // AND p.id_forma_dicionario = 0
-                                        //echo $sql;
-                                        $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-                                        $palTotal++;
-                                        if (mysqli_num_rows($a)<1){
-                                            $palDesc++;
-                                        }else{
-                                            $palCon++;
-                                            
-                                            while($qpid = mysqli_fetch_assoc($a)){
-                                                $pids .= $qpid['id'].',';
-                                            }
-                                            
-                                            if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
-                                            else $listaPalavrasUnicas[$p]['q'] = 1;
-                                            
-                                            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."';";
-                                            $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
-                                            if (mysqli_num_rows($qpstres)<1){
-                                                $palNovas++;
-                                            }else{
-                                                $qpst = mysqli_fetch_assoc($qpstres);
-                                                $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
-
-                                                $listaPalavrasUnicas[$p]['s'] = $pst;
-
-                                                if ($qpst['status_aprendido']==5) $palOk++;
-                                                else if ($qpst['status_aprendido']>0) $palStud++;
-                                                else $palNovas++;
-                                            }
-                                        }
-                                        // echo ' '.$p.' ';
-                                    }
-                                }
-
-                                $novasUnicas = 0;
-                                foreach($listaPalavrasUnicas as $pal => $pu){if ($pu['s']<1) { $novasUnicas++; } };
+                                    </div>
+                                    <div class="col">'.$descs.$btnPublicar.
+                                    '</div>
+                                </div></div>';
+                            }else{
 
                                 echo '<div class="list-group-item"><div class="row">
                                         <div class="col">
@@ -425,8 +353,9 @@
                                             <a href="?page=text&id='.$r['id'].'" class="btn btn-primary">'._t('Ler').'</a>
                                         </div>
                                     </div></div>';
-                            }; // loop texto
-                        }
+
+                            }
+                        };
 
                     ?>
 
