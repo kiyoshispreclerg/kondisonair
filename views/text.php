@@ -201,7 +201,7 @@
                     </div>
                   </div>
                   <div class="card-body">
-                    <div class="col-12"  style="overflow-y: scroll; max-height: 35rem" id="painelStud"> </div> 
+                    <div class="col-12"  style="overflow-y: scroll; max-height: 35rem" id="painelStud"><?=_t('Clique em alguma palavra para exibir seu significado.')?></div> 
                   </div>
                   
 

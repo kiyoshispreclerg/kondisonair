@@ -280,7 +280,7 @@ if (mysqli_num_rows($result)>2) {
                 </div> 
             </div>
 
-
+            <?php if ($idioma['paradigma'] != 1) { ?>
             <div class="card mb-3">
                 <div class="card-header nvt">
                     <h3 class="card-title"><?=_t('Formas órfãs')?></h3>
@@ -302,6 +302,7 @@ if (mysqli_num_rows($result)>2) {
                     
                 </div> 
             </div>
+            <?php } ?>
 
 
         </div></div>

@@ -27,9 +27,11 @@ $usuario = mysqli_fetch_assoc($result);
 
 $id_usuario = $usuario['id'];
 
-if ( $id_usuario != $_SESSION['KondisonairUzatorIDX'] && ( $id_usuario > 0 || $usuario['publico'] == '0') ) {
-  echo '<script>window.location = "index.php";</script>';
-  exit;
+if ( $id_usuario != $_SESSION['KondisonairUzatorIDX'] || !$id_usuario > 0) {
+    if ( $usuario['publico'] == 0) {
+        echo '<script>window.location = "index.php";</script>';
+        exit;
+    }
 }
 
 ?>

@@ -87,7 +87,7 @@ while($r = mysqli_fetch_assoc($result)) {
                     <h3 class="card-title mt-4"><?=_t('Perfil público')?></h3>
                     <div>
                       <label class="form-check form-switch form-switch-lg">
-                        <input id="publico" class="form-check-input" type="checkbox" <?php if ($usuario['publico']==1) echo 'checked'; ?>>
+                        <input id="publico" class="form-check-input" type="checkbox" <?php if ($usuario['publico']==1) echo 'checked'; ?> onchange="$('#btnSalvar').show()">
                         <span class="form-check-label form-check-label-on"><?=_t('Visível')?></span>
                         <span class="form-check-label form-check-label-off"><?=_t('Invisível')?></span>
                       </label>

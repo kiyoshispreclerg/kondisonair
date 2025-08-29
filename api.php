@@ -314,6 +314,8 @@ switch($page){
     case 'changer_full': $tituloPagina .= ' - '._t('Outros alteradores'); break;
     // case 'confirmation': $tituloPagina .= ' - '._t('Confirmação'); break;
     case 'paradigmer': $tituloPagina .= ' - '._t('Gerador de paradigma'); break;
+    case 'wordcompare': $tituloPagina .= ' - '._t('Comparador de palavras'); break;
+    case 'masseditlexicon': $tituloPagina .= ' - '._t('Edição em massa de palavras'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -3362,8 +3364,8 @@ function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,
             
             $popupbox = '';
             $glossbox = '';
-            if ($rom != '') { $popupbox .= '<strong>'.$rom.'</strong>'; $glossbox .= '<strong>'.$rom.'</strong>'; }
-            if ($pron != '') {$popupbox .= ' /'.$pron."/<br>\n"; $glossbox .= ' /'.$pron."/";}
+            if ($eid > 0 && $rom != '') { $popupbox .= '<strong>'.$rom.'</strong> '; $glossbox .= '<strong>'.$rom.'</strong> '; }
+            if ($pron != '') {$popupbox .= '/'.$pron."/<br>\n"; $glossbox .= '/'.$pron."/";}
 
             // $popupbox: nome classe, genero e flexões
             //if ($gloss != '') {$popupbox .= ' ('.$gloss.")";}
@@ -6144,17 +6146,29 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         };
 
     }else if($filtro == 3){ // homógrafos (mesma escrita)
-      
-      $query = "SELECT p.*, n.palavra,
-        (SELECT COUNT(*) 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = ".$escrita."
-          WHERE BINARY epn.palavra = n.palavra) as num_extras_palavras,
-        (SELECT GROUP_CONCAT(ep.pronuncia, '©', ep.significado, '©', romanizacao, '©', ep.id".$sqlNativo." SEPARATOR '|') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = ".$escrita."
-          WHERE BINARY epn.palavra = n.palavra) as extras_palavras FROM palavras p 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-        WHERE p.id_idioma = ".$_GET['id']." 
-        GROUP BY n.palavra  ORDER BY num_extras_palavras DESC;"; // AND p.id_forma_dicionario = 0
+        if($escrita>0)
+              $query = "SELECT p.*, n.palavra,
+                (SELECT COUNT(*) 
+                  FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = ".$escrita."
+                  WHERE BINARY epn.palavra = n.palavra) as num_extras_palavras,
+                (SELECT GROUP_CONCAT(ep.pronuncia, '©', ep.significado, '©', romanizacao, '©', ep.id".$sqlNativo." SEPARATOR '|') 
+                  FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = ".$escrita."
+                  WHERE BINARY epn.palavra = n.palavra) as extras_palavras FROM palavras p 
+                LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
+                WHERE p.id_idioma = ".$_GET['id']." 
+                GROUP BY n.palavra  ORDER BY num_extras_palavras DESC;"; // AND p.id_forma_dicionario = 0
+        else
+              $query = "SELECT p.*, p.romanizacao as palavra,
+                (SELECT COUNT(*) 
+                  FROM palavras ep 
+                  WHERE BINARY ep.romanizacao = p.romanizacao) as num_extras_palavras,
+                (SELECT GROUP_CONCAT(ep.pronuncia, '©', ep.significado, '©', romanizacao, '©', ep.id".$sqlNativo." SEPARATOR '|') 
+                  FROM palavras ep 
+                  WHERE BINARY ep.romanizacao = p.romanizacao) as extras_palavras 
+                FROM palavras p 
+                WHERE p.id_idioma = ".$_GET['id']." 
+                GROUP BY p.romanizacao ORDER BY num_extras_palavras DESC;";
+                
         $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
 
         $numAnterior = 1000000;
@@ -6184,12 +6198,17 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         };
 
     }else if($filtro == 4){ // pares minimos 
-      
-        $query = "SELECT p.*, n.palavra
-          FROM palavras p 
-          LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
-          WHERE p.id_idioma = ".$_GET['id']." 
-          GROUP BY p.pronuncia ;";
+        if($escrita > 0)
+            $query = "SELECT p.*, n.palavra
+              FROM palavras p 
+              LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
+              WHERE p.id_idioma = ".$_GET['id']." 
+              GROUP BY p.pronuncia ;";
+        else
+            $query = "SELECT p.*, p.romanizacao as palavra
+              FROM palavras p 
+              WHERE p.id_idioma = ".$_GET['id']." 
+              GROUP BY p.pronuncia ;";
 
         
         $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
@@ -9913,7 +9932,7 @@ if ($_GET['action'] == 'publicaTexto') {
     if ($r['binario']>0) $bin = ' BINARY ';
     $id_idioma = $r['id_idioma'];
 
-    $separadorPalavras = preg_split('//u', $r['separadores'], null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
+    $separadorPalavras = preg_split('//u', $r['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
 
     $iniciadoresPalavras = preg_split('//u', $r['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
     foreach ($iniciadoresPalavras as $sep){
@@ -9941,6 +9960,7 @@ if ($_GET['action'] == 'publicaTexto') {
         if ($p == '') continue;
         $pids = '';
       
+        if ($eid > 0){
         $sql = "SELECT p.*, c.id as clid, pn.palavra as nativa, c.nome as cnome,
             (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
           FROM palavras p
@@ -9948,6 +9968,14 @@ if ($_GET['action'] == 'publicaTexto') {
           LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
           WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." 
           ORDER BY p.id_forma_dicionario DESC;"; 
+        }else{
+          $sql = "SELECT p.*, c.id as clid, p.romanizacao as nativa, c.nome as cnome,
+              (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
+            FROM palavras p
+            LEFT JOIN classes c ON p.id_classe = c.id 
+            WHERE ".$bin." p.romanizacao = '".$p."' AND p.id_idioma = ".$id_idioma." 
+            ORDER BY p.id_forma_dicionario DESC;"; 
+        }
           // AND p.id_forma_dicionario = 0
         //echo $sql;
         $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));

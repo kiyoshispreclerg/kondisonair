@@ -48,6 +48,11 @@ $romanizacao = $idioma['romanizacao'];
                     </ol>
                 </h2>
               </div>
+              <?php if ( $idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX']) { ?>
+              <div class="col-auto ms-auto">
+                <a href="?page=editlanguage&iid=<?=$id_idioma?>" class="btn btn-primary" id="btnSalvar"><?=_t('Editar')?></a>
+              </div>
+              <?php }; ?>
             </div>
           </div>
         </div>

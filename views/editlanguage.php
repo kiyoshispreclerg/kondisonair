@@ -9,8 +9,8 @@ if ($id_idioma>0){
 
     $idioma = array();  
     $result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, e.tamanho, e.id_fonte,
-                (SELECT COUNT(*) FROM escritas where id_idioma = i.id) as numPublishedTexts,
-                (SELECT COUNT(*) FROM escritas where id_idioma = i.id) as numUsersTexts,
+                (SELECT COUNT(*) FROM studason_tests where id_idioma = i.id AND num_palavras > 0) as numPublishedTexts,
+                (SELECT COUNT(*) FROM tests_importasons where id_texto IN(SELECT id FROM studason_tests where id_idioma = i.id)) as numUsersTexts,
                 (SELECT COUNT(*) FROM soundChanges where id_idioma = i.id) as numChangesList,
                 (SELECT COUNT(*) FROM palavras where id_idioma = i.id AND id_forma_dicionario = 0) as numBaseWords,
                 (SELECT COUNT(*) FROM classes where id_idioma = i.id) as numParts,
