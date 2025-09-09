@@ -116,6 +116,8 @@
                             
 
                             <div class="mb-3">
+                            <div class="row">
+                            <div class="col-6">
                               <label class="form-label">'._t('Nome nativo').'</label>
                               <select type="text" class="form-select" value="" id="id_nativo'.$e['id'].'" onchange="salvarEscrita(\''.$e['id'].'\')">
                                 ';
@@ -130,11 +132,8 @@
                             }else{
                               $editChar = 'addCaractere(\'';
                               $editSubs = 'addSubstituicao';
-                            $contents .= '<div class="mb-3">
-                                <div class="row">
-
-                                  <div class="col-6">
-                                    <label class="form-label">'._t('Fonte').'</label>
+                            $contents .= '<div class="col-6">
+                                    <label class="form-label">'._t('Fonte').' <a class="btn btn-sm btn-primary" onclick="loadModalFontes()">'._t('Gerenciar').'</a></label>
                                     <select id="fonte'.$e['id'].'" class="form-select" type="text" onchange="salvarEscrita(\''.$e['id'].'\')" >
                                     <option value="3" selected>'._t('Desenhada').'</option>';
                                     $fts = mysqli_query($GLOBALS['dblink'],"SELECT * FROM fontes WHERE id_usuario = ".$_SESSION['KondisonairUzatorIDX']." OR publica = 1;") or die(mysqli_error($GLOBALS['dblink']));
@@ -145,12 +144,8 @@
                                         }
 
                                     $contents .='</select>
-                                  </div>
-                                  <div class="col-6">
-                                    <div class="form-label">'._t('Carregar fonte').'</div>
-                                    <input type="file" id="loadfont'.$e['id'].'" class="form-control" />
-                                  </div>
-                                </div>
+                              </div>
+                              </div>
                               </div>';
                             };
 
@@ -465,57 +460,6 @@
   $(document).ready(function(){
       <?php echo $script; ?>
   });
-
-  function upload(){ alert('to do'); return;
-      $.confirm({
-          title: 'Nova escrita',
-          type: 'default', 
-          typeAnimated: true,
-          content: `<div class="form-group">
-                  <input type="text" class="form-control" name="fontName" id="fontName" placeholder="Nome da Fonte">
-                  <input type="file" class="form-control" name="fileToUpload" id="fileToUpload" >
-                  </div>`  ,
-          containerFluid: true, 
-          buttons: {
-              "OK": function () {
-
-                  if (  $('#fontName').val()==''  ) return false;
-                  
-                  var file_data = $('#fileToUpload').prop('files')[0];
-                  var form_data = new FormData();
-                  form_data.append('fileToUpload', file_data);
-                  form_data.append('id', $('#fontName').val());
-                  $.ajax({
-                      url: 'upload.php',
-                      dataType: 'text',
-                      cache: false,
-                      contentType: false,
-                      processData: false,
-                      data: form_data,
-                      type: 'post',
-                      success: function (response) {
-                          $.get("api.php?action=ajaxSalvarFonte&f="+$.trim(response)+"&n="+$('#fontName').val(), function (data){
-                              if(data>0) location.reload(true);
-                              else alert(data);
-                          });
-                          alert(response);
-                          //location.reload(true);
-                          //$('#msg').html(response); // display success response from the server
-                      },
-                      error: function (response) {
-                          alert('Erro ao carregar arquivo: '+response);
-                          //$('#msg').html(response); // display error response from the server
-                      }
-                  });
-
-
-              },
-              "Voltar": function () {
-                      
-              } 
-          }
-      });
-  };
 
   function salvarEscrita(id){
     $('#btnSalvar'+id).show();
@@ -986,9 +930,33 @@
   </div>
 </div>
 
+<div class="modal modal-blur" tabindex="-1" id="modalFontes" style="display: none;" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><?=_t('Fontes')?></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="bodyModalFontes">
+        
+        
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label"><?=_t('Carregar Nova Fonte')?></label>
+            <input type="text" class="form-control" id="fontName" placeholder="Nome da fonte">
+            <input type="file" class="form-control" id="fontFile" accept=".ttf">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="carregarFonte()"><?=_t('Carregar')?></button>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="./dist/libs/signature_pad/dist/signature_pad.umd.min.js?1745260900" defer=""></script>
 <script>
-
 
 const canvas = document.getElementById("drawchar");
 var signaturePad;

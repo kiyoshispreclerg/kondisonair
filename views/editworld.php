@@ -374,13 +374,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Apagar cache local<br>
-                Exportar universo para arquivo local
+                <a href="#" class="btn link-secondary" onclick="limparCacheLocal('<?=$id_universo?>')">
+                    Apagar todo o cache local
+                </a>
+                <a href="?action=exportarRealidade&id_realidade=<?=$id_universo?>" class="btn link-secondary" target="_blank">
+                    Exportar para arquivo
+                </a>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
-                    Excluir universo!
-                </a>
+                <div class="d-flex align-items-center">
+                    <a href="#" class="btn link-danger" onclick="togglePasswordField()">Excluir realidade!</a>
+                    <div id="passwordContainer" class="ms-3 d-none">
+                        <input type="password" class="form-control d-inline-block" id="deletePassword" placeholder="Insira sua senha" style="width: 200px;">
+                        <button class="btn btn-danger ms-2" onclick="excluirRealidade('<?=$id_universo?>', document.getElementById('deletePassword').value)">Confirmar</button>
+                    </div>
+                </div>
                 <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal">Fechar</a>
             </div>
         </div>

@@ -25,6 +25,9 @@
                   <div class="card-header">
                     <h3 class="card-title"><?=_t('Minhas realidades')?></h3>
                     <div class="card-actions">
+                      <a onclick="$('#importRealityModal').modal('show')" class="btn btn-primary">
+                        <?=_t('Importar')?>
+                      </a>
                       <a href="?page=editworld&id=0" class="btn btn-primary">
                         <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
@@ -50,6 +53,7 @@
                         
                         // organizar primeiro, pra ter btns das familias, btn outras, btn todas, e dentro dos btn os links pra diommdason
 
+                        if (mysqli_num_rows($res)==0) { echo '<div class="col-md-6 col-lg-3">'._t('Nada aqui.').'</div>'; }else{
                         while($r = mysqli_fetch_assoc($res)) { 
                             
                           $icon = 'eye'; $title = "Pública"; $div = ''; $diva = '';
@@ -79,6 +83,7 @@
                               </div>
                             </div>'; 
                         };
+                      };
                       ?>
 
 
@@ -91,3 +96,26 @@
           </div>
         </div>
 		
+<div class="modal modal-blur" id="importRealityModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><?=_t('Importar realidade')?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="realityFile" class="form-label"><?=_t('Selecione o arquivo Zip')?></label>
+                    <input type="file" class="form-control" id="realityFile" accept=".zip">
+                </div>
+                <div id="importStatus" class="mt-3">
+                  <div class="text-secondary"><?=_t('Atenção: ao importar uma realidade, todos os dados existentes aqui serão substituídos pelos enviados nesse arquivo!')?></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?=_t('Fechar')?></button>
+                <button type="button" class="btn btn-primary" onclick="importReality(this)"><?=_t('Importar')?></button>
+            </div>
+        </div>
+    </div>
+</div>

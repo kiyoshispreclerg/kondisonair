@@ -284,7 +284,7 @@ $.post("?action=ajaxBuscaGeral&t="+ $('#inputBusca').val(), function (data){
 function globalFonts(data, force = false){ 
     var style = document.createElement('style');
     style.type = 'text/css';
-    if (force || data > localStorage.getItem("k_fonts_updated")){
+    if (true || force || data > localStorage.getItem("k_fonts_updated")){
         console.log('local fonts outdated > update');
         $.get("api.php?action=getGlobalFonts", function (lex){
             localStorage.setItem("k_fonts", lex);
@@ -1238,6 +1238,10 @@ function limparCacheLocal(id = '') {
     }
 }
 
+function limparCacheLocalRealidade(id = '') {
+    alert('to do')
+}
+
 function loadAutoSubstituicoes(eid, changed = 0, force = false) {
     $.get("api.php?action=getAllAutoSubstituicoes&eid=" + eid, function(data) {
         const response = JSON.parse(data);
@@ -1543,6 +1547,56 @@ function importLanguage(el) {
     });
 }
 
+function importReality(el) {
+    const fileInput = document.getElementById('realityFile');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        $('#importStatus').html(
+            '<div class="alert alert-danger alert-dismissible" role="alert">' +
+            'Please select a JSON file' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+            '</div>'
+        );
+        return;
+    }
+
+    $('#importStatus').html('<div class="loaderSpin"></div>');
+    $(el).parent().hide();
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    $.ajax({
+        url: 'api.php?action=importarRealidade',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            $('#importStatus').html(
+                '<div class="alert alert-success alert-dismissible" role="alert">' +
+                response.message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            );
+            fileInput.value = ''; // Reset file input
+            setTimeout(() => location.reload(), 2000);
+        },
+        error: function(xhr) {
+            let errorMessage = 'Error importing reality';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            $('#importStatus').html(
+                '<div class="alert alert-danger alert-dismissible" role="alert">' +
+                errorMessage +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            );
+             $(el).parent().show(); 
+        }
+    });
+}
+
 function excluirIdioma(idIdioma,password){
     if (!idIdioma || !password) {
         $('#deleteStatus').html(
@@ -1582,4 +1636,85 @@ function excluirIdioma(idIdioma,password){
             document.getElementById('deletePassword').value = ''; // Clear password
         }
     });
+}
+
+function excluirRealidade(idRealidade,password){
+    if (!idRealidade || !password) {
+        $('#deleteStatus').html(
+            '<div class="alert alert-danger alert-dismissible" role="alert">' +
+            'Please enter reality ID and password' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+            '</div>'
+        );
+        return;
+    }
+    $.ajax({
+        url: 'api.php?action=apagarRealidade',
+        method: 'POST',
+        data: { id_realidade: idRealidade, password: password },
+        success: function(response) {
+            $('#deleteStatus').html(
+                '<div class="alert alert-success alert-dismissible" role="alert">' +
+                response.message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            ).removeClass('d-none');
+            document.getElementById('deletePassword').value = ''; // Clear password
+            document.getElementById('passwordContainer').classList.add('d-none'); // Hide password field
+            setTimeout(() => location.reload(), 2000);
+        },
+        error: function(xhr) {
+            let errorMessage = 'Erro ao excluir realidade';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            $('#deleteStatus').html(
+                '<div class="alert alert-danger alert-dismissible" role="alert">' +
+                errorMessage +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>'
+            ).removeClass('d-none');
+            document.getElementById('deletePassword').value = ''; // Clear password
+        }
+    });
+}
+
+function loadModalFontes(){
+    $.get("api.php?action=ajaxGetListaFontes", function (data){
+        $("#bodyModalFontes").html(data);
+        $("#modalFontes").modal('show');
+    })
+}
+
+function carregarFonte(){
+    if (  $('#fontName').val()==''  ) return false;
+    
+    var file_data = $('#fontFile').prop('files')[0];
+    var form_data = new FormData();
+    form_data.append('fontFile', file_data);
+    form_data.append('nome', $('#fontName').val());
+    $.ajax({
+        url: 'api.php?action=ajaxSalvarFonte',
+        method: 'POST',
+        data: form_data,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            if(response>0) location.reload(true);
+            else alert(response);
+        },
+        error: function (response) {
+            alert('Erro ao carregar arquivo: '+response);
+        }
+    });
+};
+
+function apagarFonte(id){
+    if (confirm("Tem certeza?")) {
+        $.get("api.php?action=ajaxApagarFonte&id="+id,function (data){
+            if ($.trim(data)== "ok"){
+                loadModalFontes()
+            }else alert(data);
+        });
+    }
 }

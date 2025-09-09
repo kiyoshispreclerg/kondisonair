@@ -25,7 +25,8 @@ $id_subclasse = $_GET['c']; //esse é o id
 
 $idioma = array();   
 $result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, c.nome AS nomeClasse, c.paradigma,
-        (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab
+        (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab,
+        (SELECT nome FROM itensConcordancias WHERE id = $id_depende LIMIT 1) as nomeSuperior
         FROM classes c LEFT JOIN idiomas i ON c.id_idioma = i.id 
                WHERE c.id = ".$id_classe.";") or die(mysqli_error($GLOBALS['dblink']));
 while($r = mysqli_fetch_assoc($result)) { 
@@ -34,12 +35,14 @@ while($r = mysqli_fetch_assoc($result)) {
 if ($idioma['romanizacao']=='1') $romanizacao = 1;
 $motor = 'ksc';
 
-$title = '';
+$title = _t('Formas');
+$subNavLinks = '';
 $id_subclasse = $id_depende;
 if (!$id_subclasse>0) { 
     $id_subclasse = $id_classe;
 }else{ 
-
+    $subNavLinks .= '<li class="breadcrumb-item"><a href="?page=editforms&d=0&pid='.$_GET['pid'].'">Formas</a></li>';
+    $title = $idioma['nomeSuperior'];
     $idk = $id_subclasse;
     $i = 0;
     while($i<10){ // max level os deps
@@ -48,10 +51,9 @@ if (!$id_subclasse>0) {
             LEFT JOIN concordancias c2 ON c2.id = ic.id_concordancia 
             WHERE c.id = ".$idk.";") or die(mysqli_error($GLOBALS['dblink']));
         $d1 = mysqli_fetch_assoc($dep1);
-        if ($d1['depende']==0) break; $i++;
+        if ($d1['depende']==0||$d1['depende']==$id_depende) break; $i++;
         $idk = $d1['id_classe'];
-        $title = ' > <a >'.$d1['nome'].'</a>'.$title;
-
+        $subNavLinks .= '<li class="breadcrumb-item"><a href="?page=editforms&d='.$d1['depende'].'&pid='.$d1['nome'].'">Sub</a></li>';
     };
 }
 
@@ -178,8 +180,8 @@ if (mysqli_num_rows($result)>2) {
                 <?php }else{ ?>
                 <li class="breadcrumb-item"><a href="?page=editparts&iid=<?=$id_idioma?>"><?=$idioma['nomeClasse']?></a></li>
                 <li class="breadcrumb-item"><a href="?page=editinflections&iid=<?=$id_idioma?>&k=<?=$_GET['k']?>">Flexões</a></li>
-                <?php } ?>
-                <li class="breadcrumb-item active"><a><?=_t('Formas')?></a></li>
+                <?php } echo $subNavLinks; ?>
+                <li class="breadcrumb-item active"><a><?=$title?></a></li>
             </ol>
         </h2>
         </div>
