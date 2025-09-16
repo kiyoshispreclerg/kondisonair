@@ -282,7 +282,7 @@ if (mysqli_num_rows($result)>2) {
                 </div> 
             </div>
 
-            <?php if ($idioma['paradigma'] != 1) { ?>
+            <?php //if ($idioma['paradigma'] != 1) { ?>
             <div class="card mb-3">
                 <div class="card-header nvt">
                     <h3 class="card-title"><?=_t('Formas órfãs')?></h3>
@@ -304,7 +304,7 @@ if (mysqli_num_rows($result)>2) {
                     
                 </div> 
             </div>
-            <?php } ?>
+            <?php //} ?>
 
 
         </div></div>
@@ -381,7 +381,7 @@ function gravarFlexao(){
     });
 }; 
 
-function gravarPalavra(){ 
+function gravarPalavra(ignorar = '0'){ 
     <?php if ($romanizacao){ ?>
     if ($('#romanizacao').val()==''){
         $("#romanizacao").addClass( 'is-invalid' ); return;
@@ -406,7 +406,7 @@ function gravarPalavra(){
         cex.push( { val : $(this).val(), did : $(this).attr('id').replace("dimExtra","")} ); 
     });
 
-    $.post("api.php?action=salvarPalavraFlexionada&dic=<?=$_GET['pid']?>&iid=<?=$id_idioma?>&paradigma=<?=$idioma['paradigma']?>&classe=<?=$id_classe?>", // classe enviado só se for paradigma 1, que nao tem dependencias
+    $.post("api.php?action=salvarPalavraFlexionada&dic=<?=$_GET['pid']?>&iid=<?=$id_idioma?>&paradigma=<?=$idioma['paradigma']?>&classe=<?=$id_classe?>&ignorar="+ignorar, // classe enviado só se for paradigma 1, que nao tem dependencias
     {   <?php if ($romanizacao){ ?> romanizacao:$('#romanizacao').val(), <?php } ?>
         pronuncia:$('#pronuncia').val(),
         significado:$('#significado').val(),
@@ -424,8 +424,24 @@ function gravarPalavra(){
             $("#btnGravarPalavra").hide();
             $("#detalhesPalavra").hide(); //xxxxx limpar
             carregaTabela();
+            $("#modalPalRep").modal("hide");
         }else{
-            alert(data);
+            let resp = $.trim(data).split('|');
+
+            if (resp[0] < 0){
+                let rep = resp[0];
+                rep = rep.substring(1);
+                $('#resp').val(rep);
+                $('#resp1').val(resp[1]);
+                $('#resp2').val(resp[2]);
+                $('#palRepText').html( 'Já existe uma palavra com a mesma pronúncia ou romanização: \n<br><strong>\\'+resp[1]+
+                    '\\</strong> \n<br>'+resp[2]+'. \n<br><br>Deseja salvar mais uma nova palavra assim mesmo?' );
+                $("#ignorar").val(ignorar);
+                $("#modalPalRep").modal("show");
+                
+            }else{
+                alert(data);
+            };
         };
     });
 }; 
@@ -968,6 +984,24 @@ if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>"
 			<button class="btn btn-primary" type="button" data-bs-dismiss="offcanvas" onclick="okIpaPronuncia()">
 			Ok
 			</button>
+		</div>
+	</div>
+</div>
+
+<div class="modal modal-blur" id="modalPalRep" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-sm modal-dialog-centered" role="document" >
+		<div class="modal-content"  >
+			<div class="modal-header">
+				<h5 class="modal-title" id="modaltitle"><?=_t('Palavra já existe')?></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<input type="hidden" id="resp" value="0"/>
+			<input type="hidden" id="ignorar" value="0"/>
+			<div class="modal-body panel-body" id="palRepText"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
+				<button type="button" class="btn btn-primary" onClick="gravarPalavra( $('#ignorar').val() + ',' + $('#resp').val() );"><?=_t('Adicionar')?></button>
+			</div>
 		</div>
 	</div>
 </div>

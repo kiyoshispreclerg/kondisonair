@@ -207,7 +207,7 @@ if ($_GET['et']=='character' || $e['rule']=='character') {
 $(document).ready(function() {
     createTablerSelect('id_tipo');
     createTablerSelect('id_tags', null, true);
-    <?php if ($eid > 0) echo "loadEntity($eid);"; ?>
+    <?php if ($eid > 0) echo "loadEntity(\"$eid\");"; ?>
     setTimeout(() => { 
         createTablerSelect('id_idsig',null);
         appLoad(); },

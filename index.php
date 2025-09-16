@@ -10,22 +10,15 @@ require('api.php');
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title><?=$tituloPagina?></title>
     <!-- CSS files -->
-    <link href="dist/css/tabler2.min.css?1692870487" rel="stylesheet"/>
-    <link href="dist/css/tabler-flags.min.css?1692870487" rel="stylesheet"/>
-    <link href="dist/css/tabler-payments.min.css?1692870487" rel="stylesheet"/>
+    <link href="dist/css/tabler2.min.css?1692870487" rel="stylesheet"/>  
     <link href="dist/css/tabler-vendors.min.css?1692870487" rel="stylesheet"/>
-    <link href="kondisonair.css" rel="stylesheet"/>    
-    
-    <link href="dist/css/tabler-themes.css" rel="stylesheet"/>
-    
+    <link href="kondisonair.css" rel="stylesheet"/>        
+    <link href="dist/css/tabler-themes.css" rel="stylesheet"/>    
     <script src="jquery.min.js"></script>
     <script src="dist/js/demo-theme2.min.js?1692870487"></script>
-    
-
   </head>
   <body >
     <div class="page">
-
       <header class="navbar navbar-expand-md d-print-none" >
         <div class="container-xl">
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Toggle navigation">
@@ -234,7 +227,7 @@ require('api.php');
     <script src="./dist/js/demo.min.js?1692870487" defer></script>
 
     <script>
-      globalFonts(<?=getLastChange('fonts')?>);
+      globalFonts('<?=getLastChange('fonts')?>');
     </script>
 
   </body>

@@ -468,6 +468,7 @@
 
 				setTimeout(() => {
 					abrirPalavra($.trim(data));
+					$("#modalPalRep").modal("hide");
 				}, 500);
 
 			}else{
@@ -478,32 +479,14 @@
 					let rep = resp[0];
 					rep = rep.substring(1);
 
-					if (confirm(
-						'Já existe uma palavra com a mesma pronúncia ou romanização: \n<br><strong>\\'+resp[1]+
-						'\\</strong> \n<br>'+resp[2]+'. \n<br><br>Deseja salvar mais uma nova palavra assim mesmo?'
-					)){
-						gravarPalavra(ignorar+','+rep);
-					}
+					$('#resp').val(rep);
+					$('#resp1').val(resp[1]);
+					$('#resp2').val(resp[2]);
+					$('#palRepText').html( 'Já existe uma palavra com a mesma pronúncia ou romanização: \n<br><strong>\\'+resp[1]+
+						'\\</strong> \n<br>'+resp[2]+'. \n<br><br>Deseja salvar mais uma nova palavra assim mesmo?' );
 
-					/*$.confirm({
-						title: 'Já existe!',
-						type: 'red', 
-						typeAnimated: true,
-						content: 'Já existe uma palavra com a mesma pronúncia ou romanização: \n<br><strong>\\'+resp[1]+
-							'\\</strong> \n<br>'+resp[2]+'. \n<br><br>Deseja descartar esta e abrir a existente, ou salvar mais esta nova palavra assim mesmo?'  ,
-						containerFluid: true, 
-						buttons: {
-							"Abrir existente": function () {
-								abrirPalavra(rep);
-							},
-							"Salvar esta outra": function () {
-								gravarPalavra(ignorar+','+rep);
-							},
-							Cancelar: function () {
-								
-							} 
-						}
-					});*/
+					$("#ignorar").val(ignorar);
+					$("#modalPalRep").modal("show");
 					
 				}else{
 					alert(data);
@@ -1069,5 +1052,23 @@ if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>"
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasExtras" aria-labelledby="offcanvasExtrasLabel">
 	<div class="offcanvas-body" id="extrasCanvas">
 		
+	</div>
+</div>
+
+<div class="modal modal-blur" id="modalPalRep" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-sm modal-dialog-centered" role="document" >
+		<div class="modal-content"  >
+			<div class="modal-header">
+				<h5 class="modal-title" id="modaltitle"><?=_t('Palavra já existe')?></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<input type="hidden" id="resp" value="0"/>
+			<input type="hidden" id="ignorar" value="0"/>
+			<div class="modal-body panel-body" id="palRepText"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
+				<button type="button" class="btn btn-primary" onClick="gravarPalavra( $('#ignorar').val() + ',' + $('#resp').val() );"><?=_t('Adicionar')?></button>
+			</div>
+		</div>
 	</div>
 </div>

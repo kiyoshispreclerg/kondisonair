@@ -1121,8 +1121,7 @@ function getInfoPalavraFromID($pid){
 function getPalavrasMesmaEscrita($pid,$limit=0,$eid=0){
   $return = '';  
   if ($limit > 0) $sqlLimit = " LIMIT ".$limit." ";
-  $res0 = mysqli_query($GLOBALS['dblink'],"SELECT *, 
-      (SELECT i.id_usuario FROM idiomas i WHERE i.id = p.id_idioma) as usuario_dono FROM palavras p 
+  $res0 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavras p 
       WHERE p.id = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
   $r = mysqli_fetch_assoc($res0);
   $id_idioma = $r['id_idioma'];
@@ -1139,39 +1138,67 @@ function getPalavrasMesmaEscrita($pid,$limit=0,$eid=0){
         $tamanho = $e['tamanho'];
         $enome = $e['nome'];
         
-        $homons = mysqli_query($GLOBALS['dblink'],"SELECT p.*, ap.*, p2.id_palavra AS palavra_id, 
-          i.sigla, i.nome_legivel,
-          (SELECT c.nome FROM classes c WHERE c.id = ap.id_classe LIMIT 1) as nomeClasse 
-          FROM palavrasNativas p
-          LEFT JOIN palavrasNativas p2 ON p2.id_escrita  = p.id_escrita 
-          LEFT JOIN palavras ap ON p2.id_palavra = ap.id 
-          LEFT JOIN idiomas i ON i.id = ap.id_idioma 
-          WHERE BINARY p.palavra = p2.palavra
-          AND p.palavra <> ''
-          AND p.id_palavra = ".$pid." 
-          AND p.id_escrita = ".$escrita."
-          ORDER BY RAND() ".$sqlLimit.";") or die(mysqli_error($GLOBALS['dblink'])); //nomeClasse
+        if ($escrita > 0){
+          $sql = "SELECT p.*, ap.*, ap.pronuncia as pron, p2.id_palavra AS palavra_id,
+            i.sigla, i.nome_legivel,
+            (SELECT c.nome FROM classes c WHERE c.id = ap.id_classe LIMIT 1) as nomeClasse 
+            FROM palavrasNativas p
+            LEFT JOIN palavrasNativas p2 ON p2.id_escrita  = p.id_escrita 
+            LEFT JOIN palavras ap ON p2.id_palavra = ap.id 
+            LEFT JOIN idiomas i ON i.id = ap.id_idioma 
+            WHERE BINARY p.palavra = p2.palavra
+            AND p.palavra <> ''
+            AND p.id_palavra = $pid 
+            AND p.id_escrita = $escrita 
+            ORDER BY RAND() $sqlLimit ;";
+        }else{
+          die('invalid');
+        }
+
+        $homons = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //nomeClasse
         if (mysqli_num_rows($homons)>1){// <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasSigCom" role="button" aria-controls="offcanvasStart">Mostrar/ocultar significados da comunidade</a>
         $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaEscrita\')">'._t('Palavras com mesma escrita em').' '.$enome.'</a></h3>';
             // <h4>Palavras com mesma escrita em '.$enome.':</h4><ul>';
             while($homon = mysqli_fetch_assoc($homons)){
               if ($homon['palavra_id']==$pid) continue;
               $nat = getSpanPalavraNativa($homon['palavra'],$escrita,$fonte,$tamanho);
-              if ($homon['id_idioma']==$id_idioma)
-                $return .= '<a class="col text-truncate" href="#" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
-                    <div class="text-reset d-block text-truncate">'.$nat.' '.($homon['romanizacao']!=''?$homon['romanizacao']:'').'</div>
-                    <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
-                  </a>'; // '.'('.$homon['nomeClasse'].') 
-              else
-                $return .= '<a href="#" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')" class="col text-truncate">
-                    <div class="text-reset d-block text-truncate">'.$nat.'</div>
-                    <div class="text-secondary text-truncate mt-n1">XXXXX'.($homon['romanizacao']!=''?'"'.$homon['romanizacao'].'"':'').' ('.$homon['nomeClasse'].') <span title="'.$homon['nome_legivel'].'">['.$homon['sigla'].']</span> '.$homon['significado'].'</div>
-                  </a>';
+              //if ($homon['id_idioma']==$id_idioma)
+              $return .= '<a class="col text-truncate" href="#" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
+                  <div class="text-reset d-block text-truncate">'.$nat.' '.($homon['romanizacao']!=''?$homon['romanizacao']:'/'.$homon['pron'].'/').'</div>
+                  <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
+                </a>';
             }
             $return .= '</div>'; // </ul>
         }
     }
 
+  }else{
+      $sql = "SELECT p.*, p2.romanizacao as roman, p2.pronuncia as pron, p2.id AS palavra_id,
+          i.sigla, i.nome_legivel,
+          (SELECT c.nome FROM classes c WHERE c.id = p2.id_classe LIMIT 1) as nomeClasse 
+          FROM palavras p
+          LEFT JOIN palavras p2 ON p2.id_idioma  = p.id_idioma 
+          LEFT JOIN idiomas i ON i.id = p.id_idioma 
+          WHERE BINARY p.romanizacao = p2.romanizacao
+          AND p.romanizacao <> ''
+          AND p.id = $pid 
+          ORDER BY RAND() $sqlLimit ;";
+
+      $homons = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //nomeClasse
+      if (mysqli_num_rows($homons)>1){// <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasSigCom" role="button" aria-controls="offcanvasStart">Mostrar/ocultar significados da comunidade</a>
+      $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaEscrita\')">'._t('Palavras com mesma romanização').'</a></h3>';
+          // <h4>Palavras com mesma escrita em '.$enome.':</h4><ul>';
+          while($homon = mysqli_fetch_assoc($homons)){
+            if ($homon['palavra_id']==$pid) continue;
+            $nat = $homon['roman'];
+            //if ($homon['id_idioma']==$id_idioma)
+            $return .= '<a class="col text-truncate" href="#" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
+                <div class="text-reset d-block text-truncate">'.$homon['romanizacao'].' /'.$homon['pron'].'/</div>
+                <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
+              </a>';
+          }
+          $return .= '</div>'; // </ul>
+      }
   }
 
   return $return;
@@ -1184,8 +1211,8 @@ function getPalavrasMesmaPronuncia($pid,$limit=0){
   $res0 = mysqli_query($GLOBALS['dblink'],"SELECT *, (SELECT e.id FROM escritas e
     WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as epadrao,
       (SELECT e.id_fonte FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as fonte,
-      (SELECT e.tamanho FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as tamanh,
-      (SELECT i.id_usuario FROM idiomas i WHERE i.id = p.id_idioma) as usuario_dono FROM palavras p 
+      (SELECT e.tamanho FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as tamanho
+      FROM palavras p 
       WHERE p.id = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
   $r = mysqli_fetch_assoc($res0);
   $id_idioma = $r['id_idioma'];
@@ -1379,8 +1406,8 @@ function getPalavrasRelacionadas($pid,$limit=0){
         WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as epadrao,
         (SELECT e.id_fonte FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as fonte,
         (SELECT e.tamanho FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as tamanho,
-      (SELECT id_genero FROM classesGeneros WHERE id_palavra = ".$pid." LIMIT 1) as genDic, 
-      (SELECT i.id_usuario FROM idiomas i WHERE i.id = p.id_idioma) as usuario_dono FROM palavras p 
+      (SELECT id_genero FROM classesGeneros WHERE id_palavra = ".$pid." LIMIT 1) as genDic
+      FROM palavras p 
         WHERE p.id = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
   $r = mysqli_fetch_assoc($res0);
   $id_idioma = $r['id_idioma'];
@@ -2776,30 +2803,25 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
   echo '</table></div>';
   echo '%%%'.$autogenlist.$pronDic.'%%%';
 
-  if ($parad == 0){
+  if ($parad == 0) $pfilter = "AND p.id_forma_dicionario = $pid ";
+  else $pfilter = "AND p.id_classe = $class ";
             
-      $sql = "SELECT p.*, pn.palavra as nativa,
-              (SELECT GROUP_CONCAT(ic.nome SEPARATOR ', ' ) 
-                  FROM itens_palavras ip 
-                  LEFT JOIN concordancias c ON ip.id_concordancia = c.id 
-                  LEFT JOIN itensConcordancias ic ON ip.id_item = ic.id
-              WHERE id_palavra = p.id) as concs,
-          (SELECT COUNT(id) FROM itens_palavras WHERE id_palavra = p.id) as ips FROM palavras p 
-            LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = ".$escrita."
-            WHERE p.id_forma_dicionario = ".$pid." 
-            AND p.id_idioma = ".$idioma."
-            -- AND p.id NOT IN (SELECT id_palavra FROM itens_palavras);";
-
-      $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
-      while($p = mysqli_fetch_assoc($ps)){
-          // if ips < num concords q deveria ter
-          
-            echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="'.($p['ips']>0?'nao-vazio':'').'"
-                    id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
-                    $p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
-      }
+  $sql = "SELECT p.*, pn.palavra as nativa,
+          (SELECT GROUP_CONCAT(ic.nome SEPARATOR ', ' ) 
+              FROM itens_palavras ip 
+              LEFT JOIN concordancias c ON ip.id_concordancia = c.id 
+              LEFT JOIN itensConcordancias ic ON ip.id_item = ic.id
+          WHERE id_palavra = p.id) as concs,
+      (SELECT COUNT(id) FROM itens_palavras WHERE id_palavra = p.id) as ips FROM palavras p 
+        LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = $escrita 
+        WHERE p.id_idioma = $idioma
+        $pfilter ;";
+  $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
+  while($p = mysqli_fetch_assoc($ps)){
+        echo '<div draggable="true" ondragstart="dragstartHandler(event)" class="'.($p['ips']>0?'nao-vazio':'').'"
+                id="'.(0+$p['id']).'-0-0-0-0-'.$p['id_forma_dicionario'].'">'.getSpanPalavraNativa($p['nativa'],$escrita,$id_fonte,$tamanho).
+                $p['romanizacao'].' '.($p['pronuncia']!=''?'<span class="nowrap">/'.$p['pronuncia'].'/</span>':'&nbsp;').' <span class="text-secondary">'.$p['concs'].'</span></div>';
   }
-
 };
 
 function inserirFlexao($gen = 0, $linhas, $x = 0, $colunas = null, $y = 0, $extra = null, $z = 0){
@@ -5573,6 +5595,31 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         $idPalavra = $_POST['pid'];
       } else {  
           $idPalavra = generateId();
+          if ( $_GET['ignorar'] != '' ) {
+            $ignorar = ' AND p.id NOT IN('.$_GET['ignorar'].')';
+          };
+          $sql = "SELECT p.*, c.nome as classe FROM palavras p
+            LEFT JOIN classes c ON p.id_classe = c.id
+            WHERE p.id_idioma = ".$_GET['iid']." AND ( p.pronuncia = \"".str_replace('"',"'",$_POST['pronuncia'])."\" ".$orRom.") ".$ignorar.";";
+            
+          $busca = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+          while ($a = mysqli_fetch_array($busca)){ 
+              echo '-'.$a['id'].'|'.$a['pronuncia'].'|'.$a['significado'].' - '.$a['classe'];
+              die();
+          };
+
+          $res2 = mysqli_query($GLOBALS['dblink'],"SELECT (SELECT COUNT(*) FROM palavras WHERE id_idioma = ".$_GET['iid']." AND id_forma_dicionario = 0) as palavras_base,
+            (SELECT valor FROM opcoes_sistema WHERE opcao = 'palavras_base_lang') as limite,
+            (SELECT COUNT(*) FROM palavras WHERE id_idioma = ".$_GET['iid'].") as palavras,
+            (SELECT valor FROM opcoes_sistema WHERE opcao = 'palavras_lang') as limite2;") or die(mysqli_error($GLOBALS['dblink']));
+          $r2 = mysqli_fetch_assoc($res2);
+          if($r2['palavras_base'] > $r2['limite'] || $r2['palavras'] > $r2['limite2']){
+            echo 'limit';
+            die();
+          };
+
+          
           if ($_GET['paradigma']=='1') { // paradigma 1: palavras únicas
               $sqlQuerys = "INSERT INTO palavras SET id = $idPalavra,
                 romanizacao = '".$_POST['romanizacao']."',
@@ -9144,8 +9191,40 @@ if ($_GET['action'] == 'ajaxMoverFormaPalavra') {
             mysqli_query($GLOBALS['dblink'],"DELETE FROM itens_palavras
                         WHERE id_palavra = ".$from[0].";") or die(mysqli_error($GLOBALS['dblink']));
             echo 'ok';
-        }else if ($from[5]==0) echo '0';
-        else if ($from[0] > 0 && strlen($_POST['to'])>0) {
+        }else if ($from[5]==0) {
+          $result = mysqli_query($GLOBALS['dblink'],"SELECT *, 
+              (SELECT paradigma FROM classes c WHERE c.id = p.id_classe LIMIT 1) as paradigma
+              FROM palavras p 
+              WHERE p.id = ".$from[0].";") or die('1834'.mysqli_error($GLOBALS['dblink']));
+          $r = mysqli_fetch_assoc($result);
+          $parad = (int)$r['paradigma'];
+          if ($parad == 1) {
+              $to = explode("-",$_POST['to']);
+              $linhas = $to[1];
+              $colunas = $to[2];
+              $x = $to[3];
+              $y2 = $to[4];
+
+              if ($to[5] == 0) echo '0';
+              else if ($to[0] > 0 || $to[5] > 0) echo "0";
+              else {
+                  $id = generateId();
+                  mysqli_query($GLOBALS['dblink'],
+                      "INSERT INTO itens_palavras (id, id_concordancia, id_palavra, usar, id_item)
+                      VALUES (".$id.", ".$linhas.", ".$from[0].", 1, ".$x.")
+                      ON DUPLICATE KEY UPDATE id_item = ".$x.";")
+                      or die(mysqli_error($GLOBALS['dblink']));
+
+                  $id = generateId();
+                  mysqli_query($GLOBALS['dblink'],
+                      "INSERT INTO itens_palavras (id, id_concordancia, id_palavra, usar, id_item)
+                      VALUES (".$id.", ".$colunas.", ".$from[0].", 1, ".$y2.")
+                      ON DUPLICATE KEY UPDATE id_item = ".$y2.";")
+                      or die(mysqli_error($GLOBALS['dblink']));
+                  echo 'ok';
+              }
+          } else echo '0';
+        }else if ($from[0] > 0 && strlen($_POST['to'])>0) {
                 
             /*
               TO DO
@@ -13537,7 +13616,16 @@ if ($_GET['action'] == 'importarRealidade') {
             'historias_tipos',
             'momentos',
             'stats',
-            'time_systems'
+            'time_systems',
+            'time_cycles',
+            'time_names',
+            'time_adjustment_rules',
+            'time_units',
+            'stats_entidades',
+            'entidades_nomes',
+            'historias_entidades',
+            'entidades_relacoes',
+            'entidades_tipos_stats'
         ];
 
         foreach ($allTables as $table) {
