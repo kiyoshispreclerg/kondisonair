@@ -3187,7 +3187,7 @@ function getSpanPalavraNativa($palavra = '',$eid,$fonte,$tamanho,$suffix = ''){
 }
   
 function getStudySentence($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,$tamanho){
-    $texto = '<div style="display:flex;flex-wrap: wrap;" >';
+    $texto = '<div style="display:flex;flex-wrap: wrap;">';
     
     $palavras = separarPalavrasLinha($separadorPalavras,$linha,$id_idioma,$eid,$bin,$fonte,$tamanho)[0];
 
@@ -3412,7 +3412,7 @@ function getFullStudyText($id) {
 
   $separadorPalavras = preg_split('//u', $e['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY) ?: [" "];
 
-  $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: ["\n"];
+  $iniciadoresPalavras = preg_split('//u', $e['iniciadores'], null, PREG_SPLIT_NO_EMPTY) ?: [/*"\n"*/];
   foreach ($iniciadoresPalavras as $sep){
     $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
   }
@@ -3426,7 +3426,7 @@ function getFullStudyText($id) {
   
   $listaPalavrasUnicas = array();
 
-  $separadorLinhas = ["\n"];//array("\n");
+  $separadorLinhas = ["\n","\r\n","\r"];//array("\n");
 
   $linhas = multiexplode($separadorLinhas,$textoSentencas);
 
@@ -3443,6 +3443,158 @@ function getFullStudyText($id) {
   $echo = '<script>$("#tstats").html("'.count($listaPalavrasUnicas)." "._t('palavras')." - ".$novasUnicas." "._t('novas')." (".round($novasUnicas / (count($listaPalavrasUnicas) > 0 ? count($listaPalavrasUnicas) : 1) * 100).'%) ");
     $(".pstud").tooltip({html:true});</script>';
   return $texto.$echo;
+};
+
+function verificarTextosComEssaPalavra($idIdioma, $idPalavra, $textosRemover, $textosAtualizar, $textosIgnorar, $pronunciaNova, $romanizacaoNova, $nativaNovaEidPadrao = '') {
+  $sql = "SELECT *, 
+      (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativa,
+      (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as escritaPadrao  
+      FROM palavras p WHERE p.id_idioma = $idIdioma AND id = $idPalavra ;"; // pegar tbm escrita nativa, ou romanizacao
+  $pal = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+  $palavra = mysqli_fetch_assoc($pal);
+  if (!isset($palavra['id'])) return '0';
+  $eid = $palavra['escritaPadrao'];
+  $palavra = $eid > 0 ? $palavra['nativa'] : $palavra['romanizacao'];
+
+  $sql = "SELECT * FROM studason_tests WHERE id_idioma = $idIdioma ;";
+  $textos = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+  $ignorar = explode(',',substr($textosIgnorar,2) );
+  $atualizar = explode(',',substr($textosAtualizar,2) );
+
+  $lista = '0';
+  $listaTextos = '';
+
+  
+  while($t = mysqli_fetch_assoc($textos)) {
+    if ( in_array($t['id'],$ignorar) ) continue;
+
+    if ( in_array($t['id'],$atualizar) ) { // só se for escrita romanizada em vez de nativa
+      if ($nativaNovaEidPadrao == '') die('Palavra vazia');
+      if ($eid > 0){
+        $textoAtualizado = str_replace($palavra, $nativaNovaEidPadrao, $t['texto']);
+      }else{ // romanizaçã
+        $textoAtualizado = str_replace($palavra, $romanizacaoNova, $t['texto']);
+      }
+      mysqli_query($GLOBALS['dblink'],"UPDATE studason_tests SET texto = '$textoAtualizado' WHERE id = ".$t['id']) or die(mysqli_error($GLOBALS['dblink']));
+      mysqli_query($GLOBALS['dblink'],"DELETE FROM studason_palavrs WHERE pids = ".$idPalavra) or die(mysqli_error($GLOBALS['dblink']));
+      continue;
+    }
+
+    if ( mb_strpos($t['texto'], $palavra) !== false ) {
+      $lista .= ','.$t['id'];
+      $listaTextos .= '<a href="?page=text&id='.$t['id'].'" target="_blank">'.$t['titulo'].'</a><br>';
+    }
+  }
+
+  return $lista . ( $listaTextos != '' ? '|'.$listaTextos : '');
+};
+
+function verificarFrasesComEssaPalavra($idIdioma, $idPalavra, $textosRemover, $textosAtualizar, $textosIgnorar, $pronunciaNova, $romanizacaoNova, $nativaNovaEidPadrao = '') {
+  $sql = "SELECT *, 
+      (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativa,
+      (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as escritaPadrao  
+      FROM palavras p WHERE p.id_idioma = $idIdioma AND id = $idPalavra ;"; // pegar tbm escrita nativa, ou romanizacao
+  $pal = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+  $palavra = mysqli_fetch_assoc($pal);
+  if (!isset($palavra['id'])) return '0';
+  $eid = $palavra['escritaPadrao'];
+  $palavra = $eid > 0 ? $palavra['nativa'] : $palavra['romanizacao'];
+
+  $sql = "SELECT * FROM frases WHERE id_idioma = $idIdioma ;";
+  $textos = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+  $ignorar = explode(',',substr($textosIgnorar,2) );
+  $atualizar = explode(',',substr($textosAtualizar,2) );
+
+  $lista = '0';
+  $listaTextos = '';
+
+  
+  while($t = mysqli_fetch_assoc($textos)) {
+    if ( in_array($t['id'],$ignorar) ) continue;
+
+    if ( in_array($t['id'],$atualizar) ) { // só se for escrita romanizada em vez de nativa
+      if ($nativaNovaEidPadrao == '') die('Palavra vazia');
+      if ($eid > 0){
+        $textoAtualizado = str_replace($palavra, $nativaNovaEidPadrao, $t['frase']);
+      }else{ // romanizaçã
+        $textoAtualizado = str_replace($palavra, $romanizacaoNova, $t['frase']);
+      }
+      mysqli_query($GLOBALS['dblink'],"UPDATE frases SET frase = '$textoAtualizado', data_modificacao = NOW() WHERE id = ".$t['id']) or die(mysqli_error($GLOBALS['dblink']));
+      continue;
+    }
+
+    if ( mb_strpos($t['texto'], $palavra) !== false ) {
+      $lista .= ','.$t['id'];
+      $listaTextos .= '<a href="?page=phrase&id='.$t['id'].'" target="_blank">'.$t['titulo'].'</a><br>';
+    }
+  }
+
+  return $lista . ( $listaTextos != '' ? '|'.$listaTextos : '');
+};
+
+function verificarPalavrasComEsseSom($idIdioma, $idSom, $palavrasIgnorar, $palavrasRemover, $palavrasAtualizar, $isPersonalizado) {
+  $qry = "SELECT s.ipa as ipa1, sp.ipa as ipa2 FROM inventarios i 
+      LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
+      LEFT JOIN sonsPersonalizados sp ON (i.id_som = sp.id AND i.id_tipoSom = 0)
+      WHERE i.id_som = ".$idSom." AND i.id_idioma = ".$idIdioma.";";
+  
+  $is = mysqli_query($GLOBALS['dblink'],$qry) or die(mysqli_error($GLOBALS['dblink']));
+  $i = mysqli_fetch_assoc($is);
+  
+  $som = $isPersonalizado > 0 ? $i['ipa2'] : $i['ipa1']; //xxxxx pegar o som pelo GET id  (em inventarios)
+  
+  $sql = "SELECT * FROM palavras WHERE pronuncia LIKE \"%".$som."%\" AND id_idioma = ".$idIdioma.";";
+  
+  $palavras = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+  
+  $ignorar = explode(',',substr($palavrasIgnorar,2) );
+  $atualizar = explode(',',substr($palavrasAtualizar,2) );
+  
+  $lista = '0';
+  $listaPalavras = '';
+
+  $somNovo = ''; // por enquanto apenas existe remoção de som, não tem update
+  
+  while($pal = mysqli_fetch_assoc($palavras)) {
+    if ( in_array($pal['id'],$ignorar) ) continue;
+
+    if ( in_array($pal['id'],$atualizar) ) { 
+      $pronunciaAtualizada = str_replace($som, $somNovo, $pal['pronuncia']);
+
+      //xxxxx atualizar em frases e textos  
+      // MAS COMO ESTAMOS MEXENDO COM PRONUNCIA, NÃO ESCRITA, não precisa atualizar textos e frases, que estão em nativo ou romanização, nunca pronuncia
+      //$pid = 0;
+      /*
+      $resp = verificarTextosComEssaPalavra($idIdioma, $pid, $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+      if ($resp != 0) {
+          echo 'textos|'.$resp;
+          die();
+      }
+      $resp = verificarFrasesComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+      if ($resp != 0) {
+          echo 'frases|'.$resp;
+          die();
+      }
+      */
+
+      mysqli_query($GLOBALS['dblink'],"UPDATE palavras SET pronuncia = '$pronunciaAtualizada', data_modificacao = NOW() WHERE id = ".$pal['id']) or die(mysqli_error($GLOBALS['dblink']));
+      continue;
+    }
+
+    if ( mb_strpos($pal['texto'], $palavra) !== false ) {
+      $lista .= ','.$pal['id'];
+      $listaPalavras .= $pal['pronuncia'].' ('.$pal['significado'].')<br>';
+    }
+  }
+
+  return $lista . ( $listaPalavras != '' ? '|'.$listaPalavras : '');
+};
+
+function verificarPalavrasComEsseGlifo($idIdioma, $idGlifo, $palavrasIgnorar, $palavrasRemover, $palavrasAtualizar) {
+  //aqui dentro chamar verifiarTextos...
+  return false;
 };
 
 /*
@@ -3968,12 +4120,32 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action']=='ajaxGravarPalavra') {
     $res0 = mysqli_query($GLOBALS['dblink'],"SELECT publico FROM idiomas WHERE id = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
     $r0 = mysqli_fetch_assoc($res0);
+    $romanizacao = str_replace("'",'"',$_POST['romanizacao']);
+    $pronuncia = str_replace('"',"'",$_POST['pronuncia']);
+
+    $sqlQuerys =  "SELECT e.* FROM escritas e 
+      WHERE id_idioma = ".$_GET['iid']." ORDER BY padrao DESC;";
+    $escritas = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+    $esc = mysqli_fetch_assoc($escritas);
+
 
     if($_GET['pid']>0){ 
+      $nativaNovaEidPadrao = $_POST['nativo'][0/*$esc['id']*/];
+      $resp = verificarTextosComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+      if ($resp != 0) {
+          echo 'textos|'.$resp;
+          die();
+      }
+      $resp = verificarFrasesComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+      if ($resp != 0) {
+          echo 'frases|'.$resp;
+          die();
+      }
+
       $sqlQuerys = "UPDATE palavras SET 
         significado = '".str_replace("'",'"',$_POST['significado'])."',
-        romanizacao = '".str_replace("'",'"',$_POST['romanizacao'])."',
-        pronuncia = \"".str_replace('"',"'",$_POST['pronuncia'])."\",
+        romanizacao = '".$romanizacao."',
+        pronuncia = \"".$pronuncia."\",
         detalhes = '".str_replace("'",'"',$_POST['detalhes'])."',
         privado = '".str_replace("'",'"',$_POST['privado'])."',
         id_uso = '".$_POST['id_uso']."',
@@ -4001,7 +4173,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     
       $sql = "SELECT p.*, c.nome as classe FROM palavras p
         LEFT JOIN classes c ON p.id_classe = c.id
-        WHERE p.id_idioma = ".$_GET['iid']." AND ( p.pronuncia = \"".str_replace('"',"'",$_POST['pronuncia'])."\" ".$orRom.") ".$ignorar.";";
+        WHERE p.id_idioma = ".$_GET['iid']." AND ( p.pronuncia = \"".$pronuncia."\" ".$orRom.") ".$ignorar.";";
         
       $busca = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
 
@@ -4027,8 +4199,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $sqlQuerys = "INSERT INTO palavras SET 
         id = $pid,
         significado = '".str_replace("'",'"',$_POST['significado'])."',
-        romanizacao = '".str_replace("'",'"',$_POST['romanizacao'])."',
-        pronuncia = \"".str_replace('"',"'",$_POST['pronuncia'])."\",
+        romanizacao = '".$romanizacao."',
+        pronuncia = \"".$pronuncia."\",
         detalhes = '".str_replace("'",'"',$_POST['detalhes'])."',
         privado = '".str_replace("'",'"',$_POST['privado'])."',
         id_uso = '".$_POST['id_uso']."',
@@ -4072,6 +4244,30 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           tag = '".$tag."';") or die(mysqli_error($GLOBALS['dblink']));
     }
 
+    // incluir salvamento de nativas junto com restante?
+    die();
+
+    mysqli_data_seek($escritas,0);
+    if (isset($_POST['nativo'])) for ($i=0; $i < count($_POST['nativo']); $i++) {
+        $esc = mysqli_fetch_assoc($escritas);
+        if ($_POST['nativo'][$i]==''){
+          $sqlQuerys = "DELETE FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";";
+        }else{            
+          $pals = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+          if (mysqli_num_rows($pals)==0){
+              $sqlQuerys = "INSERT INTO palavrasNativas SET 
+                  id_palavra = ".$idPalavra.", id = ".generateId().",
+                  id_escrita = ".$esc['id'].",
+                  palavra = \"".$_POST['nativo'][$i]."\";";
+          }else{
+              $sqlQuerys = "UPDATE palavrasNativas SET  id = ".generateId().",
+                  palavra = \"".$_POST['nativo'][$i]."\" 
+                  WHERE id_palavra = ".$idPalavra." AND
+                  id_escrita = ".$esc['id'].";";
+          }
+        }
+        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+    };
 
     //echo $pid;
     die();
@@ -4391,7 +4587,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action'] == 'getAllPronuncias') {
       $iid = $_GET['iid'];
       
-      $sql = "SELECT t.tecla, s.ipa, p.ipa as ipa2, t.ordem 
+      $sql = "SELECT t.tecla, s.ipa, p.ipa as ipa2, t.ordem, i.id_tipoSom 
               FROM inventarios i
               LEFT JOIN teclas t ON t.id_inventario = i.id
               LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
@@ -4406,6 +4602,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       while ($r = mysqli_fetch_assoc($result)) {
           $pronuncias[] = [
               'tecla' => $r['tecla'] ?? '',
+              'roman' => $r['id_tipoSom'] == '3' ? '' : $r['tecla'] ?? '',
               'ipa' => $r['ipa'] ?? '',
               'ipa2' => $r['ipa2'] ?? '',
               'ordem' => $r['ordem'] ?? 0
@@ -4416,34 +4613,37 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       die();
   }
 
-  if ($_GET['action']=='getChecarNativo') {
+  if ($_GET['action'] == 'getAllGlifos') {
+    $eid = $_GET['eid'];
 
-    // ver se é fonte ou draw
+    $sql = "SELECT glifo FROM glifos WHERE id_escrita = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid);
+    $result = mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
 
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM glifos 
-      WHERE id_escrita = ".$_GET['eid'].";");
-    $rows = array();
-    while($r = mysqli_fetch_assoc($result)) {
-      array_push($rows,$r['glifo']); //$rows[] = $r;
-    } 
+    $glifos = [];
+    while ($r = mysqli_fetch_assoc($result)) {
+        $glifos[] = $r['glifo'];
+    }
 
-    $palavra = "";
-    $origem = mb_str_split($_POST['p']);
-    //$pos=0;
-    //foreach ($origem as $char){
-    for ($i = 0; $i < sizeof($origem) ;$i++) {
-      $char = $origem[$i];
+    $sql = "SELECT separadores, iniciadores, sep_sentencas, inic_sentencas 
+            FROM escritas 
+            WHERE id = " . mysqli_real_escape_string($GLOBALS['dblink'], $eid);
+    $result = mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    $r = mysqli_fetch_assoc($result);
+    $extras = [];
+    foreach (['separadores', 'iniciadores', 'sep_sentencas', 'inic_sentencas'] as $campo) {
+        if (!empty($r[$campo])) {
+            $caracteres = mb_str_split($r[$campo]);
+            $extras = array_merge($extras, $caracteres);
+        }
+    }
+    $extras = array_unique($extras);
 
-      if (!in_array($char,$rows)) {
-        echo '-1'; die();
-      };
-
-    };
-
-    echo $_POST['p'];
-
+    echo json_encode([
+        'glifos' => $glifos,
+        'extras' => $extras
+    ]);
     die();
-  };
+}
 
   if ($_GET['action'] == 'getAllAutoSubstituicoes') {
       $eid = $_GET['eid'];
@@ -5141,24 +5341,11 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   };
 
   if ($_GET['action'] == 'ajaxEditarSom') {
-      
-    if($_GET['r']=='1'){ // remover
 
-        $qry = "SELECT s.ipa as ipa1, sp.ipa as ipa2 FROM inventarios i 
-            LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
-            LEFT JOIN sonsPersonalizados sp ON (i.id_som = sp.id AND i.id_tipoSom = 0)
-            WHERE i.id_som = ".$_GET['id']." AND i.id_idioma = ".$_GET['iid'].";";
-        //echo $qry;
-        $is = mysqli_query($GLOBALS['dblink'],$qry) or die(mysqli_error($GLOBALS['dblink']));
-        $i = mysqli_fetch_assoc($is);
-
-        $som = $_GET['p'] > 0 ? $i['ipa2']:$i['ipa1']; //xxxxx pegar o som pelo GET id  (em inventarios)
-
-        $bte = "SELECT * FROM palavras WHERE pronuncia LIKE \"%".$som."%\" AND id_idioma = ".$_GET['iid'].";";
-        //echo $bte;
-        $origs = mysqli_query($GLOBALS['dblink'],$bte) or die(mysqli_error($GLOBALS['dblink']));
-        $np = mysqli_num_rows($origs);
-        if ($np>0) die(_t('Há %1 palavras cujas pronúncias contém este som! Não deletado',[$np]));
+    $resp = verificarPalavrasComEsseSom($_GET['iid'], $_GET['id'], $_POST['textosIgnorar'], $_POST['textosRemover'], $_POST['textosAtualizar'],$_GET['p']);
+    if ($resp != 0) {
+        echo 'palavras|'.$resp;
+        die();
     }
 
     if($_GET['p']>0){ // removendo som personalizado?
@@ -5192,7 +5379,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         id = $lasid,
         id_tipoSom = ".$_GET['t'].";") or die(mysqli_error($GLOBALS['dblink']));
 
-    echo $$lasid;
+    echo $lasid;
     die();
   };
 
@@ -5582,11 +5769,31 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $dicionario = (int)$_GET['dic'] ?? 0;
       if (!$_GET['iid'] > 0) die('-1');
 
+      $pronuncia = $_POST['pronuncia']; // str_replace('"',"'",$_POST['pronuncia']);
+      $romanizacao = $_POST['romanizacao'];
+
+      $sqlQuerys =  "SELECT e.* FROM escritas e 
+        WHERE id_idioma = ".$_GET['iid']." ORDER BY padrao DESC;";
+      $escritas = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+      $esc = mysqli_fetch_assoc($escritas);
+
       if($_POST['pid']>0){ 
+        $nativaNovaEidPadrao = $_POST['nativo'][0];
+        $resp = verificarTextosComEssaPalavra($_GET['iid'], $_POST['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+        if ($resp != 0) {
+            echo 'textos|'.$resp;
+            die();
+        }
+        $resp = verificarFrasesComEssaPalavra($_GET['iid'], $_POST['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+        if ($resp != 0) {
+            echo 'frases|'.$resp;
+            die();
+        }
+
         $sqlQuerys = "UPDATE palavras SET 
-          romanizacao = '".$_POST['romanizacao']."',
+          romanizacao = '".$romanizacao."',
           irregular = ".$_POST['irregular'].",
-          pronuncia = \"".$_POST['pronuncia']."\",
+          pronuncia = \"".$pronuncia."\",
           data_modificacao = now(),
           significado = '".$_POST['significado']."'
           WHERE id = ".$_POST['pid']." LIMIT 1;";
@@ -5600,7 +5807,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           };
           $sql = "SELECT p.*, c.nome as classe FROM palavras p
             LEFT JOIN classes c ON p.id_classe = c.id
-            WHERE p.id_idioma = ".$_GET['iid']." AND ( p.pronuncia = \"".str_replace('"',"'",$_POST['pronuncia'])."\" ".$orRom.") ".$ignorar.";";
+            WHERE p.id_idioma = ".$_GET['iid']." AND ( p.pronuncia = \"".$pronuncia."\" ".$orRom.") ".$ignorar.";";
             
           $busca = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
 
@@ -5622,10 +5829,10 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           
           if ($_GET['paradigma']=='1') { // paradigma 1: palavras únicas
               $sqlQuerys = "INSERT INTO palavras SET id = $idPalavra,
-                romanizacao = '".$_POST['romanizacao']."',
+                romanizacao = '".$romanizacao."',
                 irregular = ".$_POST['irregular'].",
                 id_classe = ".$_GET['classe'].",
-                pronuncia = \"".$_POST['pronuncia']."\",
+                pronuncia = \"".$pronuncia."\",
                 significado = '".$_POST['significado']."',
                 id_forma_dicionario = 0,
                 detalhes = '',
@@ -5640,10 +5847,10 @@ if($_SESSION['KondisonairUzatorIDX']>0){
               $re = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
               $r = mysqli_fetch_assoc($re);
               $sqlQuerys = "INSERT INTO palavras SET id = $idPalavra,
-                romanizacao = '".$_POST['romanizacao']."',
+                romanizacao = '".$romanizacao."',
                 irregular = ".$_POST['irregular'].",
                 id_classe = ".$r['id_classe'].",
-                pronuncia = \"".$_POST['pronuncia']."\",
+                pronuncia = \"".$pronuncia."\",
                 significado = '".$_POST['significado']."',
                 id_forma_dicionario = $dicionario,
                 detalhes = '".$r['detalhes']."',
@@ -5716,37 +5923,29 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           }  
       };
 
-      echo $idPalavra;
-
-      $sqlQuerys =  "SELECT e.* FROM escritas e 
-        WHERE id_idioma = ".$_GET['iid']." ORDER BY padrao DESC;";
-      $escritas = mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+      mysqli_data_seek($escritas,0);
       if (isset($_POST['nativo'])) for ($i=0; $i < count($_POST['nativo']); $i++) {
           $esc = mysqli_fetch_assoc($escritas);
           if ($_POST['nativo'][$i]==''){
             $sqlQuerys = "DELETE FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";";
-          }else{
-            //tem a palavra já? update ou insert
+          }else{            
             $pals = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";") or die(mysqli_error($GLOBALS['dblink']));
             if (mysqli_num_rows($pals)==0){
-              //echo 'insert-';
-                // insert
                 $sqlQuerys = "INSERT INTO palavrasNativas SET 
                     id_palavra = ".$idPalavra.", id = ".generateId().",
                     id_escrita = ".$esc['id'].",
                     palavra = \"".$_POST['nativo'][$i]."\";";
             }else{
-              //echo 'update-';
-                // update
                 $sqlQuerys = "UPDATE palavrasNativas SET  id = ".generateId().",
                     palavra = \"".$_POST['nativo'][$i]."\" 
                     WHERE id_palavra = ".$idPalavra." AND
                     id_escrita = ".$esc['id'].";";
             }
           }
-          //echo $sqlQuerys;
           mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
       };
+
+      echo $idPalavra;
       die();
   };
 
@@ -6028,7 +6227,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           id_som = ".$id.", id = ".generateId().",
           id_tipoSom = 0,
           id_idioma = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
-    die('ok');
+    echo $id;
+    die();
   };
 
   if ($_GET['action'] == 'carregarTabelaFlexoes') { // otimizar sql queries
@@ -7901,7 +8101,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action']=='ajaxGravarOpcao')  die('not_user');
   if ($_GET['action']=='ajaxGravarConcordancia') die('not_user');
   if ($_GET['action']=='getChecarPronuncia') die('not_user');
-  if ($_GET['action']=='getChecarNativo') die('not_user');
+  if ($_GET['action']=='getAllGlifos') die('not_user');
   if ($_GET['action']=='getAutoSubstituicao') die('not_user');
   if ($_GET['action']=='ajaxGravarSintazBazic') die('not_user');
   if ($_GET['action']=='ajaxGravarReferentes') die('not_user');
@@ -8225,6 +8425,13 @@ function getLastChange($tipo,$id = null) { // lastupdated
       $last = mysqli_query($GLOBALS['dblink'],
       "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
             FROM inventarios WHERE id_idioma = ".$id." 
+          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+  }else if($tipo=='glifos'){ 
+      $last = mysqli_query($GLOBALS['dblink'],
+      "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
+            FROM glifos WHERE id_escrita = ".$id." 
           ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
       $l = mysqli_fetch_assoc($last);
       return $l['d'] ? $l['d'] : 0;
@@ -9934,6 +10141,7 @@ if ($_GET['action'] == 'publicaTexto') {
     $textoSentencas = $r['texto'];
     if ($r['binario']>0) $bin = ' BINARY ';
     $id_idioma = $r['id_idioma'];
+    $eid = $r['eid'];
 
     $separadorPalavras = preg_split('//u', $r['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
 

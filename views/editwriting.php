@@ -177,19 +177,19 @@
 
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que separam palavras').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="separadores'.$e['id'].'" value=\''.$e['separadores'].'\' onchange="checarNativo(this,\''.$e['id'].'\')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="separadores'.$e['id'].'" value=\''.$e['separadores'].'\' onchange="salvarEscrita(\''.$e['id'].'\')">
                             </div>
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que iniciam palavras').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="iniciadores'.$e['id'].'" value="'.$e['iniciadores'].'" onchange="checarNativo(this,\''.$e['id'].'\')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="iniciadores'.$e['id'].'" value="'.$e['iniciadores'].'" onchange="salvarEscrita(\''.$e['id'].'\')">
                             </div>
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que separam sentenças').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="sep_sentencas'.$e['id'].'" value=\''.$e['sep_sentencas'].'\' onchange="checarNativo(this,\''.$e['id'].'\')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="sep_sentencas'.$e['id'].'" value=\''.$e['sep_sentencas'].'\' onchange="salvarEscrita(\''.$e['id'].'\')">
                             </div>
                             <div class="mb-3">
                               <label class="form-label">'._t('Glifos que iniciam sentenças').'</label>
-                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="inic_sentencas'.$e['id'].'" value="'.$e['inic_sentencas'].'" onchange="checarNativo(this,\''.$e['id'].'\')">
+                              <input type="text" class="form-control custom-font-'.$e['id'].'" id="inic_sentencas'.$e['id'].'" value="'.$e['inic_sentencas'].'" onchange="salvarEscrita(\''.$e['id'].'\')">
                             </div>
 
                         </div>
@@ -606,27 +606,6 @@
               alert(data);
           }
       });
-  };
-
-  function checarNativo(este,eid){
-
-      salvarEscrita(eid); return; // só salva, sem checar, por enquanto
-
-    //checar se caracteres estão na lista de caracteres apenas
-    $.post('api.php?action=getChecarNativo&eid='+eid, {
-      p: $(este).val()
-    }, function (data){ 
-      if(data=='-1'){ 
-        alert('Caractere não encontrado no alfabeto!');
-        $(este).val( '' );
-      }else{
-        $(este).val( data );
-        //editarPalavra();
-        salvarEscrita(eid);
-
-        //$.get autosubstituicao
-      }
-    });
   };
 
   function setPadrao(eid){

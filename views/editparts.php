@@ -78,12 +78,12 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                       <div class="mb-3">
                         <label class="form-label"><?=_t('Nome')?></label>
                         <input type="text" class="form-control" id="nome" 
-                          onchange="showGravarPalavra()" placeholder="<?=_t('Ex.: Verbo')?>">
+                          onchange="editarPalavra()" placeholder="<?=_t('Ex.: Verbo')?>">
                       </div>
 
                       <div class="mb-3" >
                           <label class="form-label"><?=_t('Gloss')?></label>
-                          <select id="gloss" onchange="showGravarPalavra()" type="text" class="form-select" value="">
+                          <select id="gloss" onchange="editarPalavra()" type="text" class="form-select" value="">
                               <option value="0" selected><?=_t('Não especificado')?></option>
                               <?php 
                               $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM glosses ;") or die(mysqli_error($GLOBALS['dblink'])); // WHERE tipo = 'k'
@@ -99,7 +99,7 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                       <div class="row mb-3" >
                           <div class="col-4" >
                               <label class="form-label"><?=_t('Tipo semântico')?></label>
-                              <select id="proto_tipo" class="form-select " onchange="showGravarPalavra()" >
+                              <select id="proto_tipo" class="form-select " onchange="editarPalavra()" >
                                   <option value="0" selected><?=_t('Nenhuma')?></option>
                                   <option value="1" selected><?=_t('Ações/Verbos')?></option>
                                   <option value="2" selected><?=_t('Estados/Substantivos')?></option>
@@ -108,7 +108,7 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                           
                           <div class="col-4" >
                               <label class="form-label"><?=_t('Classe pai')?></label>
-                              <select id="superior" onchange="showGravarPalavra()" type="text" class="form-select" value="">
+                              <select id="superior" onchange="editarPalavra()" type="text" class="form-select" value="">
                                   <option value="0" selected><?=_t('Nenhuma')?></option>
                                   <?php 
                                   $langs = mysqli_query($GLOBALS['dblink'],"SELECT c.*, g.gloss FROM classes c 
@@ -123,7 +123,7 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                           </div>
                           <div class="col-4" >
                               <label class="form-label"><?=_t('Palavras do paradigma')?></label>
-                              <select id="paradigma" class="form-select " onchange="showGravarPalavra()" >
+                              <select id="paradigma" class="form-select " onchange="editarPalavra()" >
                                   <option value="0" selected><?=_t('Derivadas')?></option>
                                   <option value="1" selected><?=_t('Únicas')?></option>
                               </select>
@@ -133,7 +133,7 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                       <div class="mb-3" >
                           <label class="form-label"><?=_t('Descrição')?></label>
                           <textarea class="form-control" id="descricao" rows="5"
-                              onchange="showGravarPalavra()"  placeholder="<?=_t('Ex.: Palavras que indicam ação ou estado')?>"></textarea>
+                              onchange="editarPalavra()"  placeholder="<?=_t('Ex.: Palavras que indicam ação ou estado')?>"></textarea>
                       </div>
 
                       <div class="col-sm-12">
@@ -211,7 +211,7 @@ function abrirPalavra(pid){
 });
 };
 
-function showGravarPalavra(){
+function editarPalavra(){
     $('#btnSalvar').show(); 
 };
 

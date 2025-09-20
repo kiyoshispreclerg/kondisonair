@@ -231,12 +231,12 @@ $tamanho = $idioma['tamanho'];
                                             <div class="col">
                                                 <div class="input-group mb-2">
                                                     <span class="input-group-text">'._t('Pronuncia').'</span>
-                                                    <input type="text" class="form-control" autocomplete="off" id="pron'.$r['id_referente'].'" onchange="checarPronuncia(\''.$r['id_referente'].'\',\''.$id_idioma.'\')" onkeyup="editarPalavra(\''.$r['id_referente'].'\')">
+                                                    <input type="text" class="form-control" autocomplete="off" id="pron'.$r['id_referente'].'" onkeyup="checarPronuncia(\''.$r['id_referente'].'\',\''.$id_idioma.'\');editarPalavra(\''.$r['id_referente'].'\')">
                                                 </div>';
                                     if ($escrita>-1){
                                                 echo '<div class="input-group mb-2">
                                                     <span class="input-group-text">'._t('Romanizacao').'</span>
-                                                    <input type="text" class="form-control" autocomplete="off" id="rom'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarRomanizacao(\''.$r['id_referente'].'\',\''.$id_idioma.'\')">
+                                                    <input type="text" class="form-control" autocomplete="off" id="rom'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\');checarRomanizacao(\''.$r['id_referente'].'\',\''.$id_idioma.'\')">
                                                 </div>';
                                     }
 
@@ -246,7 +246,7 @@ $tamanho = $idioma['tamanho'];
                                         }else{
                                             echo '<div class="input-group mb-2">
                                                     <span class="input-group-text">'._t('Nativo').'</span>
-                                                    <input type="text" class="form-control custom-font-'.$escrita.'" autocomplete="off" id="nat'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\')" onchange="checarNativo(\''.$r['id_referente'].'\',\''.$escrita.'\')">
+                                                    <input type="text" class="form-control custom-font-'.$escrita.'" autocomplete="off" id="nat'.$r['id_referente'].'" onkeyup="editarPalavra(\''.$r['id_referente'].'\');checarNativo(this,\''.$escrita.'\')">
                                                 </div>';
                                         }
                                     }
@@ -373,29 +373,15 @@ $tamanho = $idioma['tamanho'];
         if(data=='-1'){ 
             $("#pron"+id).addClass( 'is-invalid' );
         }else{
-            $("#pron"+id).val( data );
-            $("#rom"+id).val( tmpPron );
-            data = tmpPron;
+            $("#pron"+id).val( data.pron );
+            data = data.roman;
+            $("#rom"+id).val( data );
             <?=$scriptAutoSubstituicao?>
         };
 	};
 	<?php }else{
 		echo 'function checarPronuncia(id,idioma){editarPalavra(id);}';
 	}; ?>
-	function checarNativo(id,eid){
-		$("#nat"+id).removeClass( 'is-invalid' );
-		editarPalavra(id);
-		$.post('api.php?action=getChecarNativo&eid='+eid, {
-			p: $("#nat"+id).val()
-		}, function (data){ 
-			if(data=='-1'){ 
-				$("#nat"+id).addClass( 'is-invalid' );
-			}else{
-				if (data.lenght > 0)
-					$("#nat"+id).val( data );
-			}
-		});
-	};
 
     function editarPalavra(id){
         $("#ck"+id).attr("checked","true");
@@ -463,5 +449,7 @@ let soundsChanged = <?=getLastChange('sounds',$id_idioma)?>;
 if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>") ) loadPronuncias('<?=$id_idioma?>',soundsChanged, true);
 soundsChanged = <?=getLastChange('autosubstituicoes',$escrita)?>;
 if ( soundsChanged > localStorage.getItem("k_autosubs_updated_<?=$escrita?>") ) loadAutoSubstituicoes('<?=$escrita?>', soundsChanged, true);
+soundsChanged = <?=getLastChange('glifos',$escrita)?>;
+if ( soundsChanged > localStorage.getItem("k_glifos_updated_<?=$escrita?>") ) loadGlifos('<?=$escrita?>', soundsChanged, true);
 <?php }; ?>
 </script>

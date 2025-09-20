@@ -1337,6 +1337,31 @@ function loadPronuncias(iid, changed = 0, force = false) {
     });
 }
 
+function loadGlifos(eid, changed = 0, force = false) {
+    const storageKeyGlifos = "k_glifos_" + eid;
+    const storageKeyExtras = "k_extras_" + eid;
+    const updatedKey = "k_glifos_updated_" + eid;
+
+    // Verifica se os dados já estão no localStorage e não precisam ser atualizados
+    if (!force && localStorage.getItem(updatedKey) && localStorage.getItem(storageKeyGlifos) && localStorage.getItem(storageKeyExtras)) {
+        console.log('Glifos e extras já carregados no localStorage');
+        return Promise.resolve();
+    }
+
+    // Busca os glifos e extras do servidor
+    return new Promise((resolve) => {
+        $.get("api.php?action=getAllGlifos&eid=" + eid, function(data) {
+            const { glifos, extras } = JSON.parse(data);
+
+            console.log('Dados de glifos e extras atualizados > salvando no localStorage');
+            localStorage.setItem(storageKeyGlifos, JSON.stringify(glifos));
+            localStorage.setItem(storageKeyExtras, JSON.stringify(extras));
+            localStorage.setItem(updatedKey, changed);
+            resolve();
+        });
+    });
+}
+
 function loadExtraPanel(page){
     $("#offcanvasSettings").load("index.php?panel="+page);
 }
@@ -1350,7 +1375,7 @@ function getChecarPronuncia(iid, input, checar = '1') {
         return '-1';
     }
     
-    let palavra = '';
+    let palavra = '', teclas = '', roman = '';
     // Use Array.from to properly split Unicode characters, including IPA
     const chars = Array.from(input);
     
@@ -1368,9 +1393,19 @@ function getChecarPronuncia(iid, input, checar = '1') {
             );
             
             if (match) {
-                if (match.ipa) palavra += match.ipa;
-                else if (match.ipa2) palavra += match.ipa2;
-                else palavra += '+';
+                if (match.ipa) {
+                    palavra += match.ipa;
+                    teclas += match.tecla;
+                    roman += match.roman;
+                }else if (match.ipa2){
+                    palavra += match.ipa2;
+                    teclas += match.tecla;
+                    roman += match.roman;
+                }else{
+                    palavra += '+';
+                    teclas += '+';
+                    roman += '+';
+                }
                 i++; // Skip next character
                 found = true;
                 continue;
@@ -1386,23 +1421,37 @@ function getChecarPronuncia(iid, input, checar = '1') {
         );
         
         if (match) {
-            if (match.ipa) palavra += match.ipa;
-            else if (match.ipa2) palavra += match.ipa2;
-            else palavra += '=';
+            if (match.ipa) {
+                palavra += match.ipa;
+                teclas += match.tecla;
+                roman += match.roman;
+            }else if (match.ipa2) {
+                palavra += match.ipa2;
+                teclas += match.tecla;
+                roman += match.roman;
+            }else {
+                palavra += '=';
+                teclas += '=';
+                roman += '=';
+            }
             found = true;
         } else {
             // Check if char exists in IPA inventory
             const ipaMatch = pronuncias.find(p => p.ipa && p.ipa === char);
             if (!ipaMatch) {
                 palavra += '%';
+                teclas += '%';
+                roman += '%';
                 return '-1';
             } else {
                 palavra += char;
+                teclas += char;
+                roman += char;
             }
         }
     }
     
-    return checar === '0' ? input : palavra;
+    return checar === '0' ? { pron: input, roman: input } : { pron: palavra, teclas: teclas, roman: roman };
 }
 
 if ('serviceWorker' in navigator) {
@@ -1717,4 +1766,36 @@ function apagarFonte(id){
             }else alert(data);
         });
     }
+}
+
+function checarNativo(este, eid, usarExtras = false) {
+    const storageKeyGlifos = "k_glifos_" + eid;
+    const storageKeyExtras = "k_extras_" + eid;
+    const inputValue = $(este).val();
+    $(este).removeClass('is-invalid');
+    editarPalavra();
+
+    // Garante que os glifos (e extras) estejam carregados
+    loadGlifos(eid).then(() => {
+        // Carrega os glifos e, se necessário, os extras
+        const glifos = JSON.parse(localStorage.getItem(storageKeyGlifos) || '[]');
+        const extras = usarExtras ? JSON.parse(localStorage.getItem(storageKeyExtras) || '[]') : [];
+
+        // Combina glifos e extras (se usarExtras for true)
+        const caracteresValidos = [...glifos, ...extras];
+
+        // Divide o input em caracteres (suporta multibyte)
+        const caracteres = Array.from(inputValue);
+
+        // Verifica se todos os caracteres estão na lista de válidos
+        for (let char of caracteres) {
+            if (!caracteresValidos.includes(char)) {
+                $(este).addClass('is-invalid');
+                return;
+            }
+        }
+
+        // Se todos os caracteres são válidos, mantém o valor
+        $(este).val(inputValue);
+    });
 }

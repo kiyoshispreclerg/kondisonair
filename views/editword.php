@@ -49,7 +49,9 @@
 		$scriptSalvarNativo .= 'salvarNativo(\''.$e['id'].'\');';
 		$autoon = '';
 		$changed = getLastChange('autosubstituicoes',$e['id']);
-		$autoloader .= 'if('.$changed.' > localStorage.getItem("k_autosubs_updated_'.$e['id'].'") ) loadAutoSubstituicoes(\''.$e['id'].'\', '.$changed.', true);';
+		$glifosChanged = getLastChange('glifos',$e['id']);
+		$autoloader .= 'if('.$changed.' > localStorage.getItem("k_autosubs_updated_'.$e['id'].'") ) loadAutoSubstituicoes(\''.$e['id'].'\', '.$changed.', true);
+			if ( '.$glifosChanged.' > localStorage.getItem("k_glifos_updated_'.$e['id'].'") ) loadGlifos(\''.$e['id'].'\', '.$glifosChanged.', true);';
 		if ($e['padrao']==1) {
 			$escritaPadrao = $e['id'];
 			$fonte = $e['id_fonte'];
@@ -95,8 +97,8 @@
 					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasNativeBtns" role="button" aria-controls="offcanvasEnd"  onclick="loadCharDiv(\''.$e['id'].'\')">'._t('Inserir caractere').'</a></label>
 					<input type="text" class="form-control escrita_nativa custom-font-'.$e['id'].'" id="escrita_nativa_'.$e['id'].'" ';
 					
-			if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,\''.$e['id'].'\')"';
-			else $inputsNativos .= ' onchange="editarPalavra()"';
+			if($e['checar_glifos']==1) $inputsNativos .= ' onkeyup="checarNativo(this,\''.$e['id'].'\')"';
+			else $inputsNativos .= ' onkeyup="editarPalavra()"';
 			$inputsNativos .= ' placeholder=""></div>';
 		};
 	} 
@@ -173,7 +175,8 @@
 								<div class="col-6">
 									<label class="form-label"><?=_t('Pronúncia')?>* <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasPronBtns" role="button" aria-controls="offcanvasStart" onclick="loadPronDiv()"><?=_t('Inserir sons')?></a></label>
 									<input type="text" class="form-control" id="pronuncia"  autofocus
-										onchange="checarPronuncia(this,'<?=$id_idioma?>')" onkeyup="editarPalavra()"
+										onkeyup="checarPronuncia(this,'<?=$id_idioma?>');editarPalavra()"
+										onchange="checarPronuncia(this,'<?=$id_idioma?>',0,true);editarPalavra()"
 										placeholder="<?=_t('Pronúncia em IPA')?>">
 								</div>
 								
@@ -344,8 +347,7 @@
 							<div class="mb-3" >
 								<label class="form-label"><?=_t('Romanização')?></label>
 								<input type="text" class="form-control" id="romanizacao" 
-								onchange="checarRomanizacao(this,'<?=$id_idioma?>')"
-								onkeyup="editarPalavra()"
+								onkeyup="checarRomanizacao(this,'<?=$id_idioma?>');editarPalavra()"
 								placeholder="Palavra no alfabeto latino">
 							</div>
 						<?php }  
@@ -411,6 +413,7 @@
 	}
 
 	function gravarPalavra(ignorar = '0'){
+		$('#ignorarReps').val(ignorar);
 		if ($('#pronuncia').val()=='') {
 			//alert('Pronúncia está vazio!'); 
 			$("#pronuncia").addClass( 'is-invalid' );
@@ -439,8 +442,13 @@
 			oiids.push( { s : $(this).val(), i : $(this).attr('id').replace("sigoutro_","")} ); 
 		});
 
+		var nativos = [];
+		$('.escrita_nativa').each( function() {
+			nativos.push(this.value);
+		});
+
 		$.post("api.php?action=ajaxGravarPalavra"
-			+"&pid="+ $('#idPalavra').val()+"&iid=<?=$id_idioma?>&ignorar="+ignorar, 
+			+"&pid="+ $('#idPalavra').val()+"&iid=<?=$id_idioma?>&ignorar="+$('#ignorarReps').val(), 
 		{ <?php if ($romanizacao){ ?> romanizacao:$('#romanizacao').val(), <?php } ?>
 			pronuncia:$('#pronuncia').val(),
 			id_forma_dicionario:$('#id_forma_dicionario').val(),
@@ -450,7 +458,10 @@
 			significado:$('#significado').val(),
 			privado:$('#privado').val(),
 			tags:$('#id_tags').val(),
+			textosAtualizar:$('#textosAtualizar').val(),
+			textosIgnorar:$('#textosIgnorar').val(),
 			oiids:oiids,
+			nativo:nativos,
 			detalhes:tinymce.get('detalhes').getContent() //$('#detalhes').val() 
 			
 		}, function (data){
@@ -487,7 +498,20 @@
 
 					$("#ignorar").val(ignorar);
 					$("#modalPalRep").modal("show");
-					
+				}else if (resp[0] == 'textos'){
+					$("#titleModalChecagem").html( '<?=_t('O que fazer com textos que contêm essa palavra?')?>' );
+					$('#textosAtualizar').val( '0' );
+					$('#textosIgnorar').val( '0' );
+					$("#listaTextos").val( resp[1] );
+					$("#divListaChecagem").html( resp[2] );
+					$("#modalChecagem").modal("show");
+				}else if (resp[0] == 'frases'){
+					$("#titleModalChecagem").html( '<?=_t('O que fazer com frases que contêm essa palavra?')?>' );
+					$('#textosAtualizar').val( '0' );
+					$('#textosIgnorar').val( '0' );
+					$("#listaTextos").val( resp[1] );
+					$("#divListaChecagem").html( resp[2] );
+					$("#modalChecagem").modal("show");
 				}else{
 					alert(data);
 				};
@@ -500,7 +524,6 @@
 		$.post('api.php?action=salvarPalavraNativa&pid='+$('#idPalavra').val()+'&e='+e , 
 		{ p: $('#escrita_nativa_'+e).val() },function (data){
 			if ($.trim(data) != 'ok') alert(data);
-			//$("#listaDePalavras").load("api.php?action=listarPalavras&id=<?=$id_idioma?>&t=");
 		});
 	}
 
@@ -738,7 +761,7 @@
 			editarPalavra();
 	};
 	<?php if($idioma['checar_sons']==1){ ?>
-	function checarPronuncia(este,idioma){
+	function checarPronuncia(este,idioma,checar = 1, confirma = false){
 		editarPalavra();
 		$(este).removeClass( 'is-invalid' );
 		var tmpPron = $(este).val();
@@ -746,32 +769,15 @@
 		if(data=='-1'){ 
 			$(este).addClass( 'is-invalid' );
 		}else{
-			$(este).val( data );
-			data = tmpPron;
-			<?php if ($romanizacao) echo '$("#romanizacao").val(tmpPron);'; ?>
+			if (confirma) $(este).val( data.pron );
+			data = data.roman;
+			<?php if ($romanizacao) echo '$("#romanizacao").val(data);'; ?>
 			<?=$scriptAutoSubstituicao?>
 		};
 	};
 	<?php }else{
 		echo 'function checarPronuncia(este,idioma){$("#pronuncia").removeClass("is-invalid");editarPalavra();}';
 	}; ?>
-
-	function checarNativo(este,eid){
-		//checar se caracteres estão na lista de caracteres apenas
-		$(este).removeClass( 'is-invalid' );
-		editarPalavra();
-		$.post('api.php?action=getChecarNativo&eid='+eid, {
-			p: $(este).val()
-		}, function (data){ 
-			if(data=='-1'){ 
-				//alert('Caractere não encontrado no alfabeto!');
-				$(este).addClass( 'is-invalid' );//$(este).val( '' );
-			}else{
-				if (data.lenght > 0)
-					$(este).val( data );
-			}
-		});
-	};
 
 	function novaOrigem(){ alert('a fazer'); return;
 
@@ -1068,6 +1074,27 @@ if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>"
 			<div class="modal-footer">
 				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
 				<button type="button" class="btn btn-primary" onClick="gravarPalavra( $('#ignorar').val() + ',' + $('#resp').val() );"><?=_t('Adicionar')?></button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal modal-blur" id="modalChecagem" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-md modal-dialog-centered" role="document" >
+		<div class="modal-content"  >
+			<div class="modal-header">
+				<h5 class="modal-title" id="titleModalChecagem"></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<input type="hidden" id="textosIgnorar" value="0"/>
+			<input type="hidden" id="textosAtualizar" value="0"/>
+			<input type="hidden" id="ignorarReps" value="0"/>
+			<input type="hidden" id="listaTextos" value="0"/>
+			<div class="modal-body panel-body" id="divListaChecagem"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
+				<button type="button" class="btn btn-primary" onClick="$('#textosAtualizar').val( $('#listaTextos').val() );gravarPalavra( $('#ignorarReps').val() )"><?=_t('Atualizar')?></button>
+				<button type="button" class="btn btn-primary" onClick="$('#textosIgnorar').val( $('#listaTextos').val() );gravarPalavra( $('#ignorarReps').val() )"><?=_t('Ignorar')?></button>
 			</div>
 		</div>
 	</div>

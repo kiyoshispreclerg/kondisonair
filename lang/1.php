@@ -895,5 +895,8 @@ $langpack = [
 "Carregar Nova Fonte" => "Carregar Nova Fonte",
 "Palavras com mesma romanização" => "Palavras com mesma romanização",
 "Palavra já existe" => "Palavra já existe",
+"O que fazer com textos que contêm essa palavra?" => "O que fazer com textos que contêm essa palavra?",
+"O que fazer com frases que contêm essa palavra?" => "O que fazer com frases que contêm essa palavra?",
+"O que fazer com as palavras que contêm esse som?" => "O que fazer com as palavras que contêm esse som?",
 ];
 ?>

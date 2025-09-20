@@ -895,5 +895,8 @@ $langpack = [
 "Carregar Nova Fonte" => "新しいフォントを読み込む",
 "Palavras com mesma romanização" => "同じローマ字化の単語",
 "Palavra já existe" => "単語はすでに存在します",
+"O que fazer com textos que contêm essa palavra?" => "この単語を含むテキストをどうしますか？",
+"O que fazer com frases que contêm essa palavra?" => "この単語を含むフレーズをどうしますか？",
+"O que fazer com as palavras que contêm esse som?" => "この音を含む単語をどうしますか？",
 ];
 ?>

@@ -895,5 +895,8 @@ $langpack = [
 "Carregar Nova Fonte" => "Ŝargi novan tiparon",
 "Palavras com mesma romanização" => "Vortoj kun la sama romanigo",
 "Palavra já existe" => "Vorto jam ekzistas",
+"O que fazer com textos que contêm essa palavra?" => "Kion fari kun tekstoj kiuj enhavas ĉi tiun vorton?",
+"O que fazer com frases que contêm essa palavra?" => "Kion fari kun frazoj kiuj enhavas ĉi tiun vorton?",
+"O que fazer com as palavras que contêm esse som?" => "Kion fari kun vortoj kiuj enhavas ĉi tiun sonon?",
 ];
 ?>

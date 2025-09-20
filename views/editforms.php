@@ -73,7 +73,10 @@ $langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, e.padrao as padr, f.arquiv
     WHERE id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 while($e = mysqli_fetch_assoc($langs)){
     $autoon = '';
-    $autoSubsLoadScript .= 'soundsChanged= '.getLastChange('autosubstituicoes',$e['id']).';if ( soundsChanged > localStorage.getItem("k_autosubs_updated_'.$e['id'].'") ) loadAutoSubstituicoes(\''.$e['id'].'\',soundsChanged, true);';
+    $glifosChanged = getLastChange('glifos',$e['id']);
+    $autoSubsLoadScript .= 'soundsChanged= '.getLastChange('autosubstituicoes',$e['id']).';
+    if ( soundsChanged > localStorage.getItem("k_autosubs_updated_'.$e['id'].'") ) loadAutoSubstituicoes(\''.$e['id'].'\',soundsChanged, true);
+    if ( '.$glifosChanged.' > localStorage.getItem("k_glifos_updated_'.$e['id'].'") ) loadGlifos(\''.$e['id'].'\', '.$glifosChanged.', true);';
     if($e['id_fonte']== 3){
 
         if($e['substituicao']==1){
@@ -98,7 +101,7 @@ while($e = mysqli_fetch_assoc($langs)){
         $inputsNativos .= '<div class="mb-3">
                     <label class="form-label">'.$e['nome'].'</label>
                     <input type="text" class="form-control escrita_nativa custom-font-'.$e['id'].'" id="escrita_nativa_'.$e['id'].'" ';
-        if($e['checar_glifos']==1) $inputsNativos .= ' onchange="checarNativo(this,\''.$e['id'].'\')"';
+        if($e['checar_glifos']==1) $inputsNativos .= ' onkeyup="checarNativo(this,\''.$e['id'].'\')"';
         
         $inputsNativos .= ' placeholder=""></div>';
         if($e['padr']==1) {
@@ -247,14 +250,15 @@ if (mysqli_num_rows($result)>2) {
                         <div class="mb-3">
                                 <label class="form-label"><?=_t('Pronúncia')?>* <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasPronBtns" role="button" aria-controls="offcanvasEnd" onclick="loadPronDiv()"> (inserir sons) </a></label>
                                 <input type="text" class="form-control" id="pronuncia" 
-                                onchange="checarPronuncia(this,'<?=$id_idioma?>')"
+                                onkeyup="checarPronuncia(this,'<?=$id_idioma?>')"
+                                onchange="checarPronuncia(this,'<?=$id_idioma?>',0,true)"
                                 placeholder="Palavra no próprio idioma">
                         </div>
                         <?php if ($romanizacao){ ?>
                         <div class="mb-3">
                                 <label class="form-label"><?=_t('Romanização')?></label>
                                 <input type="text" class="form-control" id="romanizacao" 
-                                onchange="checarRomanizacao(this,'<?=$id_idioma?>')"  placeholder="Palavra no alfabeto latino">
+                                onkeyup="checarRomanizacao(this,'<?=$id_idioma?>')"  placeholder="Palavra no alfabeto latino">
                         </div>
                         <?php } 
                             echo $inputsNativos;
@@ -263,10 +267,10 @@ if (mysqli_num_rows($result)>2) {
                         <div class="mb-3">
                                 <label class="form-label"><?=_t('Significado')?></label>
                                 <input type="text" class="form-control" id="significado" 
-                                onchange="showGravarPalavra()">
+                                onkeyup="editarPalavra()">
                         </div>
                         <div class="mb-3">
-                            <select id="irregular" class="form-select" onchange="showGravarPalavra()"  >
+                            <select id="irregular" class="form-select" onchange="editarPalavra()"  >
                                 <option value="0" selected><?=_t('Regular')?></option>
                                 <option value="1" ><?=_t('Irregular')?></option>
                             </select>
@@ -416,6 +420,8 @@ function gravarPalavra(ignorar = '0'){
         c2:$('#c2').val(),
         i1:$('#i1').val(),
         i2:$('#i2').val(),
+        textosAtualizar:$('#textosAtualizar').val(),
+        textosIgnorar:$('#textosIgnorar').val(),
         extras:cex,
         nativo: nativos
     }, function (data){
@@ -425,8 +431,10 @@ function gravarPalavra(ignorar = '0'){
             $("#detalhesPalavra").hide(); //xxxxx limpar
             carregaTabela();
             $("#modalPalRep").modal("hide");
+            $("#modalChecagem").modal("hide");
         }else{
             let resp = $.trim(data).split('|');
+            //xxxxx split textos/frases com essa palavra pra ignorar/remover/atualizar
 
             if (resp[0] < 0){
                 let rep = resp[0];
@@ -438,7 +446,21 @@ function gravarPalavra(ignorar = '0'){
                     '\\</strong> \n<br>'+resp[2]+'. \n<br><br>Deseja salvar mais uma nova palavra assim mesmo?' );
                 $("#ignorar").val(ignorar);
                 $("#modalPalRep").modal("show");
-                
+            
+            }else if (resp[0] == 'textos'){
+                $("#titleModalChecagem").html( '<?=_t('O que fazer com textos que contêm essa palavra?')?>' );
+                $('#textosAtualizar').val( '0' );
+                $('#textosIgnorar').val( '0' );
+                $("#listaTextos").val( resp[1] );
+                $("#divListaChecagem").html( resp[2] );
+                $("#modalChecagem").modal("show");
+            }else if (resp[0] == 'frases'){
+                $("#titleModalChecagem").html( '<?=_t('O que fazer com frases que contêm essa palavra?')?>' );
+                $('#textosAtualizar').val( '0' );
+                $('#textosIgnorar').val( '0' );
+                $("#listaTextos").val( resp[1] );
+                $("#divListaChecagem").html( resp[2] );
+                $("#modalChecagem").modal("show");
             }else{
                 alert(data);
             };
@@ -446,7 +468,7 @@ function gravarPalavra(ignorar = '0'){
     });
 }; 
 
-function showGravarPalavra(){
+function editarPalavra(){
     $("#btnGravarPalavra").show();
 }
 function showGravarFlexao(){
@@ -715,6 +737,9 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
     $("#i1").val(i1);
     $("#i2").val(i2);
 
+    $('#textosAtualizar').val( '0' );
+    $('#textosIgnorar').val( '0' );
+
     $('#irregular').val(0); 
     if (dic==0 || dic==pid){
         $('#irregular').attr('disabled',true); 
@@ -782,7 +807,7 @@ function abrirPalavra(pid,l,c,i1,i2,text,dic=0,autogen=""){
                 $('#significado').val(data[0].significado); 
             }); 
             $("#detalhesPalavra").show();
-            showGravarPalavra();
+            editarPalavra();
             checarPronuncia("#pronuncia", '<?=$id_idioma?>', 0);
         });
         
@@ -799,45 +824,26 @@ function checarRomanizacao(este,idioma){
 		<?php 
 		// se estiver romanizacao como principal entrada, echo preencherPronuncia e foreach native
 		?>
-		showGravarPalavra();
+		editarPalavra();
 };
 <?php if($idioma['checar_sons']==1){ ?>
-function checarPronuncia(este = "#pronuncia",idioma=<?=$id_idioma?>,checar = 1){ 
+function checarPronuncia(este = "#pronuncia",idioma=<?=$id_idioma?>,checar = 1, confirma = false){ 
     $(este).removeClass( 'is-invalid' );
-    showGravarPalavra();
+    editarPalavra();
     var tmpPron = $(este).val();
     let data = getChecarPronuncia(idioma, tmpPron, checar);
     if(data=='-1'){ 
         $(este).addClass( 'is-invalid' );
     }else{
-        $(este).val( data );
-		<?php if ($romanizacao) echo '$("#romanizacao").val(tmpPron);'; ?>
-        data = tmpPron; // checarDigitacao('<?=$id_idioma?>', data);
+        if (confirma) $(este).val( data.pron );
+		<?php if ($romanizacao) echo '$("#romanizacao").val(data.roman);'; ?>
+        data = data.roman; // checarDigitacao('<?=$id_idioma?>', data);
         <?=$scriptAutoSubstituicao?> // data deve ser a escrita
     };
 };
 <?php }else{
-	echo 'function checarPronuncia(este,idioma){$(este).removeClass("is-invalid");showGravarPalavra();}';
+	echo 'function checarPronuncia(este,idioma){$(este).removeClass("is-invalid");editarPalavra();}';
 }; ?>
-
-function editarPalavra() {showGravarPalavra()};
-function checarNativo(este,eid){ 
-	//checar se caracteres estão na lista de caracteres apenas
-    $(este).removeClass( 'is-invalid' );
-    showGravarPalavra();
-	$.post('api.php?action=getChecarNativo&eid='+eid, {
-		p: $(este).val()
-	}, function (data){ 
-		if(data=='-1'){ 
-			$(este).addClass( 'is-invalid' );
-		}else{
-            if (data.lenght > 0)
-			    $(este).val( data );
-			//salvarNativo(eid);
-
-		}
-	});
-};
 
 $(document).ready(function(){
     carregaTabela();    
@@ -1001,6 +1007,27 @@ if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>"
 			<div class="modal-footer">
 				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
 				<button type="button" class="btn btn-primary" onClick="gravarPalavra( $('#ignorar').val() + ',' + $('#resp').val() );"><?=_t('Adicionar')?></button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal modal-blur" id="modalChecagem" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-md modal-dialog-centered" role="document" >
+		<div class="modal-content"  >
+			<div class="modal-header">
+				<h5 class="modal-title" id="titleModalChecagem"></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<input type="hidden" id="textosIgnorar" value="0"/>
+			<input type="hidden" id="textosAtualizar" value="0"/>
+			<input type="hidden" id="ignorarReps" value="0"/>
+			<input type="hidden" id="listaTextos" value="0"/>
+			<div class="modal-body panel-body" id="divListaChecagem"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
+				<button type="button" class="btn btn-primary" onClick="$('#textosAtualizar').val( $('#listaTextos').val() );gravarPalavra( $('#ignorarReps').val() )"><?=_t('Atualizar')?></button>
+				<button type="button" class="btn btn-primary" onClick="$('#textosIgnorar').val( $('#listaTextos').val() );gravarPalavra( $('#ignorarReps').val() )"><?=_t('Ignorar')?></button>
 			</div>
 		</div>
 	</div>

@@ -18,7 +18,7 @@ $scriptAutoSubstituicao = '';
 $autoloader = '';
 
 if ($id_frase > 0) {
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, e.id as eid, i.nome_legivel, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono,
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, e.id as eid, i.nome_legivel, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono, e.checar_glifos,
         (SELECT nome_legivel FROM idiomas WHERE id = i.id_idioma_descricao LIMIT 1) as idioma_descricao
         FROM frases f
         LEFT JOIN idiomas i ON f.id_idioma = i.id
@@ -27,7 +27,7 @@ if ($id_frase > 0) {
     $data = mysqli_fetch_assoc($result);
     $id_idioma = $data['id_idioma'];
 } elseif ($id_idioma > 0) {
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT i.nome_legivel, e.id as eid, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono,
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT i.nome_legivel, e.id as eid, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono, e.checar_glifos,
         (SELECT nome_legivel FROM idiomas WHERE id = i.id_idioma_descricao LIMIT 1) as idioma_descricao
         FROM idiomas i
         LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
@@ -45,7 +45,9 @@ if ($id_frase > 0 || $id_idioma > 0) {
         <li class="breadcrumb-item"><a href="?page=phrases&iid=' . $id_idioma . '">' . _t('Frases') . '</a></li>';
 
     $changed = getLastChange('autosubstituicoes', $data['eid']);
-    $autoloader .= 'if(' . $changed . ' > localStorage.getItem("k_autosubs_updated_' . $data['eid'] . '") ) loadAutoSubstituicoes(\'' . $data['eid'] . '\', ' . $changed . ', true);';
+    $glifosChanged = getLastChange('glifos', $data['eid']);
+    $autoloader .= 'if(' . $changed . ' > localStorage.getItem("k_autosubs_updated_' . $data['eid'] . '") ) loadAutoSubstituicoes(\'' . $data['eid'] . '\', ' . $changed . ', true);
+        if ( '.$glifosChanged.' > localStorage.getItem("k_glifos_updated_'.$data['eid'].'") ) loadGlifos(\''.$data['eid'].'\', '.$glifosChanged.', true);';
 
     if ($data['fonte'] == 3) {
         $autoon = $data['substituicao'] == 1 ? ' (' . _t('Automático') . ')' : '';
@@ -77,7 +79,7 @@ if ($id_frase > 0 || $id_idioma > 0) {
                 <label class="form-label">Texto nativo ' . $autoon . ' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasNativeBtns" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv(\'' . $data['eid'] . '\')">' . _t('Inserir caractere') . '</a></label>
                 <input type="text" class="form-control escrita_nativa custom-font-' . $data['eid'] . '" id="escrita_nativa_' . $data['eid'] . '" ';
 
-        $inputsNativos .= $data['checar_glifos'] == 1 ? ' onchange="checarNativo(this,\'' . $data['eid'] . '\')"' : ' onchange="editarPalavra()"';
+        $inputsNativos .= $data['checar_glifos'] == 1 ? ' onkeyup="checarNativo(this,\'' . $data['eid'] . '\',true)"' : ' onchange="editarPalavra()"';
         $inputsNativos .= ' value="' . htmlspecialchars($data['frase'] ?? '') . '"></div>';
     }
 
@@ -334,21 +336,6 @@ function checarPronuncia(este, idioma) {
     editarPalavra();
 }
 <?php } ?>
-
-function checarNativo(este, eid) {
-    $(este).removeClass('is-invalid');
-    editarPalavra();
-    $.post('api.php?action=getChecarNativo&eid=' + eid, {
-        p: $(este).val()
-    }, function(data) {
-        if (data == '-1') {
-            $(este).addClass('is-invalid');
-        } else {
-            if (data.length > 0)
-                $(este).val(data);
-        }
-    });
-}
 
 function addNatChar(char) {
     $("#tempNat").val($("#tempNat").val() + char);

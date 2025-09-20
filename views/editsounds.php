@@ -194,36 +194,106 @@ function adicionarSom(){
     if (id==0) {
         criarSom($('#tmpx').val(),$('#tmpy').val(),$('#tmpz').val()); //xxxxx
     }else if (id>0){
-        $.get("api.php?action=ajaxEditarSom&iid=<?=$id_idioma?>&id="+id+"&t="+$('#selTabela').val(), function (data){
-            carregaTabela();
+        $.post("api.php?action=ajaxEditarSom&iid=<?=$id_idioma?>&id="+id+"&t="+$('#selTabela').val()+"&ignorar="+$('#ignorar').val(), {
+          textosAtualizar:$('#textosAtualizar').val(),
+          textosIgnorar:$('#textosIgnorar').val()
+        }, function (data){
+            if ($.trim(data) > 0) {
+              carregaTabela();
+              $("#modalChecagem").modal("hide");
+            }else{
+                let resp = $.trim(data).split('|');
+
+                if (resp[0] == 'palavras'){
+                    $("#titleModalChecagem").html( '<?=_t('O que fazer com as palavras que contêm esse som?')?>' );
+                    $('#textosAtualizar').val( '0' );
+                    $('#textosIgnorar').val( '0' );
+                    $("#listaTextos").val( resp[1] );
+                    $("#divListaChecagem").html( resp[2] );
+                    $("#modalChecagem").modal("show");
+                    
+                }else if (resp[0] == 'textos'){
+                    $("#titleModalChecagem").html( '<?=_t('O que fazer com textos que contêm essa palavra?')?>' );
+                    $('#textosAtualizar').val( '0' );
+                    $('#textosIgnorar').val( '0' );
+                    $("#listaTextos").val( resp[1] );
+                    $("#divListaChecagem").html( resp[2] );
+                    $("#modalChecagem").modal("show");
+                }else if (resp[0] == 'frases'){
+                    $("#titleModalChecagem").html( '<?=_t('O que fazer com frases que contêm essa palavra?')?>' );
+                    $('#textosAtualizar').val( '0' );
+                    $('#textosIgnorar').val( '0' );
+                    $("#listaTextos").val( resp[1] );
+                    $("#divListaChecagem").html( resp[2] );
+                    $("#modalChecagem").modal("show");
+                }else{
+                    alert(data);
+                };
+            }
         })
     }else{
         $.get("api.php?action=ajaxCriarSomPersonalizado2&iid=<?=$id_idioma?>&x="+$('#tmpx').val()+"&y="
             +$('#tmpy').val()+"&z="+$('#tmpz').val()+"&t="+$('#selTabela').val()+"&ids="+id, function (data){
-            carregaTabela();
-            editarCelula(x,y,z,'');//$("#ipaEdit").modal('hide');
+              if($.trim(data)>0){
+                carregaTabela();
+                editarCelula(x,y,z,'');//$("#ipaEdit").modal('hide');
+              }else alert(data);
         });
     }
 }
-function adicionarSom2(){
-    var id = $('#sel_i').val();
-    if (id==0) {
-        criarSom($('#tmpx').val(),$('#tmpy').val(),$('#tmpz').val()); //xxxxx
-    }else{
-        $.get("api.php?action=ajaxCriarSomPersonalizado2&iid=<?=$id_idioma?>&x="+$('#tmpx').val()+"&y="
-            +$('#tmpy').val()+"&z="+$('#tmpz').val()+"&t="+$('#selTabela').val()+"&ids="+id, function (data){
-            carregaTabela();
-            editarCelula(x,y,z,'');//$("#ipaEdit").modal('hide');
-        });
-    }
-}
-function removerSom(id,pers=0){
+
+function removerSom(id,pers=0,skipConfirmation = false){
+    $('#tempRemId').val(id); $('#tempRemPers').val(pers);
     var p = '';
     if (pers > 0) p = '&p=1';
-    if (confirm("<?=_t('Remover este som?')?>"))
-    $.get("api.php?action=ajaxEditarSom&iid=<?=$id_idioma?>&id="+id+"&r=1&t="+$('#selTabela').val()+p, function (data){
-        if($.trim(data)=='deletado'||$.trim(data)=='removido') carregaTabela();
-        else alert(data);
+    if (skipConfirmation || confirm("<?=_t('Remover este som?')?>"))
+    $.post("api.php?action=ajaxEditarSom&iid=<?=$id_idioma?>&id="+id+"&r=1&t="+$('#selTabela').val()+p, {
+      textosAtualizar:$('#textosAtualizar').val(),
+      textosIgnorar:$('#textosIgnorar').val()
+    }, function (data){
+        if($.trim(data)=='deletado'||$.trim(data)=='removido') {
+          carregaTabela();
+          $("#modalChecagem").modal("hide");
+        } else {
+          let resp = $.trim(data).split('|');
+
+          if (resp[0] < 0){ //xxxxx ?????????
+              let rep = resp[0];
+              rep = rep.substring(1);
+              $('#resp').val(rep);
+              $('#resp1').val(resp[1]);
+              $('#resp2').val(resp[2]);
+              $('#palRepText').html( 'Já existe uma palavra com a mesma pronúncia ou romanização: \n<br><strong>\\'+resp[1]+
+                  '\\</strong> \n<br>'+resp[2]+'. \n<br><br>Deseja salvar mais uma nova palavra assim mesmo?' );
+              $("#ignorar").val(ignorar);
+              $("#modalPalRep").modal("show");
+          
+          }else if (resp[0] == 'palavras'){
+              $("#titleModalChecagem").html( 'O que fazer com as palavras que contêm esse som?' );
+              $('#textosAtualizar').val( '0' );
+              $('#textosIgnorar').val( '0' );
+              $("#listaTextos").val( resp[1] );
+              $("#divListaChecagem").html( resp[2] );
+              $("#modalChecagem").modal("show");
+          
+          }else if (resp[0] == 'textos'){
+              $("#titleModalChecagem").html( 'O que fazer com textos que contêm essa palavra?' );
+              $('#textosAtualizar').val( '0' );
+              $('#textosIgnorar').val( '0' );
+              $("#listaTextos").val( resp[1] );
+              $("#divListaChecagem").html( resp[2] );
+              $("#modalChecagem").modal("show");
+          }else if (resp[0] == 'frases'){
+              $("#titleModalChecagem").html( 'O que fazer com frases que contêm essa palavra?' );
+              $('#textosAtualizar').val( '0' );
+              $('#textosIgnorar').val( '0' );
+              $("#listaTextos").val( resp[1] );
+              $("#divListaChecagem").html( resp[2] );
+              $("#modalChecagem").modal("show");
+          }else{
+              alert(data);
+          };
+        }
     });
 }
 function salvarCelula(){
@@ -260,6 +330,9 @@ function execSalvarTecla(){
     */
     
     $.post("api.php?action=ajaxEditarTeclaIpa&id="+id+"&ipa="+inventario+"&k="+tecla,{k:tecla,p:peso}, function (data){
+
+      //xxxxx CONFERIR SE ALTEROU PRA ROMANIZACAO
+
       if ($.trim(data) == '1'){
           carregaTabela(); 
           $("#modal-tecla").modal('hide');
@@ -319,9 +392,11 @@ function execCriarSom(){
     //confirm: pede nome e ipa
     $.post("api.php?action=ajaxCriarSomPersonalizado&iid=<?=$id_idioma?>&x="+x+"&y="+y+"&z="+z+"&t="+$('#selTabela').val(), 
         {ipa: ipa, nome: nome}, function (data){
-        carregaTabela();
-        editarCelula(x,y,z,'');//$("#ipaEdit").modal('hide');
-        $("#modal-criarsom").modal('hide');
+          if($.trim(data)>0){
+            carregaTabela();
+            editarCelula(x,y,z,'');//$("#ipaEdit").modal('hide');
+            $("#modal-criarsom").modal('hide');
+          }else alert(data);
     });
 }
 $(document).ready(function(){
@@ -383,7 +458,7 @@ function dropHandler(ev) {
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><?=_t('Representação')?></h5>
+        <h5 class="modal-title"><?=_t('Romanização')?></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -447,4 +522,27 @@ function dropHandler(ev) {
       </div>
     </div>
   </div>
+</div>
+
+<div class="modal modal-blur" id="modalChecagem" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-md modal-dialog-centered" role="document" >
+		<div class="modal-content"  >
+			<div class="modal-header">
+				<h5 class="modal-title" id="titleModalChecagem"></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<input type="hidden" id="tempRemId" value="0"/>
+			<input type="hidden" id="tempRemPers" value="0"/>
+			<input type="hidden" id="textosIgnorar" value="0"/>
+			<input type="hidden" id="textosAtualizar" value="0"/>
+			<input type="hidden" id="ignorarReps" value="0"/>
+			<input type="hidden" id="listaTextos" value="0"/>
+			<div class="modal-body panel-body" id="divListaChecagem"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn" data-bs-dismiss="modal" aria-label="Close"><?=_t('Cancelar')?></button>
+				<button type="button" class="btn btn-primary" onClick="$('#textosAtualizar').val( $('#listaTextos').val() );removerSom( $('#tempRemId').val(), $('#tempRemPers').val(), true )"><?=_t('Atualizar')?></button>
+				<button type="button" class="btn btn-primary" onClick="$('#textosIgnorar').val( $('#listaTextos').val() );removerSom( $('#tempRemId').val(), $('#tempRemPers').val(), true )"><?=_t('Ignorar')?></button>
+			</div>
+		</div>
+	</div>
 </div>
