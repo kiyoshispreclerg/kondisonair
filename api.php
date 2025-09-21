@@ -312,6 +312,7 @@ switch($page){
     case 'editphrase': $tituloPagina .= ' - '._t('Frase'); break;
     case 'phrase': $tituloPagina .= ' - '._t('Frase'); break;
     case 'changer_full': $tituloPagina .= ' - '._t('Outros alteradores'); break;
+    case 'word': $tituloPagina .= ' - '._t('Palavra'); break;
     // case 'confirmation': $tituloPagina .= ' - '._t('Confirmação'); break;
     case 'paradigmer': $tituloPagina .= ' - '._t('Gerador de paradigma'); break;
     case 'wordcompare': $tituloPagina .= ' - '._t('Comparador de palavras'); break;
@@ -4643,7 +4644,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         'extras' => $extras
     ]);
     die();
-}
+  }
 
   if ($_GET['action'] == 'getAllAutoSubstituicoes') {
       $eid = $_GET['eid'];
@@ -4787,25 +4788,16 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     if($_GET['pid']>0){
       mysqli_query($GLOBALS['dblink'],"DELETE FROM palavras_origens WHERE id_palavra = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
 
-      $refs = explode(",",$_GET['origens']);
-      foreach($refs as $ref){
-        //
-        //echo $ref.',';
-        if ($ref>0)
+      $i = 0;
+      foreach($_POST['origens'] as $ref){
+        if ($ref>0){
           mysqli_query($GLOBALS['dblink'],"INSERT INTO palavras_origens SET 
               id_palavra = ".$_GET['pid'].",
-              detalhes = '', id = ".generateId().",
+              detalhes = '', id = ".generateId().", ordem = $i,
               id_origem = ".$ref.";") or die(mysqli_error($GLOBALS['dblink']));
+          $i++;
+        }
       }
-
-      /*foreach($_POST['origens'] as $ref){
-        //echo $ref.',';
-          if ($ref>0)
-          mysqli_query($GLOBALS['dblink'],"INSERT INTO palavras_origens SET 
-              id_palavra = ".$_GET['pid'].",
-              detalhes = '',
-              id_origem = ".$ref.";") or die(mysqli_error($GLOBALS['dblink']));
-      }*/
     }
     die('ok');
   }
@@ -6496,23 +6488,124 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die('1');
   };
 
+  if ($_GET['action'] == 'getOptionsOrigensByIds') {
+    // Recebe os IDs como uma string separada por vírgulas
+    $ids = isset($_GET['ids']) ? trim($_GET['ids']) : '';
+    
+    // Proteção contra injeção de SQL
+    $ids = mysqli_real_escape_string($GLOBALS['dblink'], $ids);
+    
+    // Valida que os IDs são numéricos e separados por vírgulas
+    if (empty($ids) || !preg_match('/^[0-9,]+$/', $ids)) {
+        header('Content-Type: application/json');
+        echo json_encode([]);
+        die();
+    }
+    
+    // SQL para buscar opções específicas por IDs
+    $sql = "SELECT p.id, p.significado, p.romanizacao, i.sigla, (
+                SELECT palavra FROM palavrasNativas pn
+                WHERE p.id = pn.id_palavra
+                AND pn.id_escrita = e.id LIMIT 1
+            ) as nativo, e.id_fonte, e.tamanho, e.id as eid 
+            FROM palavras p 
+            LEFT JOIN idiomas i ON i.id = p.id_idioma
+            LEFT JOIN escritas e ON e.padrao = 1 AND e.id_idioma = i.id
+            WHERE p.id IN ($ids)";
+    
+    $result = mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    
+    // Array para armazenar os resultados
+    $options = [];
+    
+    while ($r = mysqli_fetch_assoc($result)) {
+        $options[] = [
+            'id' => $r['id'],
+            'text' => ($r['romanizacao'] != '' ? $r['romanizacao'] : $r['pronuncia']) . ' (' . $r['sigla'] . ') - ' . $r['significado'],
+            'n' => $r['nativo'],
+            'eid' => $r['eid'],
+            'f' => $r['id_fonte'],
+            't' => $r['tamanho']
+        ];
+    }
+    
+    // Define o cabeçalho como JSON
+    header('Content-Type: application/json');
+    
+    // Retorna os resultados no formato JSON
+    echo json_encode($options);
+    die();
+  }
+  
   if ($_GET['action'] == 'getOptionsOrigens') {
-    //xxxxx idiomas publicos apenas ?
-      $sql = "SELECT p.id, p.significado, p.romanizacao, i.sigla, (
-        SELECT palavra from palavrasNativas pn
-        WHERE p.id = pn.id_palavra
-        AND pn.id_escrita = e.id LIMIT 1
-      ) as nativo, e.id_fonte, e.tamanho, e.id as eid 
-      FROM palavras p 
-      LEFT JOIN idiomas i ON i.id = p.id_idioma
-      LEFT JOIN escritas e ON e.padrao = 1 AND e.id_idioma = i.id;";
+    // Recebe o parâmetro de busca
+    $query = isset($_GET['q']) ? trim($_GET['q']) : '';
+    
+    // Proteção contra injeção de SQL
+    $query = mysqli_real_escape_string($GLOBALS['dblink'], $query);
+    
+    // SQL com filtro dinâmico
+    $sql = "SELECT p.id, p.id as pid, p.significado, p.romanizacao, i.sigla, (
+                SELECT palavra FROM palavrasNativas pn
+                WHERE p.id = pn.id_palavra
+                AND pn.id_escrita = e.id LIMIT 1
+            ) as nativo, e.id_fonte, e.tamanho, e.id as eid 
+            FROM palavras p 
+            LEFT JOIN idiomas i ON i.id = p.id_idioma
+            LEFT JOIN escritas e ON e.padrao = 1 AND e.id_idioma = i.id";
+    
+    // Adiciona filtro se houver query
+    if ($query !== '') {
+        $sql .= " WHERE p.romanizacao LIKE '%$query%' 
+                 OR p.pronuncia LIKE '%$query%' 
+                 OR p.significado LIKE '%$query%'";
+    }
+    
+    // Limita o número de resultados para evitar sobrecarga
+    $sql .= " LIMIT 50;";
+    
+    $result = mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    
+    // Array para armazenar os resultados
+    $options = [];
+    
+    while ($r = mysqli_fetch_assoc($result)) {
+        $options[] = [
+            'id' => $r['id'],
+            'text' => ($r['romanizacao'] != '' ? $r['romanizacao'] : $r['pronuncia']) . ' (' . $r['sigla'] . ') - ' . $r['significado'],
+            'n' => $r['nativo'],
+            'eid' => $r['eid'],
+            'f' => $r['id_fonte'],
+            't' => $r['tamanho'],
+            'romanizacao' => $r['romanizacao'],
+            'pronuncia' => $r['pronuncia'],
+            'escrita' => $r['eid'],
+            'nativo' => $r['nativo']
+        ];
+    }
+    
+    // Define o cabeçalho como JSON
+    header('Content-Type: application/json');
+    
+    // Retorna os resultados no formato JSON
+    echo json_encode($options);
+    die();
+  }
 
-      $result = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-      while($r = mysqli_fetch_assoc($result)){
-        echo '<option value="'.$r['id'].'" data-f="'.$r['id_fonte'].'" data-t="'.$r['tamanho'].'" data-n="'.$r['nativo'].'" data-eid="'.$r['eid'].'" title="'.$r['significado'].'">'.($r['romanizacao']!=''?$r['romanizacao']:$r['pronuncia']).' ('.$r['sigla'].') - '.$r['significado'].'</option>';
-      };
-      die();
-  };
+  if ($_GET['action'] === 'getOrigemById') {
+      $id = (int)$_GET['id'];
+      $sql = "SELECT po.*, p.romanizacao, p.pronuncia,
+                    (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id AND e.padrao = 1 LIMIT 1) as escrita,
+                    (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
+                        SELECT e.id FROM escritas e WHERE e.id_idioma = p.id AND e.padrao = 1 LIMIT 1
+                    ) LIMIT 1) as nativo 
+              FROM palavras_origens po 
+              LEFT JOIN palavras p ON p.id = po.id_origem 
+              WHERE p.id = $id LIMIT 1";
+      $result = mysqli_query($GLOBALS['dblink'], $sql);
+      echo json_encode(mysqli_fetch_assoc($result));
+      exit;
+  }
 
   if ($_GET['action'] == 'getOptionsReferentes') {
       $sql = "SELECT r.id, d.descricao, d.detalhes
@@ -7059,6 +7152,30 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     }
     die('ok');
   };
+
+  function getOrigensPalavra($pid){
+    $sql = "SELECT po.*, p.romanizacao, p.pronuncia, p.id as pid, p.significado,
+          (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as escrita,
+          (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
+            SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
+          ) LIMIT 1) as nativo 
+          FROM palavras_origens po 
+          LEFT JOIN palavras p ON p.id = po.id_origem
+          WHERE po.id_palavra = $pid ORDER BY po.ordem;";
+          
+    $result = mysqli_query($GLOBALS['dblink'],$sql);
+    $origens = [];
+    while ($r = mysqli_fetch_assoc($result)) {
+        $origens[] = $r;
+    }
+    
+    return json_encode($origens);
+  }
+
+  if ($_GET['action'] == 'ajaxOrigemPalavra') {
+    echo getOrigensPalavra($_GET['pid']);
+    die();
+  }
 
   if ($_GET['action'] == 'ajaxDeleteEscrita') {
       $eid = $_GET['id'];
@@ -8219,18 +8336,20 @@ if ($_GET['action']=='getSCHeader') {
 
 if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
 
-  if (!chottomatte($timerzinho)) die($timerzinho);
+  $data = [];
+  if (!chottomatte($timerzinho)) die([]);
   
   $usuarios = mysqli_query($GLOBALS['dblink'],
-    "SELECT * FROM usuarios WHERE username LIKE '%".$_GET['t']."%';") or die(mysqli_error($GLOBALS['dblink'])); // AND publico = 1
+    "SELECT * FROM usuarios WHERE username LIKE '%".$_GET['t']."%' AND publico = 1;") or die(mysqli_error($GLOBALS['dblink'])); // AND publico = 1
   while($u = mysqli_fetch_assoc($usuarios)){
-    echo '<a href="?action=person&uid='.$u['id'].'" class="btn">@'.$u['username'].'</a><br>';
+    $data[] = ['title' => $u['username'], 'subtitle' => 'Usuário', 'url' => '?page=profile&user='.$u['username']]; // que publicou língua tal e tal
   }
   
   $idiomas = mysqli_query($GLOBALS['dblink'],
     "SELECT * FROM idiomas WHERE nome_legivel LIKE '%".$_GET['t']."%' AND publico = 1;") or die(mysqli_error($GLOBALS['dblink']));
   while($u = mysqli_fetch_assoc($idiomas)){
-    echo '<a href="?action=diom&iid='.$u['id'].'" class="btn">'.$u['romanizacao'].'<span class="custom-font-'.$u['id_escrita'].'">'.$u['palavra'].'</span> - '.$u['nome_legivel'].'</a><br>';
+    //echo '<a href="?action=diom&iid='.$u['id'].'" class="btn">'.$u['romanizacao'].'<span class="custom-font-'.$u['id_escrita'].'">'.$u['palavra'].'</span> - '.$u['nome_legivel'].'</a><br>';
+    $data[] = ['title' => $u['nome_legivel'], 'subtitle' => 'Idioma', 'url' => '?page=language&iid='.$u['id']]; // publicado por Usuario tal
   }
 
   $palavras = mysqli_query($GLOBALS['dblink'],
@@ -8238,16 +8357,17 @@ if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
     FROM palavras p
     LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id  
     LEFT JOIN idiomas i ON p.id_idioma = i.id 
-    WHERE p.romanizacao LIKE '%".$_GET['t']."%' 
+    WHERE ( p.romanizacao LIKE '%".$_GET['t']."%' 
       OR p.pronuncia LIKE '%".$_GET['t']."%'
       OR p.significado LIKE '%".$_GET['t']."%'
-      OR pn.palavra LIKE '%".$_GET['t']."%' 
+      OR pn.palavra LIKE '%".$_GET['t']."%' )
+      AND i.publico = 1
     GROUP BY p.id
     ;") or die(mysqli_error($GLOBALS['dblink']));
   while($u = mysqli_fetch_assoc($palavras)){
-    echo '<a href="?action=palavr&pid='.$u['id'].'" class="btn">'.$u['romanizacao'].'<span class="custom-font-'.$u['id_escrita'].'">'.$u['palavra'].'</span> ('.$u['nome_legivel'].')</a><br>';
+    $data[] = ['title' => $u['romanizacao']??$u['pronuncia'], 'subtitle' => $u['nome_legivel'].': '.$u['significado'], 'url' => '?page=word&pid='.$u['id']];
   }
-
+  echo json_encode($data);
   die();
 };
 
@@ -9126,43 +9246,12 @@ if ($_GET['action'] == 'getDetalhesPalavra') {
       LEFT JOIN escritas e ON e.id = p.id_escrita
       WHERE p.id_palavra = ".$_GET['pid'].";");
     $nat = array();
-      while($r = mysqli_fetch_assoc($result)) {
-        $nat[] = $r;
-      };
-      $rows[0]['escrita_nativa'] = $nat;
-
-
-      //se for contração, ver origens
-      $ids = $nat = '';
-      //if($rows[0]['id_classe']=='2'){
-
-        $sql = "SELECT po.*, p.romanizacao, p.pronuncia,
-              (SELECT e.id FROM escritas e WHERE e.id_idioma = ".$rows[0]['id_idioma']." AND e.padrao = 1 LIMIT 1) as escrita,
-              (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
-                SELECT e.id FROM escritas e WHERE e.id_idioma = ".$rows[0]['id_idioma']." AND e.padrao = 1 LIMIT 1
-              ) LIMIT 1) as nativo 
-              FROM palavras_origens po 
-              LEFT JOIN palavras p ON p.id = po.id_origem
-              WHERE po.id_palavra = ".$_GET['pid']." ORDER BY po.ordem;";
-        //echo $sql;
-        $result = mysqli_query($GLOBALS['dblink'],$sql);
-        $ant = 0;
-        $setinha = ' ';
-        while($r = mysqli_fetch_assoc($result)) {
-          $pal = $r['romanizacao'];
-          if ($r['nativo']!='') $pal = '<span class="custom-font-'.$r['escrita'].'">'.$r['nativo'].'</span>'.' '.$pal;
-          if ($pal == '') $pal = $r['pronuncia'];
-          $nat .= $setinha.'<a class="btn btn-xs btn-default" onclick="alterarOrdemOrigens('.$r['id'].','.$ant.')">'.$pal.'</a> ';
-          $ant = $r['id'];
-          $setinha = ' ←';
-        }
-      //};
-      if ($nat =='') $rows[0]['origensTexto'] = '';
-      else {
-        //$rows[0]['origensTexto'] = ': '.substr($nat,0,strlen($nat)-3).' <a  onclick="alterarOrdemOrigens(\''.substr($ids,0,strlen($ids)-1).'\')">Alterar ordem</a>';
-        $rows[0]['origensTexto'] = ': '.$nat.' ('._t('Clique nas palavras para reordená-las para a esquerda').')';
-      };
- 
+    while($r = mysqli_fetch_assoc($result)) {
+      $nat[] = $r;
+    };
+    $rows[0]['escrita_nativa'] = $nat;
+    
+    $rows[0]['origensTexto'] = getOrigensPalavra($_GET['pid']);
 
     // sigiids : id = int, iid = int, signif = varchar, niid = i.nome_legivel
     $rows[0]['sigiids'] = array();
@@ -9182,7 +9271,7 @@ if ($_GET['action'] == 'getDetalhesPalavra') {
         // echo '<div class=""><input type="text" title="'.$oid['nome_legivel'].'" class="form-control sigoutros" id="sigoutro_'.$oid['iid'].'" onkeyup="editarPalavra()" value="'.$oid['significado'].'" placeholder="Significado sucinto em '.$oid['nome_legivel'].'"></div>';
       };
       
-
+    $rows[0]['pid'] = $_GET['pid'];
     print json_encode($rows);
 	  die();
 };

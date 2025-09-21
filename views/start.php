@@ -61,13 +61,13 @@
                           ) or die(mysqli_error($GLOBALS['dblink']));
                           while($la = mysqli_fetch_assoc($las)){
                             if($la['nativo']!=''){
-                              echo '<a href="#">'.getSpanPalavraNativa($la['nativo'],$eid,$la['fonte'],$la['tamanho']).' '.$la['pronuncia'].'<br>'.$la['significado'].'</a>';
+                              echo '<a href="?page=word&pid='.$la['id'].'">'.getSpanPalavraNativa($la['nativo'],$eid,$la['fonte'],$la['tamanho']).' '.$la['pronuncia'].'<br>'.$la['significado'].'</a>';
                               break;
                             }else if($la['romanizacao']!=''){
-                              echo '<a href="#">'.$la['romanizacao'].'  '.$la['pronuncia'].'<br>'.$la['significado'].'</a>';
+                              echo '<a href="?page=word&pid='.$la['id'].'">'.$la['romanizacao'].'  '.$la['pronuncia'].'<br>'.$la['significado'].'</a>';
                               break;
                             }else if($la['pronuncia']!=''){
-                              echo '<a href="#">'.$la['pronuncia'].'<br>'.$la['significado'].'</a>';
+                              echo '<a href="?page=word&pid='.$la['id'].'">'.$la['pronuncia'].'<br>'.$la['significado'].'</a>';
                               break;
                             }
                           };

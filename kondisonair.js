@@ -107,41 +107,75 @@ function createTablerSelectNativeWords(campo,fonte = '0', tamanho = ''){
   // @formatter:on
 };
 
-function createTablerSelectAllNativeWords(campo){
-  // @formatter:off
-      var el;
-    new TomSelect(el = document.getElementById(campo), {
-          copyClassesToDropdown: false,
-          dropdownParent: 'body',
-          controlInput: '<input>',
-          render:{
-              item: function(data,escape) {
-                  /*if( data.customProperties ){
-                      return '<div><span class="dropdown-item-indicator">' + data.customProperties + '</span>' + escape(data.text) + '</div>';
-                  }*/
-                  if (data.f < 0) {
-                    var tmp = '';
-                    data.n.split(",").forEach(function(t){
-                        tmp += '<span class="drawchar drawchar-'+data.t+'" style="background-image: url(./writing/'+data.eid+'/'+t+'.png)"></span>';
+async function createTablerSelectAllNativeWords(campo) {
+    var el = document.getElementById(campo);
+    let initialOptions = [];
+
+    // Inicializa o TomSelect com as opções iniciais
+    var select = new TomSelect(el, {
+        copyClassesToDropdown: false,
+        dropdownParent: 'body',
+        controlInput: '<input>',
+        persist: false,
+        maxOptions: 50,
+        valueField: 'id',
+        labelField: 'text',
+        searchField: ['text'],
+        load: function(query, callback) {
+            if (query.length >= 2) {
+                // Busca dinâmica para queries digitadas
+                fetch(`api.php?action=getOptionsOrigens&q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(json => {
+                        console.log('Busca dinâmica:', json);
+                        callback(json);
+                    })
+                    .catch(() => {
+                        callback();
                     });
-                    return '<div>' + tmp + escape(data.text) + '</div>';
-                  }else
-                    return '<div><span class="custom-font-'+data.eid+'">' + data.n + '</span> ' + escape(data.text) + '</div>';
-              },
-              option: function(data,escape){
-                  if (data.f < 0) {
+            } else {
+                // Retorna as opções iniciais já carregadas
+                callback(initialOptions);
+            }
+        },
+        render: {
+            item: function(data, escape) {
+                if (data.f < 0) {
                     var tmp = '';
-                    data.n.split(",").forEach(function(t){
-                        tmp += '<span class="drawchar drawchar-'+data.t+'" style="background-image: url(./writing/'+data.eid+'/'+t+'.png)"></span>';
+                    data.n.split(",").forEach(function(t) {
+                        tmp += `<span class="drawchar drawchar-${data.t}" style="background-image: url(./writing/${data.eid}/${t}.png)"></span>`;
                     });
-                    return '<div>' + tmp + escape(data.text) + '</div>';
-                  }else
-                  return '<div><span class="custom-font-'+data.eid+'">' + data.n + '</span> ' + escape(data.text) + '</div>';
-              },
-          },
-      });
-  // @formatter:on
-};
+                    return `<div>${tmp} ${escape(data.text)}</div>`;
+                } else {
+                    return `<div><span class="custom-font-${data.eid}">${data.n}</span> ${escape(data.text)}</div>`;
+                }
+            },
+            option: function(data, escape) {
+                if (data.f < 0) {
+                    var tmp = '';
+                    data.n.split(",").forEach(function(t) {
+                        tmp += `<span class="drawchar drawchar-${data.t}" style="background-image: url(./writing/${data.eid}/${t}.png)"></span>`;
+                    });
+                    return `<div>${tmp} ${escape(data.text)}</div>`;
+                } else {
+                    return `<div><span class="custom-font-${data.eid}">${data.n}</span> ${escape(data.text)}</div>`;
+                }
+            }
+        },
+        onChange: function(value) {
+            if (value) {
+                // Busca os dados completos da origem selecionada
+                fetch(`api.php?action=getDetalhesPalavra&pid=${value}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        addOrigem(data[0]);
+                        editarPalavra();
+                        select.clear(); // Limpa o select após adicionar
+                    });
+            }
+        }
+    });
+}
 
 function updateTablerSelect(campo,val){
     document.querySelector('#'+campo).tomselect.setValue(val);
@@ -265,21 +299,103 @@ function testFilter(divClass,filterField,classe=0){
   */
 }
 
-var esperando = false;
-function buscaGeral(){
-if($('#inputBusca').val().length<1) return;
-if(esperando) return;
-//$("#divResBusca").html('<div class="loaderSpin"></div>');
-$.post("?action=ajaxBuscaGeral&t="+ $('#inputBusca').val(), function (data){
-    if(data>0) {
-        esperando = true;
-        setTimeout(function(){  esperando = false; buscaGeral();}, data*1000);
-    }else{ 
-        $('#divResBusca').html($.trim(data));
-        setTimeout(function(){  esperando = false; }, data*1000);
+document.addEventListener('DOMContentLoaded', function() { 
+  const input = document.getElementById('globalSearchInput');
+  const resultsContainer = document.getElementById('globalSearchResults');
+  const clearBtn = document.getElementById('clearSearch');
+  
+  let debounceTimer;
+  let currentQuery = '';
+
+  // Função de debounce para evitar muitas requests
+  function debounceSearch(query) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => performSearch(query), 500);
+  }
+
+  // Função de busca AJAX
+  function performSearch(query) {
+    if (query.length < 2) { // Mínimo 2 caracteres, como no TomSelect
+      resultsContainer.innerHTML = `
+        <div class="text-muted text-center py-5">
+          <i class="ti ti-search-off icon-lg mb-2"></i>
+          <p>Digite pelo menos 2 caracteres para buscar...</p>
+        </div>
+      `;
+      return;
     }
+
+    // Fetch para o endpoint (ajuste a URL)
+    fetch(`api.php?action=ajaxBuscaGeral&t=${encodeURIComponent(query)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.length === 0) {
+          resultsContainer.innerHTML = `
+            <div class="text-muted text-center py-5">
+              <i class="ti ti-search-off icon-lg mb-2"></i>
+              <p>Nenhum resultado para "${query}"</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Renderiza resultados como cards (inspirado em AniList/GitHub)
+        const html = data.map(item => `
+          <a href="${item.url || '#'}" class="list-group-item" onclick="closeGlobalSearch();">
+            <div class="flex-grow-1">
+              <div>${item.title}</div>
+              <div class="text-secondary">${item.subtitle}</div>
+            </div>
+          </a>
+        `).join('');
+        resultsContainer.innerHTML = html;
+      })
+      .catch(error => {
+        console.error('Erro na busca:', error);
+        resultsContainer.innerHTML = `
+          <div class="alert alert-warning text-center">
+            Erro ao buscar. Tente novamente.
+          </div>
+        `;
+      });
+  }
+
+  // Evento de input com debounce
+  input.addEventListener('input', function(e) {
+    currentQuery = e.target.value.trim();
+    clearBtn.style.display = currentQuery ? 'block' : 'none';
+    debounceSearch(currentQuery);
+  });
+
+  // Limpar busca
+  clearBtn.addEventListener('click', function() {
+    input.value = '';
+    clearBtn.style.display = 'none';
+    resultsContainer.innerHTML = `
+      <div class="text-muted text-center py-5">
+        <i class="ti ti-search-off icon-lg mb-2"></i>
+        <p>Comece a digitar para ver resultados...</p>
+      </div>
+    `;
+  });
+
+  // Função global para fechar modal (chame no onclick dos resultados)
+  window.closeGlobalSearch = function() {
+    modal.hide();
+    input.value = '';
+    clearBtn.style.display = 'none';
+  };
+ 
+
+  // Atalho de teclado Ctrl + F
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+      e.preventDefault(); // Impede a busca nativa do navegador
+      modal.show(); // Abre o modal
+      setTimeout(() => input.focus(), 200); // Foca no input após o modal abrir
+    }
+  });
 });
-}
 
 function globalFonts(data, force = false){ 
     var style = document.createElement('style');

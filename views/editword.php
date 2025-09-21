@@ -294,10 +294,11 @@
 						</div>
 
 						<div class="mb-3" id="comboOrigens">
-							<label class="form-label"><?=_t('Origens')?> <span id="origensTexto"></span> <a class="btn btn-sm btn-primary" onclick="loadOrigens(true,true)"><?=_t('Recarregar')?></a></label>
+							<label class="form-label"><?=_t('Origens')?> <span id="origensTexto" class="row"></span></label>
 							<!-- USAR CACHE -->
-							<select id="id_origens" multiple type="text" value="" class="form-select" onchange="editarPalavra()" >
-							</select>
+							<div id="select_origens" style="display:none">
+							<select id="id_origens" type="text" value="" class="form-select" onchange="addOrigem()">
+							</select></div>
 						</div>
 
 						<div class="mb-3">
@@ -371,7 +372,7 @@
         </div>
 
 
-
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
 
 	function gravarReferentes(){
@@ -388,19 +389,80 @@
 		});
 	};
 
-	function gravarOrigens(){
+	function gravarOrigens(nova = 0){
+		var origens = Array.from(document.querySelectorAll('.o_lista')).map(div => div.id);
 		$.post("api.php?action=ajaxGravarOrigens"
-			+"&pid="+ $('#idPalavra').val()+"&iid=<?=$id_idioma?>"+"&origens="+$('#id_origens').val(), 
-		{ origens: $('#id_origens').val()
+			+"&pid="+ $('#idPalavra').val()+"&iid=<?=$id_idioma?>", 
+		{ origens: origens
 			}, function (data){
 				if ($.trim(data) == 'ok'){
-					//xxxxx reload painel origens
-					//$("#listaDePalavras").load("api.php?action=listarPalavras&id=<?=$id_idioma?>&t=");
+					carregarOrigens()
 				}else{
 					alert(data);
 				};
 		});
 	};
+
+	function carregarOrigens(origens = null) {
+		if (!origens) {
+			$.get("api.php?action=ajaxOrigemPalavra&pid=" + $('#idPalavra').val(), function(data) {
+				origens = JSON.parse(data); // Parseia o JSON retornado
+				montarOrigens(origens);
+			});
+		} else {
+			montarOrigens(JSON.parse(origens));
+		}
+	}
+
+	function montarOrigens(origens) {
+		let html = '';
+		for (const r of origens) {
+			let pal = r.romanizacao;
+			let tt = r.romanizacao ? '<strong>'+r.romanizacao + '</strong> /'+r.pronuncia+'/<br>'+r.significado : r.pronuncia+"\n"+r.significado;
+			if (r.nativo !== '') pal = `<span class="custom-font-${r.escrita}">${r.nativo}</span>`;
+			if (pal === '') pal = r.pronuncia;
+			html += `<div class="col-auto o_lista" id="${r.pid}" data-bs-toggle="tooltip" title="${tt}"><div class="input-group"><a class="btn btn-xs btn-default">${pal}</a></div></div> `;
+		}
+		$('#origensTexto').html(html + `<div class="col-auto" id="div_add_origem"><div class="input-group"><a class="btn btn-xs btn-default" onclick="$('#select_origens').toggle()">+</a></div></div> `);
+
+		$('[data-bs-toggle="tooltip"]').tooltip('dispose');
+		$('[data-bs-toggle="tooltip"]').tooltip({html:true});
+		// Inicializa o Sortable
+		$('#origensTexto').sortable({
+			items: '.o_lista', // Apenas as divs .o_lista são arrastáveis
+			cancel: '#div_add_origem', // Exclui div_add_origem do arraste
+			update: function(event, ui) {
+				// Reinicializa tooltips após reordenação
+				$('[data-bs-toggle="tooltip"]').tooltip('dispose');
+				$('[data-bs-toggle="tooltip"]').tooltip({html:true});
+
+				// Chama editarPalavra após reordenação
+				editarPalavra();
+			}
+		}).disableSelection();
+	}
+
+	function addOrigem(r){
+
+		let pal = r.romanizacao;
+		let tt = r.romanizacao ? '<strong>'+r.romanizacao + '</strong> /'+r.pronuncia+'/<br>'+r.significado : r.pronuncia+"\n"+r.significado;
+		if (r.escrita_nativa) pal = `<span class="custom-font-${r.escrita_nativa[0].id}">${r.escrita_nativa[0].palavra}</span>`;
+		if (pal === '') pal = r.pronuncia;
+		
+		// Obtém o último ID das origens existentes para a seta
+		let ant = Array.from(document.querySelectorAll('.o_lista')).pop()?.pid || 0;
+		let setinha = ant != 0 ? `<a class="btn btn-xs btn-default setinha" title="Clique nas palavras para reordená-las para a esquerda" onclick="alterarOrdemOrigens('${r.pid}', '${ant}')">←</a>` : '';
+		
+		let html = `<div class="col-auto o_lista" id="${r.pid}" title="${tt}" data-bs-toggle="tooltip"><div class="input-group">${setinha}<a class="btn btn-xs btn-default">${pal}</a></div></div> `;
+
+		$('#div_add_origem').before(html);
+		
+		$('#select_origens').hide()
+		$('[data-bs-toggle="tooltip"]').tooltip('dispose'); // Remove tooltips antigos
+		$('[data-bs-toggle="tooltip"]').tooltip({html:true}); // Inicializa novos tooltips
+
+		$('#origensTexto').sortable('refresh');
+	}
 
 	function editarPalavra(){
 		if ($('#significado').val()=='') {
@@ -472,8 +534,6 @@
 
 				setTimeout(() => {
 					gravarReferentes();
-				}, 300);
-				setTimeout(() => {
 					gravarOrigens();
 				}, 300);
 
@@ -541,7 +601,6 @@
 				document.getElementById("pronuncia").focus(); //$('#pronuncia').focus();
 				createTablerSelect('id_classe');
 				createTablerSelect('id_uso');
-				createTablerSelectAllNativeWords('id_origens');
 				createTablerSelect('id_referentes');
 				$("#saveBtn").hide();
 			}, 800);
@@ -614,11 +673,13 @@
 						$('#id_derivadora').val(data[0].id_derivadora); 
 						
 
+						/*
 						if (data[0].origens.length > 0) {
 							$.each(data[0].origens.split(","), function(i,e){
 								$("#id_origens option[value='" + e + "']").prop("selected", true);
 							});
 						}
+						*/
 
 						//xxxxx update tomselect origens
 						//document.getElementById('id_origens').tomselect.refreshItems();
@@ -631,7 +692,7 @@
 							$("#selectFormaDic").show();
 						}
 						
-						$('#origensTexto').html(data[0].origensTexto); 
+						carregarOrigens(data[0].origensTexto);
 
 						$('.escrita_nativa').val(''); 
 						data[0].escrita_nativa.forEach(function(e){ //xxxxx deve vir tbm draw TRUE se id_fonte < 0
@@ -650,15 +711,12 @@
 						$('#detalhes').val(data[0].detalhes); 
 
 						$('#btnMSalvar').hide();
-
-						$("#modalPalavra").modal('show');
 						
 						setTimeout(() => {
 							//document.getElementById("pronuncia").focus(); //$('#pronuncia').focus();
 							createTablerSelect('id_classe');
 							createTablerSelect('id_uso');
 							//createTablerSelect('id_origens');
-							createTablerSelectAllNativeWords('id_origens');
 							createTablerSelect('id_referentes');
 							$("#saveBtn").hide();
 						}, 600);
@@ -800,10 +858,21 @@
 	};
 
 	function alterarOrdemOrigens(id,a){
-		$.get("api.php?action=ajaxReordenarOrigemPalavra&id="+id+"&a="+a, function (data){
-			if(data=='ok') loadWord( $('#idPalavra').val() ); //xxxxx load somente painelzinho de origens
-			else alert(data);
+		$(`#${id}.o_lista`).insertBefore(`#${a}.o_lista`);
+		
+		// Remove todas as setas existentes
+		$('.setinha').remove();
+
+		// Atualiza as setas
+		let divs = Array.from(document.querySelectorAll('.o_lista'));
+		divs.forEach((div, index) => {
+			if (index > 0) {
+				let setinha = `<a class="btn btn-xs btn-default setinha" title="Clique nas palavras para reordená-las para a esquerda" onclick="alterarOrdemOrigens('${div.id}', '${divs[index-1].id}')">←</a>`;
+				$(div).find('.input-group').prepend(setinha);
+			}
 		});
+
+		editarPalavra();
 	};
 
 	function addIpaPronuncia(char){
@@ -817,36 +886,6 @@
 	function loadExtras(tipo){
 		$("#extrasCanvas").load('api.php?action='+tipo+'&pid=<?=$_GET['pid']?>');
 	}
-
-	function loadOrigens(forceReload = false, ja = false){ 
-		var tv;
-		if (ja) {
-			tv = document.querySelector('#id_origens').tomselect.getValue();
-			document.querySelector('#id_origens').tomselect.destroy();
-		}
-		let data = <?=getLastChange('origens')?>;
-		if (forceReload || ja || data > localStorage.getItem("k_origens_updated")){
-			console.log('local origens outdated > update');
-			$.get("api.php?action=getOptionsOrigens", function (lex){
-				$("#id_origens").html(lex);
-				localStorage.setItem("k_origens", lex);
-				localStorage.setItem("k_origens_updated", data);
-				if (ja) // reloadBases();
-					setTimeout(() => {
-						createTablerSelectAllNativeWords('id_origens');//createTablerSelect('id_origens');
-						document.querySelector('#id_origens').tomselect.setValue(tv);
-					}, 1000);
-			})
-		}else{
-			console.log('local origens load');
-			$("#id_origens").html( localStorage.getItem("k_origens") );
-			if (ja) // reloadBases();
-				setTimeout(() => {
-					createTablerSelectAllNativeWords('id_origens');//createTablerSelect('id_origens');
-					document.querySelector('#id_origens').tomselect.setValue(tv);
-				}, 1000);
-		}
-	};
 	function loadReferentes(forceReload = false, ja = false){
 		var tv;
 		if (ja) {
@@ -912,13 +951,14 @@
 	$(document).ready(function(){
 		loadDicionario();
 		loadReferentes();
-		loadOrigens();
+		//loadOrigens();
 		
 		<?php echo 'loadWord(\''.$_GET['pid'].'\');'; ?>
 		
 		setTimeout(() => {
 			createTablerSelect('id_idsig',null);
 			createTablerSelect('id_tags',null,true);
+			createTablerSelectAllNativeWords('id_origens');
 		}, 1000);
 		appLoad();
 		

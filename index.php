@@ -31,6 +31,9 @@ require('api.php');
           </h1>
           <div class="navbar-nav flex-row order-md-last">
             <div class="d-none d-md-flex">
+              <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#globalSearchModal" title="Busca Global">
+                Buscar...
+              </a>
               <a class="nav-link" href="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings" onclick="loadExtraPanel('theme')">
                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                   <!-- Download SVG icon from http://tabler.io/icons/icon/settings -->
@@ -229,6 +232,38 @@ require('api.php');
     <script>
       globalFonts('<?=getLastChange('fonts')?>');
     </script>
+
+    <!-- Modal de Busca Global -->
+    <div class="modal modal-blur" id="globalSearchModal" tabindex="-1" aria-labelledby="globalSearchLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header border-bottom">
+            <h5 class="modal-title" id="globalSearchLabel">Busca Global</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0">
+            <!-- Input de Busca -->
+            <div class="input-group input-group-flat border-bottom">
+              <span class="input-group-text">
+                <i class="ti ti-search text-muted"></i>
+              </span>
+              <input type="text" class="form-control" id="globalSearchInput" placeholder="Digite para buscar... (ex: palavras, origens)" autocomplete="off">
+              <span class="input-group-text">
+                <a href="#" class="link-secondary" id="clearSearch" style="display:none;"><i class="ti ti-x"></i></a>
+              </span>
+            </div>
+            
+            <!-- Área de Resultados (inicialmente vazia) -->
+            <div id="globalSearchResults" class="list-group list-group-flush list-group-hoverable p-3" style="max-height: 80vh; overflow-y: auto;">
+              <div class="text-muted text-center py-5">
+                <i class="ti ti-search-off icon-lg mb-2"></i>
+                <p>Comece a digitar para ver resultados...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </body>
 </html>
