@@ -1119,7 +1119,7 @@ function getInfoPalavraFromID($pid){
 
 };
 
-function getPalavrasMesmaEscrita($pid,$limit=0,$eid=0){
+function getPalavrasMesmaEscrita($pid,$limit=0,$editable = true,$eid=0){
   $return = '';  
   if ($limit > 0) $sqlLimit = " LIMIT ".$limit." ";
   $res0 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavras p 
@@ -1158,13 +1158,13 @@ function getPalavrasMesmaEscrita($pid,$limit=0,$eid=0){
 
         $homons = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //nomeClasse
         if (mysqli_num_rows($homons)>1){// <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasSigCom" role="button" aria-controls="offcanvasStart">Mostrar/ocultar significados da comunidade</a>
-        $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaEscrita\')">'._t('Palavras com mesma escrita em').' '.$enome.'</a></h3>';
+        $return .= '<div class="list-group-item"><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaEscrita\')">'._t('Palavras com mesma escrita em').' '.$enome.'</a></h3>';
             // <h4>Palavras com mesma escrita em '.$enome.':</h4><ul>';
             while($homon = mysqli_fetch_assoc($homons)){
               if ($homon['palavra_id']==$pid) continue;
               $nat = getSpanPalavraNativa($homon['palavra'],$escrita,$fonte,$tamanho);
               //if ($homon['id_idioma']==$id_idioma)
-              $return .= '<a class="col text-truncate" href="#" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
+              $return .= '<a class="col text-truncate" href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['palavra_id'].'">
                   <div class="text-reset d-block text-truncate">'.$nat.' '.($homon['romanizacao']!=''?$homon['romanizacao']:'/'.$homon['pron'].'/').'</div>
                   <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
                 </a>';
@@ -1187,13 +1187,13 @@ function getPalavrasMesmaEscrita($pid,$limit=0,$eid=0){
 
       $homons = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //nomeClasse
       if (mysqli_num_rows($homons)>1){// <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasSigCom" role="button" aria-controls="offcanvasStart">Mostrar/ocultar significados da comunidade</a>
-      $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaEscrita\')">'._t('Palavras com mesma romanização').'</a></h3>';
+      $return .= '<div class="list-group-item"><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaEscrita\')">'._t('Palavras com mesma romanização').'</a></h3>';
           // <h4>Palavras com mesma escrita em '.$enome.':</h4><ul>';
           while($homon = mysqli_fetch_assoc($homons)){
             if ($homon['palavra_id']==$pid) continue;
             $nat = $homon['roman'];
             //if ($homon['id_idioma']==$id_idioma)
-            $return .= '<a class="col text-truncate" href="#" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
+            $return .= '<a class="col text-truncate" href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['palavra_id'].'">
                 <div class="text-reset d-block text-truncate">'.$homon['romanizacao'].' /'.$homon['pron'].'/</div>
                 <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
               </a>';
@@ -1205,7 +1205,7 @@ function getPalavrasMesmaEscrita($pid,$limit=0,$eid=0){
   return $return;
 };
 
-function getPalavrasMesmaPronuncia($pid,$limit=0){
+function getPalavrasMesmaPronuncia($pid,$limit=0,$editable = true){
   $return = '';
   if ($limit > 0) $sqlLimit = " LIMIT ".$limit." ";
 
@@ -1231,13 +1231,13 @@ function getPalavrasMesmaPronuncia($pid,$limit=0){
     AND p.id= ".$pid." AND LENGTH(p.pronuncia) > 0 ORDER BY RAND() ".$sqlLimit.";") or die(mysqli_error($GLOBALS['dblink']));
 
   if (mysqli_num_rows($homons)>1){
-    $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaPronuncia\')">'._t('Palavras com mesma pronúncia').'</a></h3>';
+    $return .= '<div class="list-group-item"><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasMesmaPronuncia\')">'._t('Palavras com mesma pronúncia').'</a></h3>';
     
     if($escrita>0)
         while($homon = mysqli_fetch_assoc($homons)){
           if($pid==$homon['palavra_id']) continue;
           $nat = getSpanPalavraNativa($homon['nativa'],$escrita,$fonte,$tamanho);
-          $return .= '<a href="#" class="col text-truncate" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
+          $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['palavra_id'].'" class="col text-truncate">
             <div class="text-reset d-block text-truncate">'.$nat.($homon['romanizacao']!=''?$homon['romanizacao']:'').'</div>
             <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
           </a>'; 
@@ -1245,7 +1245,7 @@ function getPalavrasMesmaPronuncia($pid,$limit=0){
     else
         while($homon = mysqli_fetch_assoc($homons)){
           if($pid==$homon['palavra_id']) continue;
-          $return .= '<a href="#" class="col text-truncate" onclick="abrirPalavra(\''.$homon['palavra_id'].'\')">
+          $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['palavra_id'].'" class="col text-truncate">
             <div class="text-reset d-block text-truncate">'.$homon['pronuncia'].'&nbsp'.($homon['romanizacao']!=''?$homon['romanizacao']:'').'</div>
             <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].'</div>
           </a>';
@@ -1256,7 +1256,7 @@ function getPalavrasMesmaPronuncia($pid,$limit=0){
   return $return;
 };
 
-function getPalavrasMesmosReferentes($pid,$limit=0){
+function getPalavrasMesmosReferentes($pid,$limit=0,$editable = true){
   // get sinonimos na mesma iid, dps em outros idiomas 
 
   // $escrita, $id_idioma
@@ -1277,7 +1277,7 @@ function getPalavrasMesmosReferentes($pid,$limit=0){
       ORDER BY RAND(), nomeidioma ".$sqlLimit.";") or die(mysqli_error($GLOBALS['dblink'])); //p.id_idioma = ".$id_idioma." AND 
   
   if (mysqli_num_rows($simi)>1){
-    $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasSinonimos\')">'._t('Palavras com mesmos referentes').'</a></h3>';
+    $return .= '<div class="list-group-item"><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasSinonimos\')">'._t('Palavras com mesmos referentes').'</a></h3>';
 
     while($si = mysqli_fetch_assoc($simi)){ // onclick="abrirPalavra('.$si['palavra_id'].')"
         if ($si['palavra_id']==$pid) continue;
@@ -1398,7 +1398,7 @@ function setItensPalavra($pid,$conc=0,$item=0){
 
 };
 
-function getPalavrasRelacionadas($pid,$limit=0){
+function getPalavrasRelacionadas($pid,$limit=0,$editable = true){
 
   if ($limit > 0) $sqlLimit = " LIMIT ".$limit." ";
   $return = '';
@@ -1435,7 +1435,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
         //(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND id_palavra = p.id LIMIT 1) as nativa  
     $homon = mysqli_fetch_assoc($orig);
 
-    $return .= '<div><h3>'._t('Derivada de').'</h3>';
+    $return .= '<div class="list-group-item"><h3>'._t('Derivada de').'</h3>';
       
       $glosses = '';
 
@@ -1452,7 +1452,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
       while($bx = mysqli_fetch_assoc($b)){
         $glosses .= '<span title="'.$bx['nome'].'">'.$bx['gloss'].'</span>.';
       }
-      $return .= '<a href="#" class="col text-truncate" onclick="abrirPalavra(\''.$homon['id'].'\')">
+      $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
           <div class="text-reset d-block text-truncate">'.getSpanPalavraNativa($homon['nativa'],$escrita,$fonte,$tamanho).'</div>
           <div class="text-secondary text-truncate mt-n1">'.($homon['romanizacao']!=''?$homon['romanizacao']:'').' ('.substr($glosses,0,strlen($glosses)-1).') '.$homon['significado'].'</div>
         </a>';
@@ -1464,7 +1464,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
     FROM palavras p 
     WHERE p.id_derivadora = ".$pid." ORDER BY RAND() ".$sqlLimit.";") or die(mysqli_error($GLOBALS['dblink']));
   if (mysqli_num_rows($homons)>0){
-      $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasRelacionadas\')">'._t('Palavras derivadas').'</a></h3>'; //.$r['escrita_nativa']
+      $return .= '<div class="list-group-item"><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasRelacionadas\')">'._t('Palavras derivadas').'</a></h3>'; //.$r['escrita_nativa']
       if($escrita>0)
               while($homon = mysqli_fetch_assoc($homons)){
 
@@ -1488,7 +1488,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
                     $glosses .= '<span title="'.$bx['nome'].'">'.$bx['gloss'].'</span>.';
                   }
 
-                  $return .= '<a href="?page=editword&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
+                  $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
                       <div class="text-reset d-block text-truncate">'.getSpanPalavraNativa($homon['nativa'],$escrita,$fonte,$tamanho).($homon['romanizacao']!=''?$homon['romanizacao']:'').'</div>
                       <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].' ('.substr($glosses,0,strlen($glosses)-1).')</div>
                     </a>';
@@ -1516,7 +1516,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
                 $glosses .= '<span title="'.$bx['nome'].'">'.$bx['gloss'].'</span>.';
               }
 
-              $return .= '<a href="?page=editword&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
+              $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
                   <div class="text-reset d-block text-truncate">'.($homon['romanizacao']!=''?$homon['romanizacao']:$homon['pronuncia']).'</div>
                   <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].' ('.substr($glosses,0,strlen($glosses)-1).')</div>
                 </a>';
@@ -1531,7 +1531,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
         //(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND id_palavra = p.id LIMIT 1) as nativa  
     $homon = mysqli_fetch_assoc($orig);
 
-    $return .= '<div><h3>'._t('Forma de Dicionário').'</h3>';
+    $return .= '<div class="list-group-item"><h3>'._t('Forma de Dicionário').'</h3>';
       
       $glosses = '';
 
@@ -1548,7 +1548,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
       while($bx = mysqli_fetch_assoc($b)){
         $glosses .= '<span title="'.$bx['nome'].'">'.$bx['gloss'].'</span>.';
       }
-      $return .= '<a href="#" class="col text-truncate" onclick="abrirPalavra(\''.$homon['id'].'\')">
+      $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
           <div class="text-reset d-block text-truncate">'.getSpanPalavraNativa($homon['nativa'],$escrita,$fonte,$tamanho).'</div>
           <div class="text-secondary text-truncate mt-n1">'.($homon['romanizacao']!=''?$homon['romanizacao']:'').' ('.substr($glosses,0,strlen($glosses)-1).') '.$homon['significado'].'</div>
         </a>';
@@ -1559,7 +1559,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
         FROM palavras p 
         WHERE p.id_forma_dicionario = ".($base>0?$base:$pid)." AND p.id <> ".$pid." ORDER BY RAND() ".$sqlLimit.";") or die(mysqli_error($GLOBALS['dblink']));
     if (mysqli_num_rows($homons)>0){
-      $return .= '<div><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasRelacionadas\')">'._t('Outras formas').'</a></h3>'; //.$r['escrita_nativa']
+      $return .= '<div class="list-group-item"><h3><a data-bs-toggle="offcanvas" href="#offcanvasExtras" role="button" aria-controls="offcanvasExtras" onclick="loadExtras(\'getPalavrasRelacionadas\')">'._t('Outras formas').'</a></h3>'; //.$r['escrita_nativa']
       if($escrita>0)
               while($homon = mysqli_fetch_assoc($homons)){
                   
@@ -1585,7 +1585,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
                     $glosses .= '<span title="'.$bx['nome'].'">'.$bx['gloss'].'</span>.';
                   }
 
-                  $return .= '<a href="?page=editword&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
+                  $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
                       <div class="text-reset d-block text-truncate">'.getSpanPalavraNativa($homon['nativa'],$escrita,$fonte,$tamanho).($homon['romanizacao']!=''?$homon['romanizacao']:'').'</div>
                       <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].' ('.substr($glosses,0,strlen($glosses)-1).')</div>
                     </a>';
@@ -1613,7 +1613,7 @@ function getPalavrasRelacionadas($pid,$limit=0){
                 $glosses .= '<span title="'.$bx['nome'].'">'.$bx['gloss'].'</span>.';
               }
 
-              $return .= '<a href="?page=editword&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
+              $return .= '<a href="?page='.($editable?'edit':null).'word&iid='.$id_idioma.'&pid='.$homon['id'].'" class="col text-truncate">
                   <div class="text-reset d-block text-truncate">'.($homon['romanizacao']!=''?$homon['romanizacao']:$homon['pronuncia']).'</div>
                   <div class="text-secondary text-truncate mt-n1">'.$homon['significado'].' ('.substr($glosses,0,strlen($glosses)-1).')</div>
                 </a>';
@@ -4119,7 +4119,9 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   }
 
   if ($_GET['action']=='ajaxGravarPalavra') {
-    $res0 = mysqli_query($GLOBALS['dblink'],"SELECT publico FROM idiomas WHERE id = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
+    $res0 = mysqli_query($GLOBALS['dblink'],"SELECT p.pronuncia, p.romanizacao, 
+        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1) LIMIT 1) as nativo, 
+        i.publico FROM palavras p LEFT JOIN idiomas i ON i.id = p.id_idioma WHERE p.id = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
     $r0 = mysqli_fetch_assoc($res0);
     $romanizacao = str_replace("'",'"',$_POST['romanizacao']);
     $pronuncia = str_replace('"',"'",$_POST['pronuncia']);
@@ -4132,15 +4134,17 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     if($_GET['pid']>0){ 
       $nativaNovaEidPadrao = $_POST['nativo'][0/*$esc['id']*/];
-      $resp = verificarTextosComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
-      if ($resp != 0) {
-          echo 'textos|'.$resp;
-          die();
-      }
-      $resp = verificarFrasesComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
-      if ($resp != 0) {
-          echo 'frases|'.$resp;
-          die();
+      if ($_POST['nativo'][0]!=$r0['nativo'] || $pronuncia!=$r0['pronuncia'] || $romanizacao!=$r0['romanizacao']){
+        $resp = verificarTextosComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+        if ($resp != 0) {
+            echo 'textos|'.$resp;
+            die();
+        }
+        $resp = verificarFrasesComEssaPalavra($_GET['iid'], $_GET['pid'], $_POST['textosRemover'], $_POST['textosAtualizar'], $_POST['textosIgnorar'], $pronuncia, $romanizacao, $nativaNovaEidPadrao);
+        if ($resp != 0) {
+            echo 'frases|'.$resp;
+            die();
+        }
       }
 
       $sqlQuerys = "UPDATE palavras SET 
@@ -8294,22 +8298,24 @@ if ($_GET['action'] == 'listPhrases') {
   $id_fonte_original = '';
   $tamanho_original = '';
 
+  if ($_GET['palavra']>0) $filtroPalavra = " AND f.frase LIKE '%".$_GET['palavra']."%' ";
   if($dono || $id_idioma > 0){
       // apenas listagem de top frases do idioma
       $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
         LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
-        WHERE f.id_idioma = $id_idioma  ORDER BY RAND() LIMIT 100";
+        WHERE f.id_idioma = $id_idioma $filtroPalavra ORDER BY RAND() LIMIT 100";
   }else if($id_usuario > 0){
       // apenas listagem de frases do usuario - edit se é o logado
       $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
         LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
-        WHERE f.id_criador = $id_usuario  ORDER BY RAND() LIMIT 100";
+        WHERE f.id_criador = $id_usuario $filtroPalavra ORDER BY RAND() LIMIT 100";
   }else {
+      if ($_GET['palavra']>0) $filtroPalavra = " WHERE f.frase LIKE '%".$_GET['palavra']."%' ";
       //lista random top frases
       //add select pra idiomas
       $sql = "SELECT f.*, e.id as eid, e.tamanho, e.id_fonte as fonte FROM frases f 
         LEFT JOIN escritas e ON e.id_idioma = f.id_idioma AND e.padrao = 1
-        ORDER BY RAND() LIMIT 100";
+        $filtroPalavra ORDER BY RAND() LIMIT 100";
   }
   //echo $sql;
   $data = [];
@@ -9094,42 +9100,29 @@ if ($_GET['action'] == 'getDetMorfPalavra') {
 };
 
 if ($_GET['action'] == 'getPalavrasRelacionadas') {
-  echo getPalavrasRelacionadas($_GET['pid']);
+  echo getPalavrasRelacionadas($_GET['pid'],0,$_GET['e']??true);
   die();
 };
 
 if ($_GET['action'] == 'getPalavrasMesmaPronuncia') {
-  echo getPalavrasMesmaPronuncia($_GET['pid']);
+  echo getPalavrasMesmaPronuncia($_GET['pid'],0,$_GET['e']??true);
   die();
 };
 
 if ($_GET['action'] == 'getPalavrasMesmaEscrita') {
-  echo getPalavrasMesmaEscrita((int)$_GET['pid'],(int)$_GET['eid']);
+  echo getPalavrasMesmaEscrita((int)$_GET['pid'],0,$_GET['e']??true,(int)$_GET['eid']);
   die();
 };
 
 if ($_GET['action'] == 'getPalavrasSinonimos') {
-  echo getPalavrasMesmosReferentes($_GET['pid'],$escrita,$id_idioma);
+  echo getPalavrasMesmosReferentes($_GET['pid'],0,$_GET['e']??true);
   die();
 };
 
 if ($_GET['action'] == 'getPalavrasExtras') {
-  $return = getPalavrasMesmaEscrita($_GET['pid'],5);
+  $return = getPalavrasMesmaEscrita($_GET['pid'],5,true);
   $return .= getPalavrasMesmaPronuncia($_GET['pid'],5);
   $return .= getPalavrasRelacionadas($_GET['pid'],5);
-  $return .= getPalavrasMesmosReferentes($_GET['pid'],5);
-
-  if (strlen($return)<13) $return = '<h3 class="card-title">'._t('Palavras relacionadas (nada aqui)').'</h3>';
-  echo $return;
-  die();
-
-  $return = ''; $t = '';
-  $t = getPalavrasMesmaEscrita($_GET['pid'],5);
-  if ($t != '') $return .= $t;//.'<div class="mb-3"><br>a</div>';
-  $t .= getPalavrasMesmaPronuncia($_GET['pid'],5);
-  if ($t != '') $return .= $t;//.'<div class="mb-3"><br>b</div>';
-  $t .= getPalavrasRelacionadas($_GET['pid'],5);
-  if ($t != '') $return .= $t;//.'<div class="mb-3"><br>c</div>';
   $return .= getPalavrasMesmosReferentes($_GET['pid'],5);
 
   if (strlen($return)<13) $return = '<h3 class="card-title">'._t('Palavras relacionadas (nada aqui)').'</h3>';

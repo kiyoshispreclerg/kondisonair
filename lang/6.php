@@ -898,5 +898,16 @@ $langpack = [
 "O que fazer com textos que contêm essa palavra?" => "Kion fari kun tekstoj kiuj enhavas ĉi tiun vorton?",
 "O que fazer com frases que contêm essa palavra?" => "Kion fari kun frazoj kiuj enhavas ĉi tiun vorton?",
 "O que fazer com as palavras que contêm esse som?" => "Kion fari kun vortoj kiuj enhavas ĉi tiun sonon?",
+"Busca Geral" => "Ĝenerala Serĉo",
+"Comece a digitar para ver resultados..." => "Komencu tajpi por vidi rezultojn...",
+"Buscar..." => "Serĉi...",
+"Theme" => "Temo",
+"Gerador de paradigma" => "Paradigmogenerilo",
+"Ainda há %1 palavras fora do dicionário" => "Ankoraŭ estas %1 vortoj ekster la vortaro",
+"Há %1 palavras cujas pronúncias contém este som! Não deletado" => "Estas %1 vortoj kies prononcoj enhavas ĉi tiun sonon! Ne forigita",
+"Sinônimos" => "Sinonimoj",
+"Antônimos" => "Antonimoj",
+"Derivações" => "Derivaĵoj",
+"Outras Formas" => "Aliaj Formoj",
 ];
 ?>

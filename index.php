@@ -31,18 +31,8 @@ require('api.php');
           </h1>
           <div class="navbar-nav flex-row order-md-last">
             <div class="d-none d-md-flex">
-              <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#globalSearchModal" title="Busca Global">
-                Buscar...
-              </a>
-              <a class="nav-link" href="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings" onclick="loadExtraPanel('theme')">
-                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                  <!-- Download SVG icon from http://tabler.io/icons/icon/settings -->
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
-                    <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path>
-                    <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path>
-                  </svg>
-                </span>
-              </a>
+              
+              
 
               <?php if($_SESSION['KondisonairUzatorIDX']>0) { ?>
               <!--div class="nav-item dropdown d-none d-md-flex me-3">
@@ -65,6 +55,9 @@ require('api.php');
             </div>
             <div class="nav-item dropdown">
               <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
+                <span class="nav-link-icon d-md-none d-lg-inline-block"><!-- Download SVG icon from http://tabler-icons.io/i/star -->
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path><path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"></path></svg>
+                </span>
                 <div class="d-none d-xl-block ps-2">
                 <?php if($_SESSION['KondisonairUzatorIDX']>0) { ?>
                   <div><?=$_SESSION['KondisonairUzatorID']?></div>
@@ -76,6 +69,15 @@ require('api.php');
                 </div>
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings" onclick="loadExtraPanel('theme')">
+                  <span class="nav-link-icon d-md-none d-lg-inline-block">
+                    <!-- Download SVG icon from http://tabler.io/icons/icon/settings -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-1">
+                      <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path>
+                      <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path>
+                    </svg>
+                  </span><?=_t('Theme')?>
+                </a>
                 <?php if($_SESSION['KondisonairUzatorIDX']>0) { ?>
                   <a href="?page=profile" class="dropdown-item"><?=_t('Perfil')?></a>
                   <div class="dropdown-divider"></div>
@@ -156,12 +158,20 @@ require('api.php');
                         <a class="dropdown-item" href="?page=wordgen">
                         <?=_t('Gerador de palavras')?>
                         </a>
-                        <a class="dropdown-item" href="?page=paradigmer">
+                        <!--a class="dropdown-item" href="?page=paradigmer">
                         <?=_t('Criador de paradigma')?>
-                        </a>
+                        </a-->
                       </div>
                     </div>
                   </div>
+                </li>
+                <li class="nav-item droown">
+                  <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#globalSearchModal" title="<?=_t('Busca Geral')?>" onclick="$('#globalSearchInput').focus()">
+                    <span class="nav-link-icon d-md-none d-lg-inline-block"><!-- Download SVG icon from http://tabler-icons.io/i/star -->
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>
+                    </span>
+                    <?=_t('Buscar...')?>
+                  </a>
                 </li>
 
               </ul>
@@ -235,10 +245,10 @@ require('api.php');
 
     <!-- Modal de Busca Global -->
     <div class="modal modal-blur" id="globalSearchModal" tabindex="-1" aria-labelledby="globalSearchLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header border-bottom">
-            <h5 class="modal-title" id="globalSearchLabel">Busca Global</h5>
+            <h5 class="modal-title" id="globalSearchLabel"><?=_t('Busca Geral')?></h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-0">
@@ -257,7 +267,7 @@ require('api.php');
             <div id="globalSearchResults" class="list-group list-group-flush list-group-hoverable p-3" style="max-height: 80vh; overflow-y: auto;">
               <div class="text-muted text-center py-5">
                 <i class="ti ti-search-off icon-lg mb-2"></i>
-                <p>Comece a digitar para ver resultados...</p>
+                <p><?=_t('Comece a digitar para ver resultados...')?></p>
               </div>
             </div>
           </div>

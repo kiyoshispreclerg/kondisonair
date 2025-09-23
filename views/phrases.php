@@ -212,7 +212,7 @@ function loadFrases(){
     //updateTablerSelect('filtro', 'dici');
     $("#filter-div").show();
 
-    $.get("api.php?action=listPhrases&iid=<?=$id_idioma?>&uid=<?=$id_usuario?>", function (lex){
+    $.get("api.php?action=listPhrases&iid=<?=$id_idioma?>&uid=<?=$id_usuario?>&palavra=<?=$_GET['palavra']?>", function (lex){
         $("#wordTable").html(listFormat(lex));
         $('[data-bs-toggle="tooltip"]').tooltip();
     })

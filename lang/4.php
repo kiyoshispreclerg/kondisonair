@@ -898,5 +898,16 @@ $langpack = [
 "O que fazer com textos que contêm essa palavra?" => "この単語を含むテキストをどうしますか？",
 "O que fazer com frases que contêm essa palavra?" => "この単語を含むフレーズをどうしますか？",
 "O que fazer com as palavras que contêm esse som?" => "この音を含む単語をどうしますか？",
+"Busca Geral" => "一般検索",
+"Comece a digitar para ver resultados..." => "入力して結果を確認...",
+"Buscar..." => "検索...",
+"Theme" => "テーマ",
+"Gerador de paradigma" => "パラダイムジェネレーター",
+"Ainda há %1 palavras fora do dicionário" => "まだ%1語が辞書にありません",
+"Há %1 palavras cujas pronúncias contém este som! Não deletado" => "%1語の発音にこの音が含まれています！削除されていません",
+"Sinônimos" => "同義語",
+"Antônimos" => "反義語",
+"Derivações" => "派生語",
+"Outras Formas" => "他の形式",
 ];
 ?>

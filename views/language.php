@@ -232,10 +232,10 @@ function listFormat(json){
         html += `<div data-search="` + val.palavra + val.pronuncia + val.significado + val.romanizacao + val.extras +
             `" class="list-group-item divWord" ` + val.indexdata + `><div class="row">
               <div class="col-auto" data-bs-toggle="tooltip" title="`+sub+`" >
-                <a data-bs-toggle="offcanvas" href="#offcanvasHelperPanel" role="button" aria-controls="offcanvasStart" onclick="abrirSig(`+val.id+`)">` + palavra + `</a>
+                <a href="?page=word&pid=`+val.id+`&iid=<?=$id_idioma?>">` + palavra + `</a>
               </div>
               <div class="col text-truncate">
-                <a data-bs-toggle="offcanvas" href="#offcanvasHelperPanel" role="button" aria-controls="offcanvasStart" onclick="abrirSig(`+val.id+`)" class="text-body d-block">`+val.significado+`</a> 
+                <a href="?page=word&pid=`+val.id+`&iid=<?=$id_idioma?>" class="text-body d-block">`+val.significado+`</a> 
               </div>
           </div></div>`;
     });

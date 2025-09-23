@@ -898,5 +898,16 @@ $langpack = [
 "O que fazer com textos que contêm essa palavra?" => "O que fazer com textos que contêm essa palavra?",
 "O que fazer com frases que contêm essa palavra?" => "O que fazer com frases que contêm essa palavra?",
 "O que fazer com as palavras que contêm esse som?" => "O que fazer com as palavras que contêm esse som?",
+"Busca Geral" => "Busca Geral",
+"Comece a digitar para ver resultados..." => "Comece a digitar para ver resultados...",
+"Buscar..." => "Buscar...",
+"Theme" => "Theme",
+"Gerador de paradigma" => "Gerador de paradigma",
+"Ainda há %1 palavras fora do dicionário" => "Ainda há %1 palavras fora do dicionário",
+"Há %1 palavras cujas pronúncias contém este som! Não deletado" => "Há %1 palavras cujas pronúncias contém este som! Não deletado",
+"Sinônimos" => "Sinônimos",
+"Antônimos" => "Antônimos",
+"Derivações" => "Derivações",
+"Outras Formas" => "Outras Formas",
 ];
 ?>

@@ -4,14 +4,13 @@
 	$filtro = 'dici';
 	if (isset($_GET['t']) && $_GET['t']!='') $filtro = $_GET['t'];
 
-	if (!$_GET['pid']>0) $_GET['pid'] = 0;
 	$idioma = array();   
 	$romanizacao = 0;
 	$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, e.id as eid, e.id_fonte as fonte, e.tamanho, e.substituicao,
         (SELECT COUNT(*) FROM studason_palavrs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."') as numPal,
         (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab
         FROM idiomas i LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
-        WHERE i.id = '".$id_idioma."';") or die(mysqli_error($GLOBALS['dblink']));
+        WHERE i.id = $id_idioma;") or die(mysqli_error($GLOBALS['dblink']));
     while($r = mysqli_fetch_assoc($result)) { 
         $idioma  = $r;
     };
@@ -20,6 +19,7 @@
     $fonte = $idioma['fonte'];
     $tamanho = $idioma['tamanho'];
     $substituicao = $idioma['substituicao'];
+	if ($_GET['palavra']>0) $filtroPalavra = " AND t.texto LIKE '%".$_GET['palavra']."%' ";
     
     if (($idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX'] || $idioma['collab'] > 0 ) && $id_idioma > 0) { // my language, show add/edit
         $mdason = 'mdason';
@@ -31,7 +31,7 @@
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
             WHERE t.id_idioma = ".$_GET['iid']." AND (t.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR t.id_usuario IN(
-                SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')) ;";
+                SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')) $filtroPalavra;";
                 //echo $query;
         $imports = 'usuários';
         $btnNovoTexto = '<a class="btn btn-primary"onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
@@ -124,7 +124,7 @@
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = ".$_GET['iid']." AND t.num_palavras > 0 ;"; // 
+            WHERE t.id_idioma = ".$_GET['iid']." AND t.num_palavras > 0  $filtroPalavra;"; // 
 
 
 
@@ -140,7 +140,7 @@
                 (SELECT iniciadores FROM escritas e WHERE e.id_idioma = s.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores
             FROM tests_importasons i
                 LEFT JOIN studason_tests s ON i.id_texto = s.id
-                WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0);//." AND s.num_palavras > 0;";
+                WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)."  $filtroPalavra";//." AND s.num_palavras > 0;";
 
     }else {
         echo '<script>window.location = "index.php";</script>';
