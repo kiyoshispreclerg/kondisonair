@@ -901,7 +901,6 @@ $langpack = [
 "Busca Geral" => "General Search",
 "Comece a digitar para ver resultados..." => "Start typing to see results...",
 "Buscar..." => "Search...",
-"Theme" => "Theme",
 "Gerador de paradigma" => "Paradigm Generator",
 "Ainda há %1 palavras fora do dicionário" => "There are still %1 words outside the dictionary",
 "Há %1 palavras cujas pronúncias contém este som! Não deletado" => "There are %1 words whose pronunciations contain this sound! Not deleted",
@@ -909,5 +908,13 @@ $langpack = [
 "Antônimos" => "Antonyms",
 "Derivações" => "Derivations",
 "Outras Formas" => "Other Forms",
+"desde" => "from",
+"até" => "until",
+"usuario" => "user",
+"idioma" => "language",
+"palavra" => "word",
+"Nenhuma palavra relacionada" => "No related word",
+"Níveis de uso" => "Usage levels",
+"Ex.: Desuso" => "Ex.: Archaism",
 ];
 ?>

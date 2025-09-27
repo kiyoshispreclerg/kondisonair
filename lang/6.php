@@ -901,7 +901,6 @@ $langpack = [
 "Busca Geral" => "Ĝenerala Serĉo",
 "Comece a digitar para ver resultados..." => "Komencu tajpi por vidi rezultojn...",
 "Buscar..." => "Serĉi...",
-"Theme" => "Temo",
 "Gerador de paradigma" => "Paradigmogenerilo",
 "Ainda há %1 palavras fora do dicionário" => "Ankoraŭ estas %1 vortoj ekster la vortaro",
 "Há %1 palavras cujas pronúncias contém este som! Não deletado" => "Estas %1 vortoj kies prononcoj enhavas ĉi tiun sonon! Ne forigita",
@@ -909,5 +908,13 @@ $langpack = [
 "Antônimos" => "Antonimoj",
 "Derivações" => "Derivaĵoj",
 "Outras Formas" => "Aliaj Formoj",
+"desde" => "ekde",
+"até" => "ĝis",
+"usuario" => "uzanto",
+"idioma" => "lingvo",
+"palavra" => "vorto",
+"Nenhuma palavra relacionada" => "Neniu rilata vorto",
+"Níveis de uso" => "Niveloj de uzado",
+"Ex.: Desuso" => "Ekz.: Arkaikaĵo",
 ];
 ?>

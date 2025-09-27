@@ -297,7 +297,7 @@
 							<label class="form-label"><?=_t('Origens')?> <span id="origensTexto" class="row"></span></label>
 							<!-- USAR CACHE -->
 							<div id="select_origens" style="display:none">
-							<select id="id_origens" type="text" value="" class="form-select" onchange="addOrigem()">
+							<select id="id_origens" type="text" value="" class="form-select">
 							</select></div>
 						</div>
 
@@ -358,8 +358,7 @@
 				<?php }  ?>
 
 				<div class="card"  style="max-height:25rem;overflow:auto;">
-					<div class="card-body" id="fleksonsPalavr"> 
-						<h3 class="card-title"><?=_t('Palavras relacionadas')?></h3>
+					<div class=" list-group list-group-flush list-group-hoverable" id="fleksonsPalavr">
 					</div>
 				</div>
 
@@ -371,8 +370,6 @@
           </div>
         </div>
 
-
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
 
 	function gravarReferentes(){
@@ -407,46 +404,18 @@
 		if (!origens) {
 			$.get("api.php?action=ajaxOrigemPalavra&pid=" + $('#idPalavra').val(), function(data) {
 				origens = JSON.parse(data); // Parseia o JSON retornado
-				montarOrigens(origens);
+				montarOrigens(origens, true);
 			});
 		} else {
-			montarOrigens(JSON.parse(origens));
+			montarOrigens(origens, true);
 		}
-	}
-
-	function montarOrigens(origens) {
-		let html = '';
-		for (const r of origens) {
-			let pal = r.romanizacao;
-			let tt = r.romanizacao ? '<strong>'+r.romanizacao + '</strong> /'+r.pronuncia+'/<br>'+r.significado : r.pronuncia+"\n"+r.significado;
-			if (r.nativo !== '') pal = `<span class="custom-font-${r.escrita}">${r.nativo}</span>`;
-			if (pal === '') pal = r.pronuncia;
-			html += `<div class="col-auto o_lista" id="${r.pid}" data-bs-toggle="tooltip" title="${tt}"><div class="input-group"><a class="btn btn-xs btn-default">${pal}</a></div></div> `;
-		}
-		$('#origensTexto').html(html + `<div class="col-auto" id="div_add_origem"><div class="input-group"><a class="btn btn-xs btn-default" onclick="$('#select_origens').toggle()">+</a></div></div> `);
-
-		$('[data-bs-toggle="tooltip"]').tooltip('dispose');
-		$('[data-bs-toggle="tooltip"]').tooltip({html:true});
-		// Inicializa o Sortable
-		$('#origensTexto').sortable({
-			items: '.o_lista', // Apenas as divs .o_lista são arrastáveis
-			cancel: '#div_add_origem', // Exclui div_add_origem do arraste
-			update: function(event, ui) {
-				// Reinicializa tooltips após reordenação
-				$('[data-bs-toggle="tooltip"]').tooltip('dispose');
-				$('[data-bs-toggle="tooltip"]').tooltip({html:true});
-
-				// Chama editarPalavra após reordenação
-				editarPalavra();
-			}
-		}).disableSelection();
 	}
 
 	function addOrigem(r){
 
 		let pal = r.romanizacao;
 		let tt = r.romanizacao ? '<strong>'+r.romanizacao + '</strong> /'+r.pronuncia+'/<br>'+r.significado : r.pronuncia+"\n"+r.significado;
-		if (r.escrita_nativa) pal = `<span class="custom-font-${r.escrita_nativa[0].id}">${r.escrita_nativa[0].palavra}</span>`;
+		if (r.escrita_nativa[0]) pal = `<span class="custom-font-${r.escrita_nativa[0].id}">${r.escrita_nativa[0].palavra}</span>`;
 		if (pal === '') pal = r.pronuncia;
 		
 		// Obtém o último ID das origens existentes para a seta

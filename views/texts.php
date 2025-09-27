@@ -6,14 +6,16 @@
 
 	$idioma = array();   
 	$romanizacao = 0;
-	$result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, e.id as eid, e.id_fonte as fonte, e.tamanho, e.substituicao,
-        (SELECT COUNT(*) FROM studason_palavrs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."') as numPal,
-        (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab
-        FROM idiomas i LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
-        WHERE i.id = $id_idioma;") or die(mysqli_error($GLOBALS['dblink']));
-    while($r = mysqli_fetch_assoc($result)) { 
-        $idioma  = $r;
-    };
+    if ($id_idioma>0){
+        $result = mysqli_query($GLOBALS['dblink'],"SELECT i.*, e.id as eid, e.id_fonte as fonte, e.tamanho, e.substituicao,
+            (SELECT COUNT(*) FROM studason_palavrs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."') as numPal,
+            (SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' LIMIT 1) as collab
+            FROM idiomas i LEFT JOIN escritas e ON e.id_idioma = i.id AND e.padrao = 1
+            WHERE i.id = $id_idioma;") or die(mysqli_error($GLOBALS['dblink']));
+        while($r = mysqli_fetch_assoc($result)) { 
+            $idioma  = $r;
+        };
+    }
     $romanizacao = $idioma['romanizacao'];
     $eid = $idioma['eid'] ?? 0;
     $fonte = $idioma['fonte'];
@@ -124,7 +126,7 @@
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = ".$_GET['iid']." AND t.num_palavras > 0  $filtroPalavra;"; // 
+            WHERE t.id_idioma = $id_idioma AND t.num_palavras > 0  $filtroPalavra;"; // 
 
 
 

@@ -84,8 +84,8 @@
                         </div>
 
                         <div class="mt-5">
-						    <!--a class="btn btn-primary w-100 mt-2" href="index.php?page=usagelevels&iid=<?=$id_idioma?>" >Níveis de uso</a>
-							<a class="btn btn-primary w-100 mt-2" title="<?=_t('Gerador de palavras aleatórias')?>" href="index.php?page=wordgen&iid=<?=$id_idioma?>"><?=_t('Gerador de palavras')?></a-->
+						    <a class="btn btn-primary w-100 mt-2" href="index.php?page=editwordusage&iid=<?=$id_idioma?>" >Níveis de uso</a>
+							<!--a class="btn btn-primary w-100 mt-2" title="<?=_t('Gerador de palavras aleatórias')?>" href="index.php?page=wordgen&iid=<?=$id_idioma?>"><?=_t('Gerador de palavras')?></a-->
 							<a class="btn btn-primary w-100 mt-2" title="<?=_t('Listas de palavras para rápida importação')?>" href="index.php?page=wordbanks&iid=<?=$id_idioma?>"><?=_t('Bancos e gerador de palavras')?></a>
                         </div>
 

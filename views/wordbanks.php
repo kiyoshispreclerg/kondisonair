@@ -44,7 +44,7 @@
                                     </div><div class="col-auto">
                                       <a class="btn btn-primary" href="?page=wordbank&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Gerador de Palavras').'</a>
                                       <a class="btn btn-primary" href="?page=wordcompare&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Comparador de Palavras').'</a>'.
-                                        ($_SESSION['KondisonairUzatorIDX']==$r['id_usuario']?
+                                        ($_SESSION['KondisonairUzatorIDX']>0&&$_SESSION['KondisonairUzatorIDX']==$r['id_usuario']?
                                           '<a class="btn btn-sm" href="?page=editwordbank&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Editar').'</a>'.
                                           '<a class="btn btn-sm" onclick="delWordbank(\''.$r['id'].'\')">'._t('Apagar').'</a>'
                                         :'').'

@@ -75,7 +75,6 @@ if ( $palavra['pronuncia']=='') {
                             $pronuncia = $palavra['pronuncia'];
                         } ?>
                         <?=$pronuncia?>
-                        <h3><?=$palavra['significado']?></h3>
 
                         <ol class="breadcrumb breadcrumb-arrows mb-3">
                             <li class="breadcrumb-item"><?=$palavra['nomeClasse']?></li>
@@ -97,7 +96,13 @@ if ( $palavra['pronuncia']=='') {
                         }
                         ?>
                         </ol>
+                        <h3><?=$palavra['significado']?></h3>
+                        <div><?=$palavra['detalhes']?></div>
 
+                        <div class="mt-3">
+							<label class="form-label"><?=_t('Origens')?></label>
+                            <div id="origensTexto" class="row"><label class="form-label"><?=_t('Nada aqui.')?></label></div>
+						</div>
                     </div>
                 </div>
             </div>
@@ -108,7 +113,9 @@ if ( $palavra['pronuncia']=='') {
                 if ($palavraEscrita) { 
                     $query = "SELECT t.*
                         FROM frases t
-                        WHERE t.frase LIKE \"%$palavraEscrita%\";";
+                        WHERE t.frase LIKE \"%$palavraEscrita%\" 
+                        ORDER BY RAND()
+                        LIMIT 5;";
 
                     $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
                     
@@ -141,7 +148,9 @@ if ( $palavra['pronuncia']=='') {
                     $query = "SELECT t.*,
                         (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
                         FROM studason_tests t
-                        WHERE t.texto LIKE \"%$palavraEscrita%\" AND t.num_palavras > 0 ;";
+                        WHERE t.texto LIKE \"%$palavraEscrita%\" AND t.num_palavras > 0 
+                        ORDER BY RAND()
+                        LIMIT 5;";
                         
                     $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
                     
@@ -198,4 +207,7 @@ if ( $palavra['pronuncia']=='') {
 	function loadExtras(tipo){
 		$("#extrasCanvas").load('api.php?action='+tipo+'&pid=<?=$_GET['pid']?>&e=0');
 	}
+    $.get("api.php?action=ajaxOrigemPalavra&pid=<?=$_GET['pid']?>", function(data) {
+        montarOrigens(JSON.parse(data));
+    });
 </script>

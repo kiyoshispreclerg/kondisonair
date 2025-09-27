@@ -313,7 +313,7 @@ switch($page){
     case 'phrase': $tituloPagina .= ' - '._t('Frase'); break;
     case 'changer_full': $tituloPagina .= ' - '._t('Outros alteradores'); break;
     case 'word': $tituloPagina .= ' - '._t('Palavra'); break;
-    // case 'confirmation': $tituloPagina .= ' - '._t('Confirmação'); break;
+    case 'editwordusage': $tituloPagina .= ' - '._t('Níveis de uso'); break;
     case 'paradigmer': $tituloPagina .= ' - '._t('Gerador de paradigma'); break;
     case 'wordcompare': $tituloPagina .= ' - '._t('Comparador de palavras'); break;
     case 'masseditlexicon': $tituloPagina .= ' - '._t('Edição em massa de palavras'); break;
@@ -7162,10 +7162,15 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as escrita,
           (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
             SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
-          ) LIMIT 1) as nativo 
+          ) LIMIT 1) as nativo,
+          (SELECT m.nome FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as momento,
+          (SELECT m.data_calendario FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as tempo
           FROM palavras_origens po 
           LEFT JOIN palavras p ON p.id = po.id_origem
+          LEFT JOIN idiomas i ON i.id = p.id_idioma
           WHERE po.id_palavra = $pid ORDER BY po.ordem;";
+    
+    // time_value ou data_calendario ?
           
     $result = mysqli_query($GLOBALS['dblink'],$sql);
     $origens = [];
@@ -7173,11 +7178,18 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         $origens[] = $r;
     }
     
-    return json_encode($origens);
+    return $origens;
   }
-
+  function getOrigensPalavraRecursivo($pid) {
+      $origens = getOrigensPalavra($pid);
+      foreach ($origens as &$origem) {
+          // Busca recursivamente as origens de cada origem
+          $origem['origens'] = getOrigensPalavraRecursivo($origem['pid']);
+      }
+      return $origens;
+  }
   if ($_GET['action'] == 'ajaxOrigemPalavra') {
-    echo getOrigensPalavra($_GET['pid']);
+    echo json_encode(getOrigensPalavraRecursivo($_GET['pid']));
     die();
   }
 
@@ -8190,6 +8202,20 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die("invalid");
   };
 
+  if ($_GET['action']=='ajaxApagarNivel') {
+    if ($_GET['unsetWords'] == '1'){
+      mysqli_query($GLOBALS['dblink'],"UPDATE palavras SET id_uso = 0 WHERE id_uso = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+    }else{
+      $words = mysqli_query($GLOBALS['dblink'],"SELECT id FROM palavras WHERE id_uso = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+      $words = mysqli_num_rows($words);
+      if ($words > 0) {
+        echo $words; die();
+      } 
+    }
+    mysqli_query($GLOBALS['dblink'],"DELETE FROM nivelUsoPalavra WHERE id = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+    die('ok');
+  };
+
 }else{
   
   if ($_GET['action']=='ajaxGetLigacoesArtyg')  die('not_user');
@@ -8343,43 +8369,174 @@ if ($_GET['action']=='getSCHeader') {
 if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
 
   $data = [];
-  if (!chottomatte($timerzinho)) die([]);
-  
-  $usuarios = mysqli_query($GLOBALS['dblink'],
-    "SELECT * FROM usuarios WHERE username LIKE '%".$_GET['t']."%' AND publico = 1;") or die(mysqli_error($GLOBALS['dblink'])); // AND publico = 1
-  while($u = mysqli_fetch_assoc($usuarios)){
-    $data[] = ['title' => $u['username'], 'subtitle' => 'Usuário', 'url' => '?page=profile&user='.$u['username']]; // que publicou língua tal e tal
-  }
-  
-  $idiomas = mysqli_query($GLOBALS['dblink'],
-    "SELECT * FROM idiomas WHERE nome_legivel LIKE '%".$_GET['t']."%' AND publico = 1;") or die(mysqli_error($GLOBALS['dblink']));
-  while($u = mysqli_fetch_assoc($idiomas)){
-    //echo '<a href="?action=diom&iid='.$u['id'].'" class="btn">'.$u['romanizacao'].'<span class="custom-font-'.$u['id_escrita'].'">'.$u['palavra'].'</span> - '.$u['nome_legivel'].'</a><br>';
-    $data[] = ['title' => $u['nome_legivel'], 'subtitle' => 'Idioma', 'url' => '?page=language&iid='.$u['id']]; // publicado por Usuario tal
+  if (!chottomatte($timerzinho)) die(json_encode(['wait' => $timerzinho])); 
+
+  // Inicializa o array de resultados
+  $data = [];
+  $search_term = trim($_GET['t'] ?? '');
+  $where_conditions = [];
+  $params = [];
+  $param_types = '';
+
+  // Processa o termo de busca para verificar filtros específicos
+  $filter = null;
+  $keyword = $search_term;
+
+  $iids = mysqli_query($GLOBALS['dblink'],"SELECT nome_legivel FROM idiomas WHERE publico = 1;");
+  $idiomas = [];
+  while ($row = mysqli_fetch_assoc($iids)) {
+      $idiomas[] = $row['nome_legivel'];
   }
 
-  $palavras = mysqli_query($GLOBALS['dblink'],
-    "SELECT p.*, pn.id_escrita, pn.palavra, i.nome_legivel 
-    FROM palavras p
-    LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id  
-    LEFT JOIN idiomas i ON p.id_idioma = i.id 
-    WHERE ( p.romanizacao LIKE '%".$_GET['t']."%' 
-      OR p.pronuncia LIKE '%".$_GET['t']."%'
-      OR p.significado LIKE '%".$_GET['t']."%'
-      OR pn.palavra LIKE '%".$_GET['t']."%' )
-      AND i.publico = 1
-    GROUP BY p.id
-    ;") or die(mysqli_error($GLOBALS['dblink']));
-  while($u = mysqli_fetch_assoc($palavras)){
-    $data[] = ['title' => $u['romanizacao']??$u['pronuncia'], 'subtitle' => $u['nome_legivel'].': '.$u['significado'], 'url' => '?page=word&pid='.$u['id']];
+  if (preg_match('/^('._t('desde').'|'._t('até').'|'._t('usuario').'|'._t('idioma').'|'._t('palavra').'):(.+)/i', $search_term, $matches)) {
+      $filter = strtolower($matches[1]);
+      $keyword = trim($matches[2]);
+  } else if (preg_match('/^([^:]*):?(.*)$/', $search_term, $matches)) {
+      if(in_array($matches[1], $idiomas)){
+        $filter = $matches[1];
+        $keyword = trim($matches[2]);
+      }
   }
+
+  // Escapa o termo de busca
+  $keyword = mysqli_real_escape_string($GLOBALS['dblink'], $keyword);
+
+  // Base da query com UNION para combinar as três tabelas
+  $sql = "
+      SELECT 'usuario' AS tipo, username AS title, 'Usuário' AS subtitle, 
+            CONCAT('?page=profile&user=', username) AS url, data_cadastro as data_modificado
+      FROM usuarios
+      WHERE publico = 1 AND username LIKE ?
+      UNION ALL
+      SELECT 'idioma' AS tipo, nome_legivel AS title, 'Idioma' AS subtitle, 
+            CONCAT('?page=language&iid=', id) AS url, data_modificacao as data_modificado
+      FROM idiomas
+      WHERE publico = 1 AND nome_legivel LIKE ?
+      UNION ALL
+      SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title, 
+            CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle, 
+            CONCAT('?page=word&pid=', p.id) AS url, p.data_modificacao as data_modificado
+      FROM palavras p
+      LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id
+      LEFT JOIN idiomas i ON p.id_idioma = i.id
+      WHERE i.publico = 1 
+        AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ? OR pn.palavra LIKE ?)
+  ";
+
+  // Prepara os parâmetros iniciais
+  $like_term = "%$keyword%";
+  $params = array_fill(0, 6, $like_term);
+  $param_types = str_repeat('s', 6);
+
+  // Aplica filtros específicos
+  if ($filter) {
+      if (in_array($filter, $idiomas)) {
+          // Caso o filtro seja um idioma, buscar apenas palavras desse idioma
+          $sql = "
+              SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title, 
+                    CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle, 
+                    CONCAT('?page=word&pid=', p.id) AS url, p.data_modificacao AS data_modificado
+              FROM palavras p
+              LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id
+              LEFT JOIN idiomas i ON p.id_idioma = i.id
+              WHERE i.publico = 1 AND i.nome_legivel = ?
+                AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ? OR pn.palavra LIKE ?)
+          ";
+          $params = [$filter, $like_term, $like_term, $like_term, $like_term];
+          $param_types = 'sssss';
+      } else switch ($filter) {
+          case _t('desde'):
+              $sql .= " AND data_modificado >= ?";
+              $params[] = $keyword;
+              $param_types .= 's';
+              break;
+              
+          case _t('ate'):
+              $sql .= " AND data_modificado <= ?";
+              $params[] = $keyword;
+              $param_types .= 's';
+              break;
+              
+          case _t('usuario'):
+              // Filtra apenas usuários e seus idiomas
+              $sql = "
+                  SELECT 'usuario' AS tipo, username AS title, 'Usuário' AS subtitle, 
+                        CONCAT('?page=profile&user=', username) AS url, data_cadastro as data_modificado
+                  FROM usuarios
+                  WHERE publico = 1 AND username LIKE ?
+                  UNION ALL
+                  SELECT 'idioma' AS tipo, nome_legivel AS title, 'Idioma' AS subtitle, 
+                        CONCAT('?page=language&iid=', idiomas.id) AS url, idiomas.data_modificacao as data_modificado
+                  FROM idiomas
+                  JOIN usuarios ON idiomas.id_usuario = usuarios.id
+                  WHERE idiomas.publico = 1 AND usuarios.username LIKE ?
+              ";
+              $params = [$like_term, $like_term];
+              $param_types = 'ss';
+              break;
+              
+          case _t('idioma'):
+              // Filtra apenas idiomas e suas palavras
+              $sql = "
+                  SELECT 'idioma' AS tipo, nome_legivel AS title, 'Idioma' AS subtitle, 
+                        CONCAT('?page=language&iid=', id) AS url, data_modificacao as data_modificado
+                  FROM idiomas
+                  WHERE publico = 1 AND nome_legivel LIKE ?
+              ";
+              $params = [$like_term];
+              $param_types = 's';
+              break;
+              
+          case _t('palavra'):
+              // Filtra apenas palavras
+              $sql = "
+                  SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title, 
+                        CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle, 
+                        CONCAT('?page=word&pid=', p.id) AS url, p.data_modificacao as data_modificado
+                  FROM palavras p
+                  LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id
+                  LEFT JOIN idiomas i ON p.id_idioma = i.id
+                  WHERE i.publico = 1 
+                    AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ? OR pn.palavra LIKE ?)
+              ";
+              $params = array_fill(0, 4, $like_term);
+              $param_types = 'ssss';
+              break;
+      }
+  }
+
+  // Adiciona ordenação por data_modificado
+  $sql .= " ORDER BY data_modificado DESC";
+
+  // Prepara e executa a consulta
+  $stmt = mysqli_prepare($GLOBALS['dblink'], $sql);
+  if ($stmt) {
+      mysqli_stmt_bind_param($stmt, $param_types, ...$params);
+      mysqli_stmt_execute($stmt);
+      $result = mysqli_stmt_get_result($stmt);
+      
+      // Processa os resultados
+      while ($u = mysqli_fetch_assoc($result)) {
+          $data[] = [
+              'title' => $u['title'],
+              'subtitle' => $u['subtitle'],
+              'url' => $u['url']
+          ];
+      }
+      
+      mysqli_stmt_close($stmt);
+  } else {
+      die(mysqli_error($GLOBALS['dblink']));
+  }
+
+  // Retorna os resultados em JSON
   echo json_encode($data);
   die();
 };
 
 if ($_GET['action']=='ajaxTraduzir') { //xxxxx
 
-  if (!chottomatte($timerzinho)) die($timerzinho);
+  if (!chottomatte($timerzinho)) die(json_encode(['wait' => $timerzinho]));
   
   traduzirTexto($_GET['o'],$_GET['d'],$_POST['texto'],$_POST['entrada'],$_POST['nat'],$_POST['pr'],$_POST['gl']);
   die();
@@ -8423,7 +8580,7 @@ if ($_GET['action'] == 'ajaxCarregarListaPalavras') {
       $q = "SELECT p.pronuncia, p.romanizacao FROM palavras p 
           WHERE p.id_idioma = ".$_GET['iid']." AND p.id_classe = $iid;";
     }else{
-      // geral ?
+      die();
     }
 
   }
@@ -8810,14 +8967,12 @@ if ($_GET['action'] == 'simpleListWords') { // LIST WORDS in public page languag
 
 if ($_GET['action'] == 'listarNiveis') {
   $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM nivelUsoPalavra WHERE id_idioma = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
-  echo '<table id="tabelaPalavras" data-ride="datatables" class="table table-m-b-none">
-        <thead><tr><th>Nome</th><th>X</th></tr></thead><tbody>';
   while($r = mysqli_fetch_assoc($result)){
-
-    echo "<tr id='row_".$r['id']."'><td onClick='abrirPalavra(\"".$r['id']."\")'>".$r['titulo']."</td>
-        <td><a class='btn btn-xs btn-info btn-rounded' onClick='apagarOpcao(\"".$r['id']."\")'>X</a></td></tr>";
+    echo "<div id='row_".$r['id']."' class='divN list-group-item'>
+      <div class='col-auto' onClick='abrirNivel(\"".$r['id']."\",\"".$r['titulo']."\",\"".$r['descricao']."\")'>".$r['titulo']."  
+      <a class='btn btn-sm btn-danger btn-rounded' onClick='apagarNivel(\"".$r['id']."\")'>X</a></div>
+    </div>";
   };
-  echo '</tbody></table><script>$("#tabelaPalavras").DataTable();</script>';
     die();
 };
 
@@ -9125,7 +9280,7 @@ if ($_GET['action'] == 'getPalavrasExtras') {
   $return .= getPalavrasRelacionadas($_GET['pid'],5);
   $return .= getPalavrasMesmosReferentes($_GET['pid'],5);
 
-  if (strlen($return)<13) $return = '<h3 class="card-title">'._t('Palavras relacionadas (nada aqui)').'</h3>';
+  if (strlen($return)<13) $return = '<div class="list-group-item"><h3 class="card-title">'._t('Palavras relacionadas (nada aqui)').'</h3></div>';
   echo $return;
   die();
 };

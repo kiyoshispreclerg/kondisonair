@@ -901,7 +901,6 @@ $langpack = [
 "Busca Geral" => "一般検索",
 "Comece a digitar para ver resultados..." => "入力して結果を確認...",
 "Buscar..." => "検索...",
-"Theme" => "テーマ",
 "Gerador de paradigma" => "パラダイムジェネレーター",
 "Ainda há %1 palavras fora do dicionário" => "まだ%1語が辞書にありません",
 "Há %1 palavras cujas pronúncias contém este som! Não deletado" => "%1語の発音にこの音が含まれています！削除されていません",
@@ -909,5 +908,13 @@ $langpack = [
 "Antônimos" => "反義語",
 "Derivações" => "派生語",
 "Outras Formas" => "他の形式",
+"desde" => "から",
+"até" => "まで",
+"usuario" => "ユーザー",
+"idioma" => "言語",
+"palavra" => "単語",
+"Nenhuma palavra relacionada" => "関連する単語がありません",
+"Níveis de uso" => "使用レベル",
+"Ex.: Desuso" => "例：廃語",
 ];
 ?>

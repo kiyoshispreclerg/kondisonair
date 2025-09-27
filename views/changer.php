@@ -183,7 +183,7 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                             <div class="card-actions">
                               <?php if($id_idioma > 0){ ?>
                                     <div class="" <?=$show?>>
-                                        <select id="listap" class="chosen-select form-control " onchange="carregarPalavras()"  >
+                                        <select id="listap" class="form-select" onchange="carregarPalavras()"  >
                                             <option value="0" selected><?=_t('Carregar')?>...</option>
                                             <option value="g1" title="Insira qualquer palavra"><?=_t('Personalizado')?></option>
                                             <option value="g2" title="Carregar as palavras em forma de dicionário" ><?=_t('Léxico')?></option>
@@ -203,9 +203,9 @@ $getSubstituicoes = $_GET['rewrites'] ?? '';
                                         </select>
                                     </div>
                                     <div class="col-sm-4" style="display:none">
-                                        <select id="entradaTipo" class="chosen-select form-control " onchange="carregarPalavras()"  >
+                                        <select id="entradaTipo" class="form-select" onchange="carregarPalavras()"  >
                                             <option value="pronuncia" selected><?=_t('Pronúncia')?></option>
-                                            <option value="romanizacao"><?=_t('Romanização')?></option>
+                                            <option value="romanizacao" <?=$idioma['romanizacao']==2?'selected':''?>><?=_t('Romanização')?></option>
                                         </select>
                                     </div>
                                 <?php } ?>

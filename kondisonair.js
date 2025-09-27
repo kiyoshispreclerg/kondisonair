@@ -120,7 +120,7 @@ async function createTablerSelectAllNativeWords(campo) {
         maxOptions: 50,
         valueField: 'id',
         labelField: 'text',
-        searchField: ['text'],
+        searchField: ['text','n'],
         load: function(query, callback) {
             if (query.length >= 2) {
                 // Busca dinâmica para queries digitadas
@@ -147,7 +147,8 @@ async function createTablerSelectAllNativeWords(campo) {
                     });
                     return `<div>${tmp} ${escape(data.text)}</div>`;
                 } else {
-                    return `<div><span class="custom-font-${data.eid}">${data.n}</span> ${escape(data.text)}</div>`;
+                    var tmp = data.n ? `<span class="custom-font-${data.eid}">${data.n}</span>` : '';
+                    return `<div>${tmp} ${escape(data.text)}</div>`;
                 }
             },
             option: function(data, escape) {
@@ -158,7 +159,8 @@ async function createTablerSelectAllNativeWords(campo) {
                     });
                     return `<div>${tmp} ${escape(data.text)}</div>`;
                 } else {
-                    return `<div><span class="custom-font-${data.eid}">${data.n}</span> ${escape(data.text)}</div>`;
+                    var tmp = data.n ? `<span class="custom-font-${data.eid}">${data.n}</span>` : '';
+                    return `<div>${tmp} ${escape(data.text)}</div>`;
                 }
             }
         },
@@ -299,6 +301,43 @@ function testFilter(divClass,filterField,classe=0){
   */
 }
 
+function montarOrigens(origens, sortable = false, retornar = false, nivel = 0) {
+    let html = '';
+    let padding = nivel * 10;
+    for (const r of origens) {
+        console.log(nivel + ' - ' + r.pronuncia)
+        let pal = r.romanizacao;
+        let tt = r.romanizacao ? '<strong>'+r.romanizacao + '</strong> /'+r.pronuncia+'/<br>'+r.significado : r.pronuncia+"\n"+r.significado;
+        if (r.nativo !== '') pal = `<span class="custom-font-${r.escrita}">${r.nativo}</span>`;
+        if (pal === '') pal = r.pronuncia;
+        if (!sortable && r.momento) tt = tt + '<hr class=\'my-1\'><small>' + r.tempo + '</small>';
+        let sub = r.origens && !sortable ? montarOrigens(r.origens, false, true, nivel+1) : ''; 
+        html += `<div class="col-auto o_lista" id="${r.pid}" data-bs-toggle="tooltip" title="${tt}">
+            <div class="input-group"><a href="?page=word&pid=${r.pid}" target="_blank" class="btn btn-xs btn-default">${pal}</a></div>
+            <div ="row" style="padding-left:${padding}px">${sub}</div>
+            </div> `;
+    }
+    if (sortable) {
+        html = html + `<div class="col-auto" id="div_add_origem"><div class="input-group"><a class="btn btn-xs btn-default" onclick="$('#select_origens').toggle()">+</a></div></div> `;
+        $('#origensTexto').sortable({
+            items: '.o_lista', // Apenas as divs .o_lista são arrastáveis
+            cancel: '#div_add_origem', // Exclui div_add_origem do arraste
+            update: function(event, ui) {
+                // Reinicializa tooltips após reordenação
+                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+                $('[data-bs-toggle="tooltip"]').tooltip({html:true});
+
+                editarPalavra();
+            }
+        }).disableSelection();
+    }
+
+    if (retornar) return html;
+    $('#origensTexto').html(html);
+    $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+    $('[data-bs-toggle="tooltip"]').tooltip({html:true});
+}
+
 document.addEventListener('DOMContentLoaded', function() { 
   const input = document.getElementById('globalSearchInput');
   const resultsContainer = document.getElementById('globalSearchResults');
@@ -308,9 +347,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentQuery = '';
 
   // Função de debounce para evitar muitas requests
-  function debounceSearch(query) {
+  function debounceSearch(query, ms = 500) {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => performSearch(query), 500);
+    debounceTimer = setTimeout(() => performSearch(query), ms);
   }
 
   // Função de busca AJAX
@@ -337,6 +376,10 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           `;
           return;
+        }
+        if (data.wait && data.wait > 0) {
+            debounceSearch(query,data.wait*1000)
+            return;
         }
 
         // Renderiza resultados como cards (inspirado em AniList/GitHub)

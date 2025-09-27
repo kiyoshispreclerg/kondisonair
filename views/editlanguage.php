@@ -126,7 +126,7 @@ if ($id_idioma>0){
                                                     echo '>'.$lang['nome'].'</option>';
                                                 }
                                                 ?>
-                                                <option value="-1"><?=_t('NOVO')?></option>
+                                                <!--option value="-1"><?=_t('NOVO')?></option-->
                                             </select>
                                         </div>
                                     </div>
