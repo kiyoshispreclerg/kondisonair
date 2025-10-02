@@ -19,6 +19,7 @@ $autoloader = '';
 
 if ($id_frase > 0) {
     $result = mysqli_query($GLOBALS['dblink'], "SELECT f.*, e.id as eid, i.nome_legivel, e.tamanho, e.id_fonte as fonte, i.id_usuario as dono, e.checar_glifos,
+		(SELECT id_artyg FROM artyg_dest WHERE id_dest = f.id AND tipo_dest = 'frase' LIMIT 1) as artigo_ligado,
         (SELECT nome_legivel FROM idiomas WHERE id = i.id_idioma_descricao LIMIT 1) as idioma_descricao
         FROM frases f
         LEFT JOIN idiomas i ON f.id_idioma = i.id
@@ -44,8 +45,8 @@ if ($id_frase > 0 || $id_idioma > 0) {
     $breadcrumb = '<li class="breadcrumb-item"><a href="?page=' . ($data['dono'] == $_SESSION['KondisonairUzatorIDX'] ? 'edit' : '') . 'language&iid=' . $id_idioma . '">' . htmlspecialchars($data['nome_legivel']) . '</a></li>
         <li class="breadcrumb-item"><a href="?page=phrases&iid=' . $id_idioma . '">' . _t('Frases') . '</a></li>';
 
-    $changed = getLastChange('autosubstituicoes', $data['eid']);
-    $glifosChanged = getLastChange('glifos', $data['eid']);
+    $changed = getLastChange('autosubstituicoes', $data['eid']??0);
+    $glifosChanged = getLastChange('glifos', $data['eid']??0);
     $autoloader .= 'if(' . $changed . ' > localStorage.getItem("k_autosubs_updated_' . $data['eid'] . '") ) loadAutoSubstituicoes(\'' . $data['eid'] . '\', ' . $changed . ', true);
         if ( '.$glifosChanged.' > localStorage.getItem("k_glifos_updated_'.$data['eid'].'") ) loadGlifos(\''.$data['eid'].'\', '.$glifosChanged.', true);';
 
@@ -192,6 +193,24 @@ $id_original = $data['id_original'] ?? $_GET['original'] ?? 0;
                                 }
                                 ?>
                             </select>
+                        </div>
+                        <div>
+                                <label class="form-label"><?=_t('Artigo vinculado')?> <a class="btn btn-sm btn-primary" onclick="abrirArtigoSel('<?=$id_idioma?>',$('#artigo').val())"><?=_t('Ver artigo')?></a></label>
+                                <select id="artigo" class="form-select" onchange="updateArtVinculado('frase', '<?=$id_frase?>', $(this).val())">
+                                    <option value="0" selected><?=_t('Nenhum')?></option>
+                                    <?php 
+                                        $langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM artygs WHERE id_idioma = ".$id_idioma." AND (publico = 1 OR id_usuario = '".$_SESSION['KondisonairUzatorIDX']."');") or die(mysqli_error($GLOBALS['dblink']));
+                                        while ($lang = mysqli_fetch_assoc($langs)){
+                                            echo '<option value="'.$lang['id'].'" ';
+                                            if ($data['artigo_ligado'] == $lang['id']) echo ' selected';
+                                            echo ' >'.$lang['nome'].'</option>';
+                                        }
+                                    ?>
+
+                                </select>
+                            
+                            <div class="col-sm-12" style="white-space:preserve;" id="textoMarcado"></div> 
+                            
                         </div>
                     </div>
                 </div>

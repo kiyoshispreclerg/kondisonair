@@ -7951,8 +7951,9 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   };
   
   if ($_GET['action']=='ajaxJoes') { 
+    if (!$_SESSION['KondisonairUzatorIDX']>0) die('not_user');
     if ($_GET['id']>0) $id = $_GET['id']; else die('novalered');
-    $tipo = $_GET['t']; // GET t = tipo ( diom | palavr | artyg | post | ... )
+    $tipo = $_GET['t']; // GET t = tipo ( diom | word | frase | text | artyg | post | ... )
     $val = $_GET['l']; // GET l = 0=só load, 1=like, outros=dislike
     if( $val > 0 || $val < 0 ){
 
@@ -7991,8 +7992,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     $result = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
 
     $r = mysqli_fetch_assoc($result);
-    echo '<label class="control-label btn '.($r['liked']==1?'btn-primary">':'" onclick="btnJoes(1,\''.$tipo.'\','.$id.')">').$r['likes'].' <i class="fa fa-thumbs-up"></i></label>
-    <label class="control-label btn '.($r['disliked']==1?'btn-danger">':'" onclick="btnJoes(2,\''.$tipo.'\','.$id.')">').$r['dislikes'].' <i class="fa fa-thumbs-down"></i></label>';
+    echo $r['likes'].'|'.$r['dislikes'].'|'.$r['liked'].'|'.$r['disliked'];
     die();
   };
 
@@ -8075,19 +8075,14 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   };
   
   if ($_GET['action'] == 'ajaxUpdateLinkArtigo') {
-
-    if ($_GET['dest'] > 0 && $_GET['aid'] > 0){ 
-      $tipo = $_GET['tipo']; // text, diom
-      $dest = $_GET['dest']; // id do texto/idioma
-      $art = $_GET['aid']; // id do artigo
-
-      mysqli_query($GLOBALS['dblink'],"DELETE FROM artyg_dest WHERE tipo_dest = '".$tipo."' AND id_dest = ".$dest.";") or die(mysqli_error($GLOBALS['dblink']));
-
+    $tipo = $_GET['tipo']; // text, diom, palavra, frase, escrita
+    $dest = $_GET['dest']; // id do texto/idioma/palavra/frase/escrita etc
+    $art = $_GET['aid']; // id do artigo
+    mysqli_query($GLOBALS['dblink'],"DELETE FROM artyg_dest WHERE tipo_dest = '".$tipo."' AND id_dest = ".$dest.";") or die(mysqli_error($GLOBALS['dblink']));
+    if ($dest > 0 && $art > 0){ 
       $sql = "INSERT INTO artyg_dest SET id = ".generateId().", id_artyg = ".$art.", tipo_dest = '".$tipo."', id_dest = ".$dest.";";
       $result = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
     }
-
     die('ok');
   };
 
@@ -8213,6 +8208,29 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       } 
     }
     mysqli_query($GLOBALS['dblink'],"DELETE FROM nivelUsoPalavra WHERE id = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+    die('ok');
+  };
+
+  if ($_GET['action'] == 'ajaxSaveTextsList') { 
+    $id = (int)$_GET['id'] ?? 0;
+    if ($_GET['id']>0){
+      $sql = "UPDATE studason_lists SET 
+        id_idioma = ".$_GET['iid'].",
+        nome = '".$_POST['nome']."',
+        descricao = '".$_POST['descricao']."',
+        id_usuario = ".$_SESSION['KondisonairUzatorIDX']."
+        WHERE id = ".$id;
+    }else{
+      $id = generateId();
+      $sql = "INSERT INTO studason_lists SET id = $id,
+        id_idioma = ".$_GET['iid'].",
+        nome = '".$_POST['nome']."',
+        descricao = '".$_POST['descricao']."',
+        id_usuario = ".$_SESSION['KondisonairUzatorIDX']."
+        ";
+    };
+
+    mysqli_query($GLOBALS['dblink'],$sql) or die('err: '.mysqli_error($GLOBALS['dblink']));
     die('ok');
   };
 
@@ -8593,7 +8611,8 @@ if ($_GET['action'] == 'ajaxCarregarListaPalavras') {
   die();
 };
 
-function getLastChange($tipo,$id = null) { // lastupdated
+function getLastChange($tipo,$id = 0) { // lastupdated
+  if (! $id > 0) return 0;
 
   if($tipo=='lexicon'){ // incluir writing e drawchars
       $last = mysqli_query($GLOBALS['dblink'],
@@ -8737,7 +8756,7 @@ function getLastChange($tipo,$id = null) { // lastupdated
 };
 
 if ($_GET['action'] == 'getLastChange') { // lastupdated
-  echo getLastChange($_GET['data'], $_GET['iid'] || $_GET['rid'] || $_GET['cid'] || $_GET['eid'] || null);
+  echo getLastChange($_GET['data'], $_GET['iid'] || $_GET['rid'] || $_GET['cid'] || $_GET['eid'] || 0);
   die();
 };
 
@@ -10478,7 +10497,11 @@ if ($_GET['action'] == 'publicaTexto') {
 
 if ($_GET['action'] == 'testSalvar') { 
 
-  // parse aqui ou ao abrir?
+  $listaOrdem = "ordem = 0,"; // ver ordem pelo último da lista, e lista se tem no POST ou 0
+  $sqlLista = "id_lista = ".($_POST['lista']??0).",";
+  if ($_POST['lista']>0){
+  }
+
   if ($_GET['id']>0){
     //updatew
     $sql = "UPDATE studason_tests SET
@@ -10487,6 +10510,7 @@ if ($_GET['action'] == 'testSalvar') {
       link_audio = '',
       data_modificacao = now(),
       texto = '".$_POST['texto']."',
+      $sqlLista $listaOrdem
       num_palavras = 0
       WHERE id = ".$_GET['id'].";";
   }else{
@@ -10499,6 +10523,7 @@ if ($_GET['action'] == 'testSalvar') {
       link_origem = '',
       link_audio = '',
       texto = '".$_POST['texto']."',
+      $sqlLista $listaOrdem
       num_palavras = 0,
       id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
   }

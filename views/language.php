@@ -5,7 +5,7 @@ $id_idioma = $_GET['iid'];
 $idioma = array();
 $result = mysqli_query($GLOBALS['dblink'],"SELECT i.*,
             (SELECT COUNT(*) FROM escritas where id_idioma = i.id) as numPublishedTexts,
-            (SELECT COUNT(*) FROM escritas where id_idioma = i.id) as numUsersTexts,
+            (SELECT COUNT(*) FROM frases where id_idioma = i.id) as numPhrases,
             (SELECT COUNT(*) FROM soundChanges where id_idioma = i.id) as numChangesList,
             (SELECT COUNT(*) FROM palavras where id_idioma = i.id AND id_forma_dicionario = 0) as numBaseWords,
             (SELECT COUNT(*) FROM classes where id_idioma = i.id) as numParts,
@@ -48,6 +48,7 @@ $romanizacao = $idioma['romanizacao'];
                     </ol>
                 </h2>
               </div>
+              <div class="col-auto ms-auto" id="joesDiv"></div>
               <?php if ( $idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX']) { ?>
               <div class="col-auto ms-auto">
                 <a href="?page=editlanguage&iid=<?=$id_idioma?>" class="btn btn-primary" id="btnSalvar"><?=_t('Editar')?></a>
@@ -89,6 +90,7 @@ $romanizacao = $idioma['romanizacao'];
                                     };
 
                                     if ($idioma['numWritingSysts']>0) echo $idioma['numWritingSysts'].' '._t('sistemas de escrita').'<br>'; // com <?=$idioma['numCharsTotal'] caracteres<br>
+                                    if ($idioma['numPhrases']>0) echo $idioma['numPhrases'].' '._t('frases publicadas').'<br>';
                                     if ($idioma['numPublishedTexts']>0) echo $idioma['numPublishedTexts'].' '._t('textos publicados').'<br>';
                                     
                                     ?>
@@ -126,7 +128,7 @@ $romanizacao = $idioma['romanizacao'];
 
                     </div>
                 </div>
-                <div class="row row-deckx row-cards">
+                <div class="row row-deck row-cards">
                     <div class="col-6">
                         <div class="card">
                             <div class="card-header">
@@ -173,6 +175,42 @@ $romanizacao = $idioma['romanizacao'];
 
                                     };
                                 }else echo '<div class="list-group-item">'._t('Nenhum texto').'</div>';;
+
+                            ?>
+
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title"><?=_t('Artigos')?></h3>
+                                <div class="card-actions">
+                                    <a href="?page=myarticles&iid=<?=$id_idioma?>" class="btn btn-primary"><?=_t('Ver mais')?></a>
+                                </div>
+                            </div>
+                            
+                            <div class="list-group list-group-flush list-group-hoverable overflow-auto" style="max-height: 25rem" id="texts">
+
+                            
+                                <?php
+                                $query = "SELECT * FROM artygs a
+                                    WHERE a.id_idioma = $id_idioma AND a.publico = 1 ;";
+
+                                $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
+                                
+                                if (mysqli_num_rows($result)>0){
+                                    while($r = mysqli_fetch_assoc($result)){
+
+                                        echo '<div class="list-group-item"><div class="row">
+                                            <div class="col-auto">
+                                            <a href="?page=article&id='.$r['id'].'">'.$r['nome'].' </a>
+                                            </div>
+                                        </div></div>';
+
+                                    };
+                                }else echo '<div class="list-group-item">'._t('Nenhum artigo').'</div>';;
 
                             ?>
 
@@ -279,4 +317,5 @@ function loadFrases(){
 
 loadWords();
 loadFrases();
+btnJoes(0,'diom','<?=$id_idioma?>')
 </script>

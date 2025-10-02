@@ -68,7 +68,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title"><?=_t('Artigos')?></h3>
-                        <?php if($idioma['id'] > 0){?>
+                        <?php if($idioma['id'] > 0 && $_SESSION['KondisonairUzatorIDX'] > 0){?>
                         <div class="card-actions">
                             <a href="index.php?page=editarticle&iid=<?=$idioma['id']?>" class="btn btn-primary d-none d-sm-inline-block">
                             <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
@@ -85,6 +85,8 @@
                         $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
                         $ianterior = 0;
                         while($r = mysqli_fetch_assoc($result)){
+                            if ( $r['publico'] == 0 && ! $_SESSION['KondisonairUzatorIDX'] > 0 ) continue;
+
                             if ($mostrarIndice) {
                                 if ($ianterior != $r['id_idioma']){
                                     echo '<div class="list-group-header sticky-top">'.$r['nome_legivel'].'</div>';

@@ -10,6 +10,7 @@
 	$romanizacao = 0;
 	$result = mysqli_query($GLOBALS['dblink'],"SELECT *, 
 					(SELECT binario FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as binario,
+					(SELECT id_artyg FROM artyg_dest WHERE id_dest = ".$_GET['pid']." AND tipo_dest = 'word' LIMIT 1) as artigo_ligado,
 					(SELECT nome_legivel FROM idiomas d WHERE d.id = i.id_idioma_descricao LIMIT 1) as desc_idioma,
 					(SELECT id FROM palavras p WHERE p.id = ".$_GET['pid']." AND p.id_idioma = ".$id_idioma." LIMIT 1) as validPal,
 					(SELECT id FROM collabs WHERE id_idioma = i.id AND id_usuario = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as collab
@@ -314,6 +315,22 @@
 									};
 								?>
 							</select>
+						</div>
+
+						<div>
+							<label class="form-label"><?=_t('Artigo vinculado')?> <a class="btn btn-sm btn-primary" onclick="abrirArtigoSel('<?=$id_idioma?>',$('#artigo').val())"><?=_t('Ver artigo')?></a></label>
+							<select id="artigo" class="form-select" onchange="updateArtVinculado('word', '<?=$_GET['pid']?>', $(this).val())">
+								<option value="0" selected><?=_t('Nenhum')?></option>
+								<?php 
+									$langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM artygs WHERE id_idioma = ".$id_idioma." AND (publico = 1 OR id_usuario = '".$_SESSION['KondisonairUzatorIDX']."');") or die(mysqli_error($GLOBALS['dblink']));
+									while ($lang = mysqli_fetch_assoc($langs)){
+										echo '<option value="'.$lang['id'].'" ';
+										if ($idioma['artigo_ligado'] == $lang['id']) echo ' selected';
+										echo ' >'.$lang['nome'].'</option>';
+									}
+								?>
+							</select>
+						
 						</div>
 
 					</div>

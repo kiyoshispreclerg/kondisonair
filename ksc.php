@@ -13,7 +13,7 @@ function parseSoundChangeRules($text) {
   $result['default'] = [];
 
   foreach ($lines as $line) {
-      if ($line === '' || preg_match('/^(\/\/|##)/', $line)) {
+      if ($line === '' || preg_match('/^(\/\/|##)/', $line)|| preg_match('/:$/', $line)) {
           continue;
       }
 

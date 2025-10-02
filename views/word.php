@@ -3,7 +3,8 @@
 <?php 
 $pid = $_GET['pid'];
 $palavra = array();
-$result = mysqli_query($GLOBALS['dblink'],"SELECT p.*, i.nome_legivel,
+$result = mysqli_query($GLOBALS['dblink'],"SELECT p.*, i.nome_legivel, i.id_usuario,
+		( SELECT texto FROM artygs WHERE id = (SELECT id_artyg FROM artyg_dest WHERE id_dest = p.id AND tipo_dest = 'word' LIMIT 1) LIMIT 1) as artigo_texto,
             (SELECT id_fonte FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as fonte,
             (SELECT tamanho FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as tamanho ,
             (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as eid ,
@@ -39,7 +40,8 @@ if ( $palavra['pronuncia']=='') {
                     </ol>
                 </h2>
               </div>
-              <?php if ( $palavra['id_usuario'] == $_SESSION['KondisonairUzatorIDX']) { ?>
+              <div class="col-auto ms-auto" id="joesDiv"></div>
+              <?php if ( $_SESSION['KondisonairUzatorIDX'] > 0 && $palavra['id_usuario'] == $_SESSION['KondisonairUzatorIDX']) { ?>
               <div class="col-auto ms-auto">
                 <a href="?page=editword&pid=<?=$pid?>&iid=<?=$palavra['id_idioma']?>" class="btn btn-primary" id="btnSalvar"><?=_t('Editar')?></a>
               </div>
@@ -105,6 +107,16 @@ if ( $palavra['pronuncia']=='') {
 						</div>
                     </div>
                 </div>
+
+
+                <?php if($palavra['artigo_texto'] != ''){ ?>
+                <div class="card">
+                <div class="card-body">
+                    <div style="overflow-y:scroll;white-space:preserve;"><?=$palavra['artigo_texto']?></div> 
+                    
+                </div>
+                </div>
+                <?php } ?>
             </div>
 
             <div class="col-4">
@@ -210,4 +222,6 @@ if ( $palavra['pronuncia']=='') {
     $.get("api.php?action=ajaxOrigemPalavra&pid=<?=$_GET['pid']?>", function(data) {
         montarOrigens(JSON.parse(data));
     });
+
+btnJoes(0,'word','<?=$_GET['pid']?>')
 </script>

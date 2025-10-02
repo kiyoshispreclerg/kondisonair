@@ -648,8 +648,21 @@ CREATE TABLE `studason_tests` (
   `id_usuario` bigint(20) UNSIGNED NOT NULL,
   `num_palavras` int(11) NOT NULL DEFAULT 0,
   `data_criacao` datetime NOT NULL DEFAULT current_timestamp(),
-  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
+  `data_modificacao` datetime NOT NULL DEFAULT current_timestamp(),
+  `id_lista` bigint(20) UNSIGNED NOT NULL,
+  `ordem` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `studason_lists` ( 
+  `id` BIGINT UNSIGNED NOT NULL , 
+  `id_idioma` BIGINT UNSIGNED NOT NULL , 
+  `nome` VARCHAR(70) NOT NULL , 
+  `descricao` VARCHAR(250) NOT NULL , 
+  `id_usuario` BIGINT UNSIGNED NOT NULL 
+) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci; 
+
+ALTER TABLE `studason_lists` 
+  ADD PRIMARY KEY (`id`); 
 
 CREATE TABLE `tags` (
   `id` bigint(20) UNSIGNED NOT NULL,

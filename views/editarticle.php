@@ -107,38 +107,44 @@
 
                         <div class="mb-3">
                             <div class="form-label"><?=_t('Ligações')?></div>
-                            <select class="form-select" id="links" title="Ligacao" type="text" value="" onchange="$('#btnSalvar').show()" multiple>
-                              
-
-                                <option disabled><?=_t('Frases')?></option>
-                                <?php 
-                                  $langs = mysqli_query($GLOBALS['dblink'],
-                                    "SELECT t.*, ad.id_artyg FROM frases t 
-                                      LEFT JOIN idiomas i ON i.id = t.id_idioma
-                                      LEFT JOIN artyg_dest ad ON ad.id_dest = t.id AND tipo_dest = 'phrase';") or die(mysqli_error($GLOBALS['dblink']));
-                                  while ($l = mysqli_fetch_assoc($langs)){
-                                      echo '<option value="phrase_'.$l['id'].'"';
-                                      if($aid>0 && $aid==$l['id_artyg']) echo ' selected';
-                                      echo '>'._t('Frase').': '.$l['descricao'].'</option>';
+                            <?php 
+                              $links = mysqli_query($GLOBALS['dblink'],
+                                "SELECT d.id_dest, d.tipo_dest,
+                                  t.titulo as texto, f.frase, COALESCE(p.romanizacao, p.pronuncia) as palavra,
+                                  (SELECT id_fonte FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as fonte,
+                                  (SELECT tamanho FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as tamanho ,
+                                  (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as eid ,
+                                  (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativo
+                                FROM artyg_dest d 
+                                  LEFT JOIN studason_tests t ON t.id = d.id_dest
+                                  LEFT JOIN frases f ON f.id = d.id_dest
+                                  LEFT JOIN palavras p ON p.id = d.id_dest
+                                  LEFT JOIN idiomas i ON p.id_idioma = i.id OR f.id_idioma = i.id
+                                WHERE id_artyg = $aid GROUP BY d.id_dest;") or die(mysqli_error($GLOBALS['dblink']));
+                              while ($l = mysqli_fetch_assoc($links)){
+                                  $link = ''; $nome = '';
+                                  switch ($l['tipo_dest']){
+                                    case 'word':
+                                      $link = 'word&pid=';
+                                      $nome = _t('Palavra').': '.getSpanPalavraNativa($l['nativo']??$l['palavra'],$l['eid'],$l['fonte'],$l['tamanho']);
+                                      break;
+                                    case 'frase':
+                                      $link = 'phrase&id=';
+                                      $nome = _t('Frase').': '.getSpanPalavraNativa($l['frase'],$l['eid'],$l['fonte'],$l['tamanho']);
+                                      break;
+                                    case 'text':
+                                      $link = 'text&id=';
+                                      $nome = _t('Texto').': '.$l['texto'];
+                                      break;
+                                    default:
+                                      $link = '';
+                                      $nome = '';
                                   }
-                                ?>
-
-                                <option disabled><?=_t('Textos')?></option>
-                                <?php 
-                                  $langs = mysqli_query($GLOBALS['dblink'],
-                                    "SELECT t.*, ad.id_artyg FROM studason_tests t 
-                                      LEFT JOIN idiomas i ON i.id = t.id_idioma
-                                      LEFT JOIN artyg_dest ad ON ad.id_dest = t.id AND tipo_dest = 'text';") or die(mysqli_error($GLOBALS['dblink']));
-                                  while ($l = mysqli_fetch_assoc($langs)){
-                                      echo '<option value="text_'.$l['id'].'"';
-                                      if($aid>0 && $aid==$l['id_artyg']) echo ' selected';
-                                      echo '>'._t('Texto').': '.$l['titulo'].'</option>';
-                                  }
-                                ?>
-
-
-                            </select>
+                                  if ($nome!='') echo '<a href="?page='.$link.$l['id_dest'].'">'.$nome.'</a><br>';
+                              }
+                            ?>
                         </div>
+
                         <a class="btn btn-primary w-100 mt-2" id="btnSalvar" onclick="salvarArtigo()"><?=_t('Salvar')?></a>
 
 

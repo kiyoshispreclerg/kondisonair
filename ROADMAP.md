@@ -10,8 +10,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Suporte a sistemas de escrita mistos
 - Notificar interações sociais com seus idiomas
 - Reordenar substituição automática por arrastar e soltar
-- Montar sequência de textos
-- Ligar artigos a vários itens (escrita, palavra, texto, classe e idioma)
 - Usuário criar bancos de palavras temáticos e publicá-los (alimentos, natureza, movimentos etc)
 - Adicionar metadados em caracteres dos sistemas de escrita
 - Personalizar ordem alfabética
@@ -22,7 +20,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Ao criar um novo idioma, dar uma base mínima para começar a trabalhar
 - Separar código dinâmico do estático para permitir uso offline via Service Worker
 - Usar termos linguísticos mais corretos
-- KSC: ignorar linhas terminadas com dois pontos
 - Criador de paradigmas baseado em alterações sonoras
 
 ## Em consideração

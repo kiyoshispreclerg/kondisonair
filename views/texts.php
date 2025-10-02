@@ -1,6 +1,19 @@
 
 <?php 
 	$id_idioma = $_GET['iid'];
+	$id_lista = (int)$_GET['list'] ?? 0;
+    $extraNavLista = '<li class="breadcrumb-item active"><a href="#">'._t('Textos').'</a></li>';
+    if ($id_lista>0){
+        $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM studason_lists WHERE id = $id_lista") or die(mysqli_error($GLOBALS['dblink']));
+        $r = mysqli_fetch_assoc($result);
+        $id_idioma = $r['id_idioma'];
+        $filtroLista = " AND id_lista = $id_lista ";
+        $extraNavLista = '<li class="breadcrumb-item"><a href="?page=texts&iid='.$r['id_idioma'].'">'._t('Textos').'</a></li>
+            <li class="breadcrumb-item active"><a href="#">'.$r['nome'].'</a></li>';
+    }else{
+        $filtroLista = " AND id_lista = 0 ";
+    }
+
 	$filtro = 'dici';
 	if (isset($_GET['t']) && $_GET['t']!='') $filtro = $_GET['t'];
 
@@ -32,11 +45,17 @@
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = ".$_GET['iid']." AND (t.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR t.id_usuario IN(
-                SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')) $filtroPalavra;";
+            WHERE t.id_idioma = ".$id_idioma." AND (t.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR t.id_usuario IN(
+                SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')) $filtroPalavra $filtroLista;";
                 //echo $query;
         $imports = 'usuários';
         $btnNovoTexto = '<a class="btn btn-primary"onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
+
+        $listaListas = '';
+        $listas = mysqli_query($GLOBALS['dblink'], "SELECT * FROM studason_lists WHERE id_idioma = $id_idioma;");
+        while ($r = mysqli_fetch_assoc($listas)) { 
+            $listaListas .= '<option value="'.$r['id'].'" '.($r['id']==$id_lista?'selected':'').'>'.$r['nome'].'</option>';
+        }
 
 
         $modalNovoTexto = '<div class="modal modal-blur" id="modalAddText" tabindex="-1" role="dialog" aria-hidden="true">
@@ -51,7 +70,7 @@
                         <label class="form-label">'._t('Título legível').'</label>
                         <input type="text" class="form-control" id="testTytol" />
                     </div>
-                    <div>
+                    <div class="mb-3">
                         <label class="form-label">'._t('Texto nativo').($substituicao ? ' ('._t('Automático').')' : '').
                         ($fonte ==3 ? ' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv('.$eid.',\'drawcharlist'.$eid.'\',false,'.$fonte.')">'._t('Inserir caractere').'</a>' : '').'</label>'.
                         ( $fonte ==3 ?
@@ -61,9 +80,38 @@
                             '<textarea data-bs-toggle="autosize" class="form-control custom-font-'.$eid.'" id="testStudason" rows="10"></textarea>'
                         )
                     .'</div>
+                    <div>
+                        <label class="form-label">'._t('Salvar na lista').'</label>
+                        <select id="lista" class="form-select">
+                            <option value="0" selected>'._t('Nenhuma').'</option>'.$listaListas.'</select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <a class="btn btn-success" title="Salvar texto" data-toggle="tooltip" onClick="salvarTexto()">'._t('Salvar').'</a>
+                </div>
+                </div>
+            </div>
+            </div> 
+            
+            <div class="modal modal-blur" id="modalAddLista" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content"  >
+                <div class="modal-header">
+                  <h5 class="modal-title" id="modaltitleList"></h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body panel-body" id="addListPanel"> 
+                    <div class="mb-3">
+                        <label class="form-label">'._t('Nome da lista').'</label>
+                        <input type="text" class="form-control" id="listTitle" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">'._t('Descrição').'</label>
+                        <input type="text" class="form-control" id="listDesc" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-success" title="Salvar lista" data-toggle="tooltip" onClick="salvarLista()">'._t('Salvar').'</a>
                 </div>
                 </div>
             </div>
@@ -91,6 +139,21 @@
             $("#modalAddText").modal("show");
         };
 
+        function novaLista(){
+            $("#curTexto").val(0);
+            $("#modaltitleList").html("'._t('Nova lista').'");
+            $("#listTitle").val("");
+            $("#listDesc").val("");
+            $("#modalAddLista").modal("show");
+        };
+        function editLista(id, nome, desc){
+            $("#curTexto").val(id);
+            $("#modaltitleList").html("'._t('Editar lista').'");
+            $("#listTitle").val(nome);
+            $("#listDesc").val(desc);
+            $("#modalAddLista").modal("show");
+        };
+
         function publicaTexto(id){
             $.post("api.php?action=publicaTexto&id="+id, function (data){
                     if ($.trim(data) == "ok"){
@@ -106,7 +169,8 @@
                 var texto = '.($fonte == 3 ? '$("#escrita_nativa_'.$eid.'").val()' : '$("#testStudason").val()' ).';
                 $.post("api.php?action=testSalvar&iid='.$id_idioma.'&id="+ $("#curTexto").val(), 
                     {   texto: texto,
-                        titulo: $("#testTytol").val()
+                        titulo: $("#testTytol").val(),
+                        lista: $("#lista").val()
                     }, function (data){
                     if ($.trim(data) == "ok"){
                         //$("#modalAddText").modal("hide");
@@ -115,7 +179,19 @@
                         alert(data);
                     }
                 });
-            };';
+            };
+        function salvarLista(){
+            $.post("api.php?action=ajaxSaveTextsList&iid='.$id_idioma.'&id="+ $("#curTexto").val(), 
+                {   descricao: $("#listDesc").val(),
+                    nome: $("#listTitle").val()
+                }, function (data){
+                if ($.trim(data) == "ok"){
+                    location.reload(true);
+                }else{
+                    alert(data);
+                }
+            });
+        };';
     }else if ($id_idioma > 0){ 
         
         // todos textos públicos da língua, com status particular do usuario logado ou nenhum status
@@ -126,7 +202,7 @@
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = $id_idioma AND t.num_palavras > 0  $filtroPalavra;"; // 
+            WHERE t.id_idioma = $id_idioma AND t.num_palavras > 0  $filtroPalavra $filtroLista;"; // 
 
 
 
@@ -142,7 +218,7 @@
                 (SELECT iniciadores FROM escritas e WHERE e.id_idioma = s.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores
             FROM tests_importasons i
                 LEFT JOIN studason_tests s ON i.id_texto = s.id
-                WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)."  $filtroPalavra";//." AND s.num_palavras > 0;";
+                WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)."  $filtroPalavra $filtroLista";//." AND s.num_palavras > 0;";
 
     }else {
         echo '<script>window.location = "index.php";</script>';
@@ -170,8 +246,7 @@
                       <li class="breadcrumb-item"><a href="index.php"><?=_t('Início')?></a></li>
                       <?php if($id_idioma > 0){?>
                       <li class="breadcrumb-item"><a href="?page=<?=$idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX']?'edit':''?>language&iid=<?=$idioma['id']?>"><?=$idioma['nome_legivel']?></a></li>
-                      <?php }?>
-                      <li class="breadcrumb-item active"><a href="#"><?=_t('Textos')?></a></li>
+                      <?php } echo $extraNavLista; ?>
                     </ol>
                 </h2>
               </div>
@@ -182,7 +257,7 @@
         <!-- Page body -->
         <div class="page-body">
           <div class="container-xl">
-            <div class="row row-deck row-cards">
+            <div class="row row-deckx row-cards">
 
 
 
@@ -367,6 +442,35 @@
                     </div>
                     </div>
                 </div>
+
+                <?php if ($id_idioma > 0 && $id_lista == 0) { ?>
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h3 class="card-title"><?=_t('Listas de textos')?></h3>
+                        <div class="card-actions">
+                        <a class="btn btn-primary" onClick="novaLista()"><i class="fa fa-plus"></i> Nova lista</a>
+						</div>
+                    </div>
+                    <div class="card-bodyx">
+                    <?php 
+                    $listas = mysqli_query($GLOBALS['dblink'], "SELECT *, (SELECT COUNT(*) FROM studason_tests WHERE id_lista = s.id) as numTextos FROM studason_lists s WHERE id_idioma = $id_idioma;");
+                    if (mysqli_num_rows($listas)>0) while ($r = mysqli_fetch_assoc($listas)) { 
+                    ?>
+                    <div class="list-group list-group-flush overflow-auto" style="max-height: 35rem">
+                        <?php echo '<div class="list-group-item"><div class="row">
+                                <div class="col">
+                                    <a href="?page=texts&list='.$r['id'].'">'.$r['nome'].'</a> 
+                                    <div class="text-secondary text-truncate mt-n1">'.$r['descricao'].' '.($r['numTextos']>0? ' - '.$r['numTextos'].' textos' :'').'</div>
+                                </div>
+                                <div class="col">
+                                    <a href="#" onclick="editLista(\''.$r['id'].'\', \''.$r['nome'].'\', \''.$r['descricao'].'\')" class="btn btn-primary">'._t('Editar').'</a>
+                                </div>
+                            </div></div>'; ?>
+                    </div>
+                    <?php } ?>
+                    </div>
+                </div>
+                <?php } ?>
             </div>
 
 

@@ -119,6 +119,8 @@
                     </ol>
                 </h2>
               </div>
+
+              <div class="col-auto ms-auto" id="joesDiv"></div>
             </div>
           </div>
         </div>
@@ -150,8 +152,8 @@
 				<?php if($isOwner){ ?>
                 <div class="card sticky-top">
                   <div class="card-body">
-				  		<label class="form-label"><?=_t('Artigo vinculado')?> <a class="btn btn-sm btn-primary" onclick="abrirArtigoSel()"><?=_t('Ver artigo')?></a></label>
-						<select id="artigo" class="form-select" onchange="updateArtVinculado()">
+				  		<label class="form-label"><?=_t('Artigo vinculado')?> <a class="btn btn-sm btn-primary" onclick="abrirArtigoSel('<?=$id_idioma?>',$('#artigo').val())"><?=_t('Ver artigo')?></a></label>
+						<select id="artigo" class="form-select" onchange="updateArtVinculado('text', '<?=$id_texto?>', $(this).val())">
 							<option value="0" selected><?=_t('Nenhum')?></option>
 							<?php 
 								$langs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM artygs WHERE id_idioma = ".$id_idioma." AND (publico = 1 OR id_usuario = '".$_SESSION['KondisonairUzatorIDX']."');") or die(mysqli_error($GLOBALS['dblink']));
@@ -171,7 +173,7 @@
 				<?php }else if($e['artigo_texto'] != ''){ ?>
 				<div class="card">
                   <div class="card-body">
-                    <div style="overflow-y:scroll;max-height:35rem;white-space:preserve;"><?=$e['artigo_texto']?></div> 
+                    <div style="overflow-y:scroll;white-space:preserve;"><?=$e['artigo_texto']?></div> 
 					
                   </div>
                 </div>
@@ -318,10 +320,6 @@ $(document).ready(function(){
     $(".pstud").popover({html:true});
 }); 
 
-function abrirArtigoSel(){
-	if($("#artigo").val()>0) window.open("index.php?page=article&iid=<?=$id_idioma?>&id="+$("#artigo").val());
-}
-
 <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
 
 function novoSignifCom(){ alert('to do: adicionar significado comunidade'); return;
@@ -369,12 +367,5 @@ function sgD(id){
 }
 
 <?php } ?>
-<?php if($isOwner){ ?>
-function updateArtVinculado(){
-	var dest = $("#artigo").val();
-	$.get("?action=ajaxUpdateLinkArtigo&aid="+dest+"&tipo=text&dest=<?=$id_texto?>",function(data){
-        if($.trim(data)=='ok'){}else alert(data);
-	})
-}
-<?php } ?>
+btnJoes(0,'text','<?=$id_texto?>')
 </script>

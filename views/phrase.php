@@ -12,6 +12,7 @@ if ($id_frase <= 0) {
 // Fetch main phrase data
 $result = mysqli_query($GLOBALS['dblink'], "SELECT 
         f.*, i.nome_legivel, i.id_usuario as dono, e.id as eid, e.tamanho, e.id_fonte as fonte, u.username as usuario_nome, e.separadores, e.binario,
+		( SELECT texto FROM artygs WHERE id = (SELECT id_artyg FROM artyg_dest WHERE id_dest = f.id AND tipo_dest = 'frase' LIMIT 1) LIMIT 1) as artigo_texto,
         f2.frase as frase2, f2.id_idioma as id_idioma2, i2.nome_legivel as nome_legivel2, e2.id as eid2, e2.tamanho as tamanho2, e2.id_fonte as fonte2
     FROM frases f
     LEFT JOIN idiomas i ON f.id_idioma = i.id
@@ -103,6 +104,8 @@ function adicionarParametro($param, $valor) {
                     </ol>
                 </h2>
             </div>
+
+            <div class="col-auto ms-auto" id="joesDiv"></div>
             <?php if ($main_phrase['id_criador'] == $_SESSION['KondisonairUzatorIDX']) { ?>
             <div class="col-auto ms-auto d-print-none">
                 <div class="btn-list">
@@ -252,6 +255,16 @@ function adicionarParametro($param, $valor) {
 
                     </div>
                 </div>
+
+
+                <?php if($main_phrase['artigo_texto'] != ''){ ?>
+                <div class="card mt-3">
+                <div class="card-body">
+                    <div style="overflow-y:scroll;white-space:preserve;"><?=$main_phrase['artigo_texto']?></div> 
+                    
+                </div>
+                </div>
+                <?php } ?>
             </div>
 
             <div class="col-4">
@@ -326,4 +339,5 @@ function cpk(pids = '', st = 9, aid, pal = '', ps = '0',este,refs){
         $(".r"+refs).addClass('palSelected');
     });
 }
+btnJoes(0,'frase','<?=$id_frase?>')
 </script>
