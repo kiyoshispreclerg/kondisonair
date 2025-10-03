@@ -183,6 +183,10 @@
                 <div class="card mt-3">
                   <div class="card-header">
                     <h3 class="card-title"><?=_t('Idiomas de sistema')?></h3>
+                    <div class="card-actions">
+                      <a href="?page=settings" class="btn btn-primary"><?=_t('Configurações')?>
+                      </a>
+                    </div>
                   </div>
                   <div class="card-body">
                     <div class="">
@@ -225,178 +229,6 @@
                 <?php }; ?>
 
               </div>
-                
-              <?php if($_SESSION['KondisonairUzatorIDX']>0){ ?>
-
-              <div class="col-md-4">
-          
-                <div class="row row-cards">
-                  <?php
-                    $sql = "SELECT u.username, u.id as userid, a.tipo_destino as tipo, a.tipo as t, a.id_destino, 
-                      DATE_FORMAT( a.data_acao,'%d/%m/%Y %h:%i:%s') as data_acao,
-                      i.nome_legivel as d_idioma,
-                      f.frase as frase,
-                      p.pronuncia as d_palavra, pn.palavra as d_nativo, p.romanizacao as d_romanizacao,
-                      e.nome as d_escrita, en.id as eid, en.id_fonte, en.tamanho
-                      FROM asons a
-                      LEFT JOIN idiomas i ON (a.tipo_destino = 'diom' AND i.id = a.id_destino)
-                      LEFT JOIN palavras p ON (a.tipo_destino = 'palavr' AND p.id = a.id_destino)
-                        LEFT JOIN idiomas pi ON (pi.id = p.id_idioma)
-                      LEFT JOIN frases f ON (a.tipo_destino = 'frase' AND f.id = a.id_destino)
-                        LEFT JOIN idiomas fi ON (fi.id = f.id_idioma)
-                      LEFT JOIN escritas e ON (a.tipo_destino = 'skreveson' AND e.id = a.id_destino)
-                        LEFT JOIN idiomas ei ON (ei.id = e.id_idioma)
-                      LEFT JOIN palavrasNativas pn ON (p.id = pn.id_palavra AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1))
-                      LEFT JOIN escritas en ON ((en.id_idioma = p.id_idioma) OR (en.id_idioma = f.id_idioma) AND en.padrao = 1)
-                      LEFT JOIN usuarios u ON u.id = a.id_usuario 
-                      WHERE a.id_usuario IN (SELECT ss.id_seguido FROM sosail_sgisons ss WHERE ss.id_usuario = ".$_SESSION['KondisonairUzatorIDX'].")
-                        AND ( i.publico = 1 
-                        OR (p.id > 0 AND pi.publico = 1) 
-                        OR (f.id > 0 AND fi.publico = 1) 
-                        OR (e.id > 0 AND ei.publico = 1) )
-                      GROUP BY a.tipo_destino, a.id_destino
-                      ORDER BY a.data_acao DESC
-                      LIMIT ".$feedLimit.";";
-                  $res2 = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink'])); //WHERE destinos in id usuarios q segue
-                  if (mysqli_num_rows($res2)>0){ ?>
-
-                  <div class="col-12">
-                    <div class="card" style="height: 28rem">
-                    <div class="card-header">
-                      <h3 class="card-title"><?=_t('Atividades recentes')?></h3>
-                    </div>
-                      <div class="card-body card-body-scrollable card-body-scrollable-shadow">
-                        <div class="divide-y">
-                          
-                          <?php
-                            while($r = mysqli_fetch_assoc($res2)) { 
-
-                              $linkData = linkData( $r['userid'], $r['username'], $r['tipo'], $r['id_destino'], 
-                                ( $r['d_nativo']=='' ? 
-                                    ($r['d_romanizacao']==''? $r['d_palavra'] : $r['d_romanizacao'] ) 
-                                    : 
-                                    getSpanPalavraNativa($r['d_nativo'],$r['eid'],$r['id_fonte'],$r['tamanho']) 
-                                ).getSpanPalavraNativa($r['frase'],$r['eid'],$r['id_fonte'],$r['tamanho']) 
-                                .$r['d_escrita'].$r['d_idioma'], $r['t'], $r['data_acao'] );
-                              if(!empty($linkData))
-                              echo '<div>
-                                <div class="row">
-                                  <div class="col">
-                                    <div class="text-truncate">
-                                      <strong><a href="?page=profile&user='.$linkData['uname'].'">'.$linkData['uname'].'</a></strong> '.$linkData['text'].' <strong>'.$linkData['ltitle'].'</strong>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>';
-                            };
-                          ?> 
-
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <?php } ?>
-
-                  <?php if($_SESSION['KondisonairUzatorNivle']==100){ 
-                        $resop = mysqli_query($GLOBALS['dblink'],"SELECT * FROM opcoes_sistema;") or die(mysqli_error($GLOBALS['dblink']));
-                        while($ro = mysqli_fetch_assoc($resop)) { 
-                          $op[$ro['opcao']]  = $ro['valor'];
-                        };
-                    ?>
-                  <div class="col-12">
-                    <div class="card">
-                    <div class="card-header">
-                      <h3 class="card-title"><?=_t('Administração')?></h3>
-                    </div>
-                      <div class="card-body row">
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Idiomas por usuário')?></label>
-                            <input type="number" class="form-control" id="limite_langs" value="<?=$op['limite_langs']?>" onchange="gravarOpsons('limite_langs')">
-                        </div>  
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Palavras base por idioma')?></label>
-                            <input type="number" class="form-control" id="palavras_base_lang" value="<?=$op['palavras_base_lang']?>" onchange="gravarOpsons('palavras_base_lang')">       
-                        </div>  
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Palavras total por idioma')?></label>
-                            <input type="number" class="form-control" id="palavras_lang" value="<?=$op['palavras_lang']?>" onchange="gravarOpsons('palavras_lang')">       
-                        </div>  
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Fontes por usuario')?></label>
-                            <input type="number" class="form-control" id="fonts_usuario" value="<?=$op['fonts_usuario']?>" onchange="gravarOpsons('fonts_usuario')">  
-                        </div> 
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Classes por idioma')?></label>
-                            <input type="number" class="form-control" id="lim_lang_parts" value="<?=$op['lim_lang_parts']?>" onchange="gravarOpsons('lim_lang_parts')">  
-                        </div> 
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Concordâncias por idioma')?></label>
-                            <input type="number" class="form-control" id="lim_conc_lang" value="<?=$op['lim_conc_lang']?>" onchange="gravarOpsons('lim_conc_lang')">  
-                        </div> 
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Itens por concordância')?></label>
-                            <input type="number" class="form-control" id="lim_itens_conc" value="<?=$op['lim_itens_conc']?>" onchange="gravarOpsons('lim_itens_conc')">  
-                        </div> 
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Sons por idioma')?></label>
-                            <input type="number" class="form-control" id="lim_sons_lang" value="<?=$op['lim_sons_lang']?>" onchange="gravarOpsons('lim_sons_lang')">  
-                        </div> 
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Sistemas de escrita por idioma')?></label>
-                            <input type="number" class="form-control" id="limite_escritas_l" value="<?=$op['limite_escritas_l']?>" onchange="gravarOpsons('limite_escritas_l')">  
-                        </div> 
-
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Listas de alteração sonora por idioma')?></label>
-                            <input type="number" class="form-control" id="limite_scs_lang" value="<?=$op['limite_scs_lang']?>" onchange="gravarOpsons('limite_scs_lang')">  
-                        </div> 
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label"><?=_t('Listas de alteração sonora por usuário')?></label>
-                            <input type="number" class="form-control" id="limite_scs_user" value="<?=$op['limite_scs_user']?>" onchange="gravarOpsons('limite_scs_user')">  
-                        </div> 
-                        
-                        <div class="mb-3 col-md-6">
-                              <label class="form-label"><?=_t('Aberto para novos usuários?')?></label>
-                              <select id="inscr_aberta" class="chosen-select form-control" onchange="gravarOpsons('inscr_aberta')">
-                                  <option value="0" <?php if ($op['inscr_aberta']==0) echo 'selected'; ?> >Não</option>
-                                  <option value="1" <?php if ($op['inscr_aberta']==1) echo 'selected'; ?> >Sim</option>
-                              </select>
-                        </div>
-                        <div class="mb-3 col-md-6">
-                              <label class="form-label"><?=_t('Idioma padrão do sistema')?></label>
-                              <?php
-                                echo gerarSelectIdiomas('def_lang', $op['def_lang'], 'gravarOpsons(\'def_lang\')', false);
-                              ?>
-                        </div>
-                      </div>
-                      <div class="card-body">
-
-                        <a href="index.php?page=ipa" class="btn btn-primary"><?=_t('IPA')?></a>
-                        <a href="index.php?page=glosses" class="btn btn-primary"><?=_t('Glosses')?></a>
-                        <a href="index.php?page=referents" class="btn btn-primary"><?=_t('Referentes')?></a>
-                        <a href="index.php?page=users" class="btn btn-primary"><?=_t('Usuários')?></a>
-                      </div>
-                    </div>
-                  </div>
-                  <script>
-
-                    function gravarOpsons(param){
-                        $.get("api.php?action=ajaxGravarOption&param="+param+"&value="+$('#'+param).val(), 
-                            function (data){
-                            if ($.trim(data) == 'ok'){
-                                //alert('ok');//window.location = "dash.php?ason=opsons";
-                            }else{
-                                alert(data);
-                            }
-                        });
-                    };
-                  </script>
-                  <?php } ?>
-
-                </div>
-              </div>
-
-              <?php }else{ ?>
 
               <div class="col-md-4">
 				
@@ -465,8 +297,6 @@
                   </div>
                 </div>
               </div>
-
-              <?php }; ?>
 
             </div>
           </div>

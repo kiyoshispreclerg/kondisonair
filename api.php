@@ -3598,6 +3598,218 @@ function verificarPalavrasComEsseGlifo($idIdioma, $idGlifo, $palavrasIgnorar, $p
   return false;
 };
 
+function gerarLinksIdiomas($idioma_atual, $use_js = true) {
+    global $idiomas_sistema;
+    $html = '';
+    foreach ($idiomas_sistema as $id => $nome) {
+        if ($id != $idioma_atual) {
+            if ($use_js) {
+                $html .= '<li class="list-inline-item"><a onclick="setLang(' . $id . ')" class="link-secondary">' . htmlspecialchars($nome) . '</a></li>';
+            } else {
+                $url = str_replace('&lang=', '&nus=', $_SERVER['REQUEST_URI']) . '&lang=' . $id;
+                $html .= '<li class="list-inline-item"><a href="' . htmlspecialchars($url) . '" class="link-secondary">' . htmlspecialchars($nome) . '</a></li>';
+            }
+        }
+    }
+    return $html;
+}
+
+function getDescricaoIdioma($id_idioma) {
+    global $idiomas_sistema;
+    if (isset($idiomas_sistema[$id_idioma])) {
+        return _t($idiomas_sistema[$id_idioma]);
+    }
+    return '';
+}
+
+function gerarSelectIdiomas($id_select, $idioma_selecionado, $onchange = '', $use_translation = true) {
+    global $idiomas_sistema;
+    $html = '<select id="' . htmlspecialchars($id_select) . '" name="' . htmlspecialchars($id_select) . '" class="chosen-select form-control"';
+    if ($onchange) {
+        $html .= ' onchange="' . htmlspecialchars($onchange) . '"';
+    }
+    $html .= '>';
+    foreach ($idiomas_sistema as $id => $nome) {
+        $nome_exibido = $use_translation ? _t($nome) : $nome;
+        $selected = ($id == $idioma_selecionado) ? ' selected' : '';
+        $html .= '<option value="' . $id . '"' . $selected . '>' . htmlspecialchars($nome_exibido) . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+}
+
+function formatTimeValue($id_time_system, $time_value, $dia, $mes, $ano, $dblink) {
+    if (!$id_time_system || $time_value === null) {
+        return '';
+    }
+    $units = [];
+    $result = mysqli_query($dblink, "SELECT u.id, u.nome, u.duracao, c.id_unidade_ref, c.quantidade 
+        FROM time_units u 
+        LEFT JOIN time_cycles c ON c.id_unidade = u.id 
+        WHERE u.id_time_system = $id_time_system 
+        ORDER BY u.duracao DESC;") or die(mysqli_error($dblink));
+    while ($u = mysqli_fetch_assoc($result)) {
+        $units[$u['id']] = [
+            'nome' => $u['nome'],
+            'duracao' => $u['duracao'],
+            'ref' => $u['id_unidade_ref'],
+            'quantidade' => $u['quantidade'] ?: 1
+        ];
+    }
+    // Usar dia, mes, ano armazenados
+    if ($dia !== null && $mes !== null && $ano !== null) {
+        $unit_names = array_column($units, 'nome', 'id');
+        $mes_nome = $unit_names[2] ?? 'Solis'; // Assumindo id 2 = Solis
+        $ano_nome = $unit_names[3] ?? 'Ano';   // Assumindo id 3 = Ano
+        return "$dia $mes_nome, $ano_nome $ano";
+    }
+    return '';
+}
+
+function getLastChange($tipo,$id = 0) { // lastupdated
+  if (! $id > 0) return 0;
+
+  if($tipo=='lexicon'){ // incluir writing e drawchars
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM palavras WHERE id_idioma = ".$id."
+            UNION
+            SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM escritas WHERE id_idioma = ".$id."
+            UNION
+            SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
+              FROM drawChars WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma=".$id.")
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+  }else if($tipo=='ref'){
+
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(modificado, '%Y%m%d%H%i%s') as d 
+              FROM referentes
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+
+  }else if($tipo=='entities'){ //xxxxx falta
+
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM entidades WHERE id_realidade = ".$id."
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+
+
+  }else if($tipo=='characters'){ //xxxxx falta
+
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM entidades WHERE id_realidade = ".$id." AND rule = 'character'
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+
+
+  }else if($tipo=='items'){ //xxxxx falta
+
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM entidades WHERE id_realidade = ".$id." AND rule = 'item'
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+
+
+  }else if($tipo=='places'){ //xxxxx falta
+
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM entidades WHERE id_realidade = ".$id." AND rule = 'place'
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+
+  }else if($tipo=='autosubstituicoes'){
+
+      $last = mysqli_query($GLOBALS['dblink'],
+        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+              FROM autosubstituicoes WHERE id_escrita = '".$id."'
+            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+  }else if($tipo=='moments'){ //xxxxx falta
+
+        $rid = (int)$id;
+        // Buscar timestamp da última alteração na tabela momentos
+        $result = mysqli_query($GLOBALS['dblink'], "SELECT MAX(updated_at) as last_change 
+            FROM momentos 
+            WHERE id_realidade = $rid;") or die(mysqli_error($GLOBALS['dblink']));
+        
+        $row = mysqli_fetch_assoc($result);
+        $timestamp = strtotime($row['last_change']) ?: time();
+        return $timestamp;
+
+  }else if($tipo=='origens'){
+
+      // geral
+      return '1';
+
+  }else if($tipo=='calendar'){
+      $cid = (int)$id;
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT GREATEST(
+          COALESCE((SELECT MAX(updated_at) FROM time_systems WHERE id = $cid), 0),
+          COALESCE((SELECT MAX(updated_at) FROM time_units WHERE id_time_system = $cid), 0),
+          COALESCE((SELECT MAX(updated_at) FROM time_cycles WHERE id_time_system = $cid), 0),
+          COALESCE((SELECT MAX(updated_at) FROM time_names WHERE id_time_system = $cid), 0)
+      ) as last_change;") or die(mysqli_error($GLOBALS['dblink']));
+      
+      //, COALESCE((SELECT MAX(updated_at) FROM time_adjustment_rules WHERE id_time_system = $cid), 0)
+      
+      $row = mysqli_fetch_assoc($result);
+      $timestamp = strtotime($row['last_change']) ?: time(); 
+      return $timestamp ? $timestamp : 0;
+
+  }else if($tipo=='fonts'){
+
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id
+            FROM fontes ORDER BY id DESC LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+        
+      $row = mysqli_fetch_assoc($result);
+      return $row['id'] ? $row['id'] : 0;
+
+  }else if($tipo=='sounds'){  //xxxxx falta em editsounds ???
+      $last = mysqli_query($GLOBALS['dblink'],
+      "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
+            FROM inventarios WHERE id_idioma = ".$id." 
+          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+  }else if($tipo=='glifos'){ 
+      $last = mysqli_query($GLOBALS['dblink'],
+      "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
+            FROM glifos WHERE id_escrita = ".$id." 
+          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+  }else if($tipo=='writing'){ //xxxxx falta ?
+      $last = mysqli_query($GLOBALS['dblink'],
+      "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
+            FROM escritas WHERE id = ".$id."
+          UNION
+          SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
+            FROM glifos WHERE id_escrita = ".$id."
+          UNION
+          SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
+            FROM drawChars WHERE id_escrita = ".$id."
+          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
+      $l = mysqli_fetch_assoc($last);
+      return $l['d'] ? $l['d'] : 0;
+  }
+
+  return 0;
+};
+
 /*
   AÇÕES KONDISONAIR - DE EDIÇÃO (PARA APENAS LOGADO)
 */
@@ -8234,8 +8446,2184 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die('ok');
   };
 
+  if ($_GET['action'] == 'testSalvar') { 
+
+    $listaOrdem = "ordem = 0,"; // ver ordem pelo último da lista, e lista se tem no POST ou 0
+    $sqlLista = "id_lista = ".($_POST['lista']??0).",";
+    if ($_POST['lista']>0){
+    }
+
+    if ($_GET['id']>0){
+      //updatew
+      $sql = "UPDATE studason_tests SET
+        titulo = '".$_POST['titulo']."',
+        link_origem = '',
+        link_audio = '',
+        data_modificacao = now(),
+        texto = '".$_POST['texto']."',
+        $sqlLista $listaOrdem
+        num_palavras = 0
+        WHERE id = ".$_GET['id'].";";
+    }else{
+
+      //xxxxx LIMIT textos/aulas
+
+      $sql = "INSERT INTO studason_tests SET id = ".generateId().",
+        id_idioma = ".$_GET['iid'].",
+        titulo = '".$_POST['titulo']."',
+        link_origem = '',
+        link_audio = '',
+        texto = '".$_POST['texto']."',
+        $sqlLista $listaOrdem
+        num_palavras = 0,
+        id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+    }
+
+    //echo $sql;
+    $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+    die('ok');
+  };
+
+  if ($_GET['action'] == 'ajaxMoverSom') {
+    
+      // // ajaxMoverSom  POST from = 'cell_30_40' to = 'cell_30_40'
+      if ( is_numeric($_POST['from']) && $_POST['from']>0 && strlen($_POST['to'])>0){
+          $to = explode('_',$_POST['to']);
+          $tox = $to[1];
+          $toy = $to[2];
+          $tipo = $_GET['t'];
+          
+          $is = mysqli_query($GLOBALS['dblink'],"SELECT *, i.id_tipoSom as tipo, s.id as idSom, i.id as id_inventario FROM inventarios i 
+                LEFT JOIN sons s ON i.id_som = s.id 
+                WHERE i.id = ".$_POST['from'].";") or die(mysqli_error($GLOBALS['dblink']));
+          $i = mysqli_fetch_assoc($is);
+
+          if ($i['tipo']==0){
+
+              mysqli_query($GLOBALS['dblink'],"UPDATE sonsPersonalizados SET
+                  posx = ".$tox.",
+                  posy = ".$toy."
+                  WHERE id = ".$i['idSom'].";") or die(mysqli_error($GLOBALS['dblink']));
+              mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET data_modificado = NOW() 
+                WHERE id = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
+
+          }else{
+            
+              $id = generateId();
+              mysqli_query($GLOBALS['dblink'],"INSERT INTO sonsPersonalizados SET id = $id,
+                    nome = '".$i['nome']."',
+                    ipa = '".$i['ipa']."',
+                    id_referente = 0,
+                    posx = ".$tox.",
+                    posy = ".$toy.",
+                    posz = ".$i['posz'].",
+                    id_tipoSom = ".$i['id_tipoSom'].",
+                    id_idioma = '".$i['id_idioma']."';") or die(mysqli_error($GLOBALS['dblink']));
+              
+              // atualiza no inventario, de som default pra personalizado
+              mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET 
+                    id_som = ".$id.", data_modificado = NOW(),
+                    id_tipoSom = 0
+                    WHERE id = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
+
+          }
+
+      }else if ( strlen($_POST['from'])>0 && strlen($_POST['to'])>0){
+          $from = explode('_',$_POST['from']);
+          $fromx = $from[1];
+          $fromy = $from[2];
+          $to = explode('_',$_POST['to']);
+          $tox = $to[1];
+          $toy = $to[2];
+          $tipo = $_GET['t'];
+
+          $is = mysqli_query($GLOBALS['dblink'],"SELECT *, i.id as id_inventario FROM inventarios i 
+                LEFT JOIN sons s ON i.id_som = s.id 
+                WHERE s.posx = ".$fromx." AND s.posy = ".$fromy." 
+                  AND s.id_tipoSom = ".$tipo." AND i.id_tipoSom > 0 
+                  AND i.id_idioma = ".$_GET['iid']." ORDER BY s.posz;") or die(mysqli_error($GLOBALS['dblink']));
+            
+          while($i = mysqli_fetch_assoc($is)){
+
+              //print_r($i);
+
+              // SONS PADRAO NÂO MOVE ?  CONVERTER PRA PERSONALIZADOS ?
+
+              // insere nos personalizaos - Copiar do som original
+              $id = generateId();
+              mysqli_query($GLOBALS['dblink'],"INSERT INTO sonsPersonalizados SET  id = $id,
+                    nome = '".$i['nome']."',
+                    ipa = '".$i['ipa']."',
+                    id_referente = 0,
+                    posx = ".$tox.",
+                    posy = ".$toy.",
+                    posz = ".$i['posz'].",
+                    id_tipoSom = ".$i['id_tipoSom'].",
+                    id_idioma = '".$i['id_idioma']."';") or die(mysqli_error($GLOBALS['dblink']));
+              
+              // atualiza no inventario, de som default pra personalizado
+              mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET 
+                    id_som = ".$id.", data_modificado = NOW(),
+                    id_tipoSom = 0
+                    WHERE id = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
+              
+              /*
+              $keys = mysqli_query($GLOBALS['dblink'],"SELECT * FROM teclas WHERE id_inventario = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
+              $key = mysqli_fetch_assoc($keys);
+              if ($key['tecla']=='') $key = '<span class="celulaSom" title="'.$i['nome'].'">/'.$i['ipa'].'/</span><br>';
+              else $key = '<span class="celulaSom" title="'.$i['nome'].'">'.$key['tecla'].' /'.$i['ipa'].'/</span><br>';
+              echo $key;
+              */
+          }
+
+          $is = mysqli_query($GLOBALS['dblink'],"SELECT *, s.id as idSom, i.id as id_inventario FROM inventarios i 
+              LEFT JOIN sonsPersonalizados s ON i.id_som = s.id 
+                WHERE s.posx = ".$fromx." AND s.posy = ".$fromy." AND i.id_tipoSom = 0 AND s.id_tipoSom = ".$tipo."
+                  AND s.id_idioma = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
+            
+          while($i = mysqli_fetch_assoc($is)){
+
+              mysqli_query($GLOBALS['dblink'],"UPDATE sonsPersonalizados SET
+                  posx = ".$tox.",
+                  posy = ".$toy."
+                  WHERE id = ".$i['idSom'].";") or die(mysqli_error($GLOBALS['dblink']));
+          }
+          mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET data_modificado = NOW(),
+                    WHERE id = ".$i['id_inventario'].";");
+          
+      }else die('0');
+
+      die('ok');
+  };
+
+  if ($_GET['action'] == 'ajaxMoverFormaPalavra') {
+
+      $cex = null;
+      if(isset($_POST['cex'])){
+        $cex = $_POST['cex'];
+      };
+      $idioma = $_GET['iid'];
+
+      if (strlen($_POST['from'])>0){
+
+          $from = explode("-",$_POST['from']);
+          if($from[0]>0 && $from[5]>0 && $from[1]==0&& $from[2]==0&& $from[3]==0&& $from[4]==0){
+
+              // echo 'ok'; die();
+
+              // aqui pra mover das órfãs: insert into itens_palavras
+              $taVazio = false;
+              $to = explode("-",$_POST['to']);
+              if($to[3]>0){}else{
+                echo'ok';die();
+              }
+
+              // ver o destino
+              $tox = $to[1];
+              $toy = $to[2];
+              $toz = $cex[0]['val'];
+              $textra = 0;
+              
+              $pid = $from[0];
+              $dic = $from[5];
+              $linhas = $tox;
+              $colunas = $toy;
+              // ver se tem palavra no destino
+              // inserir em itens_palavras
+
+              $sql = "SELECT p.* FROM palavras p WHERE p.id_idioma = ".$idioma;
+              $sql .= " AND (p.id = ".$dic." OR p.id_forma_dicionario = ".$dic.")  "; // $sql .= " AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.")  ";
+              $sql .= " AND (SELECT ip1.id FROM itens_palavras ip1 WHERE ip1.id_palavra = p.id AND ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$to[3]/*$x*/." AND ip1.usar = 1 ) IS NOT NULL ";
+              if ($to[4]>0) $sql .= " AND (SELECT ip2.id FROM itens_palavras ip2 WHERE ip2.id_palavra = p.id AND ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$to[4]/*$y2*/." AND ip2.usar = 1 ) IS NOT NULL ";
+              if ($toz>0) $sql .= " AND (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did']." AND ip3.id_item = ".$toz." AND ip3.usar = 1 ) IS NOT NULL ";
+              
+              $sql .= " ;";
+
+              $ps = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+              if (mysqli_num_rows($ps)==0) $taVazio = true;
+
+              if ( $taVazio ) {// aqui vai mover se estiver td certo acima
+                
+                  mysqli_query($GLOBALS['dblink'], "DELETE FROM itens_palavras WHERE id_palavra = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
+                  $sql = "INSERT INTO itens_palavras (id, id_item, id_concordancia, id_palavra, usar) VALUES ";
+
+                  $sql .= "(".generateId().",".$to[3].",".$linhas.",".$pid.",1),";
+                  if ($to[4]>0) $sql .= "(".generateId().",".$to[4].",".$colunas.",".$pid.",1),";
+                  if ($toz>0) $sql .= "(".generateId().",".$toz.",".$cex[0]['did'].",".$pid.",1),";
+
+                  mysqli_query($GLOBALS['dblink'],substr($sql,0,-1)) or die(mysqli_error($GLOBALS['dblink']));
+
+                  $ccs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM concordancias WHERE id = $linhas") or die(mysqli_error($GLOBALS['dblink']));
+                  $cc = mysqli_fetch_assoc($ccs);
+                  $dependencia = $cc['depende'] > 0 ? (int)$cc['depende'] : 0;
+                  
+                  $il = 0; // limite de subtabelas
+                  while($dependencia > 0){ 
+                      $ccs = mysqli_query($GLOBALS['dblink'],"SELECT *, c.nome as titulo FROM concordancias c 
+                          LEFT JOIN itensConcordancias ic ON ic.id_concordancia = c.id 
+                          WHERE ic.id = ".$dependencia.";") or die(mysqli_error($GLOBALS['dblink']));
+                      $cc = mysqli_fetch_assoc($ccs);
+
+                      $sqlQuerys = "INSERT INTO itens_palavras SET 
+                        id_palavra = ".$pid.", id = ".generateId().",
+                        id_concordancia = ".$cc['id_concordancia'].",
+                        id_item = ".$dependencia.",
+                        usar = 1;";
+                      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+
+                      if ($cc['depende']>0) $dependencia = $cc['depende'];
+                      else $dependencia = 0;
+                      
+                      $il++; if($il>10) $dependencia = 0;
+                  }  
+              }
+
+              echo 'ok';
+
+          }else if($_POST['to']=='lixo' && $from[5]>0){
+              // delete
+              mysqli_query($GLOBALS['dblink'],"DELETE FROM itens_palavras
+                          WHERE id_palavra = ".$from[0].";") or die(mysqli_error($GLOBALS['dblink']));
+              echo 'ok';
+          }else if ($from[5]==0) {
+            $result = mysqli_query($GLOBALS['dblink'],"SELECT *, 
+                (SELECT paradigma FROM classes c WHERE c.id = p.id_classe LIMIT 1) as paradigma
+                FROM palavras p 
+                WHERE p.id = ".$from[0].";") or die('1834'.mysqli_error($GLOBALS['dblink']));
+            $r = mysqli_fetch_assoc($result);
+            $parad = (int)$r['paradigma'];
+            if ($parad == 1) {
+                $to = explode("-",$_POST['to']);
+                $linhas = $to[1];
+                $colunas = $to[2];
+                $x = $to[3];
+                $y2 = $to[4];
+
+                if ($to[5] == 0) echo '0';
+                else if ($to[0] > 0 || $to[5] > 0) echo "0";
+                else {
+                    $id = generateId();
+                    mysqli_query($GLOBALS['dblink'],
+                        "INSERT INTO itens_palavras (id, id_concordancia, id_palavra, usar, id_item)
+                        VALUES (".$id.", ".$linhas.", ".$from[0].", 1, ".$x.")
+                        ON DUPLICATE KEY UPDATE id_item = ".$x.";")
+                        or die(mysqli_error($GLOBALS['dblink']));
+
+                    $id = generateId();
+                    mysqli_query($GLOBALS['dblink'],
+                        "INSERT INTO itens_palavras (id, id_concordancia, id_palavra, usar, id_item)
+                        VALUES (".$id.", ".$colunas.", ".$from[0].", 1, ".$y2.")
+                        ON DUPLICATE KEY UPDATE id_item = ".$y2.";")
+                        or die(mysqli_error($GLOBALS['dblink']));
+                    echo 'ok';
+                }
+            } else echo '0';
+          }else if ($from[0] > 0 && strlen($_POST['to'])>0) {
+                  
+              /*
+                TO DO
+                  - não pode mover nada onde já tem palavra
+              */
+
+              if (is_numeric($_POST['to']) && $_POST['to'] > 0){
+                  $tox = $from[1];
+                  $toy = $from[2];
+                  $toz = $_POST['to'];
+                  $textra = 0;
+                  
+                  $linhas = $tox;
+                  $colunas = $toy;
+                  
+                  $pid = $from[0];
+                  $dic = $from[5];
+                  
+                  //$toz = $from[3];
+                  $textra = $from[4];
+                  $x = $toz;
+                  $y2 = $textra;
+
+                  if ($toz == $cex[0]['val']) echo '0';
+                  else {
+                      $taVazio = false;
+
+                      $extraPadrao = 0;
+                      $resdef = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias
+                          WHERE id_concordancia = ".$cex[0]['did']." AND padrao < 2 ORDER BY padrao DESC, ordem;") or die(mysqli_error($GLOBALS['dblink']));
+                      $rc = mysqli_fetch_assoc($resdef);
+                      if ($rc['id']==$cex[0]['val']) $extraPadrao = 1;
+
+                      //echo $extraPadrao."\n";
+                      //echo 'de '.$_POST['from'].' para '.$_POST['to']."\n";
+
+                      //xxxxx ver se existe uma palavra nessa posição na outra dimensão
+
+                      $sql = "SELECT p.* FROM palavras p WHERE p.id_idioma = ".$idioma;
+                      $sql .= " AND (p.id = ".$dic." OR p.id_forma_dicionario = ".$dic.")  "; // $sql .= " AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.")  ";
+                      $sql .= " AND (SELECT ip1.id FROM itens_palavras ip1 WHERE ip1.id_palavra = p.id AND ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$from[3]/*$x*/." AND ip1.usar = 1 ) IS NOT NULL ";
+                      $sql .= " AND (SELECT ip2.id FROM itens_palavras ip2 WHERE ip2.id_palavra = p.id AND ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$from[4]/*$y2*/." AND ip2.usar = 1 ) IS NOT NULL ";
+                          
+                      if($extraPadrao == 1){ 
+                          $sql .= " AND ( 
+                              (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did']." AND ip3.id_item = ".$toz." AND ip3.usar = 1 ) IS NOT NULL
+                              OR
+                              (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did'].") IS NULL 
+                            ) ";
+                      }else{
+                          $sql .= " AND (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did']." AND ip3.id_item = ".$toz." AND ip3.usar = 1 ) IS NOT NULL ";
+                      }
+                          
+                      $sql .= " ;";
+
+                      $ps = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+                      // TESTE:
+                      //echo $sql."\n";
+                      // $pal = mysqli_fetch_assoc($ps); 
+                      //print_r($pal);
+                      if (mysqli_num_rows($ps)==0) $taVazio = true;
+
+                      //echo 'ok mudar';
+
+                      // echo "UPDATE itens_palavras SET id_item = ".$toz." WHERE id_concordancia = ".$cex[0]['did']." AND id_palavra = ".$pid." AND usar = 1;";
+                      if ( $taVazio ) // aqui vai mover se estiver td certo acima
+                          mysqli_query($GLOBALS['dblink'],
+                              "UPDATE itens_palavras SET id_item = ".$toz." WHERE id_concordancia = ".$cex[0]['did']." AND id_palavra = ".$pid." AND usar = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+
+                      echo 'ok';
+                  }
+
+              }else{
+
+                  $to = explode("-",$_POST['to']);
+                  $tox = $to[1];
+                  $toy = $to[2];
+                  $toz = $to[3];
+                  $textra = $to[4];
+
+                  $linhas = $tox;
+                  $colunas = $toy;
+                  $x = $toz;
+                  $y2 = $textra;
+
+                  $pid = $from[0];
+                  $dic = $from[5];
+
+                  if ($to[5] == 0) echo '0'; // é a forma de dicionário, padrão!
+                  else if ($to[0] > 0 || $to[5] > 0) echo "0"; // tem uma palavra aqui
+                  else {
+                          mysqli_query($GLOBALS['dblink'],
+                              "UPDATE itens_palavras SET id_item = ".$x." WHERE id_concordancia = ".$linhas." AND id_palavra = ".$pid." AND usar = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+                              
+                          mysqli_query($GLOBALS['dblink'],
+                              "UPDATE itens_palavras SET id_item = ".$y2." WHERE id_concordancia = ".$colunas." AND id_palavra = ".$pid." AND usar = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+
+                      echo 'ok';
+                  }
+              }
+          }else{
+              echo '0';
+          }
+      }else echo '0';
+      die();
+  };
+
+  if ($_GET['action'] == 'studasonPalSigSalvar') { 
+
+      $sql = "INSERT INTO pal_sig_comunidade SET id = ".generateId().",
+        palavra = '".$_GET['p']."',  
+        id_idioma = ".$_GET['iid'].",
+        id_usuario = '".$_SESSION['KondisonairUzatorIDX']."', 
+        significado = '".$_GET['s']."';";
+      $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+
+      die('ok');
+  };
+
+  if ($_GET['action'] == 'studasonPalSalvar') { 
+
+      if (!$_SESSION['KondisonairUzatorIDX']>0) die('invalid');
+
+      // parse aqui ou ao abrir?
+      if ($_GET['aid']>0){
+        //updatew
+        $sql = "UPDATE studason_palavrs SET
+          status_aprendido = ".$_GET['s'].",  
+          pids = '".$_GET['pids']."' 
+          WHERE id = ".$_GET['aid'].";";
+        $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+        echo $_GET['aid'];
+      }else{
+        $id = generateId();
+        $sql = "INSERT INTO studason_palavrs SET id = $id,
+          pids = '".$_GET['pids']."' ,
+          status_aprendido = ".$_GET['s'].",
+          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+
+        $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+        echo $id;
+      }
+
+      die();
+
+  };
+
+  if ($_GET['action'] == 'ajaxGravarStat') {
+    $sid = (int)$_GET['sid'];
+    $rid = (int)$_GET['rid'];
+    $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
+    $tipo_dado = in_array($_POST['tipo_dado'], ['integer', 'decimal', 'text']) ? $_POST['tipo_dado'] : 'integer';
+    $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
+    $tipo_entidade =(int)$_POST['tipo_entidade'];
+
+    if ($sid > 0) {
+        $sql = "UPDATE stats SET 
+            titulo = '$nome',
+            tipo = '$tipo_dado',
+            tipo_entidade = '$tipo_entidade', data_modificacao = NOW(),
+            descricao = '$descricao'
+            WHERE id = $sid AND id_realidade = $rid LIMIT 1;";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    } else {
+        $sid = generateId();
+        $sql = "INSERT INTO stats SET  id = $sid,
+            id_realidade = $rid,
+            titulo = '$nome',
+            id_usuario = ".$_SESSION['KondisonairUzatorIDX'].",
+            tipo = '$tipo_dado',
+            tipo_entidade = '$tipo_entidade',
+            descricao = '$descricao';";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    }
+
+    echo $sid;
+    die();
+  }
+
+  if ($_GET['action'] == 'getAcessoColaborador') {
+    $iid = (int)$_GET['iid'];
+    $existentes = mysqli_query($GLOBALS['dblink'],
+          "SELECT * FROM collabs WHERE 
+            id_idioma = ".$iid." AND
+            id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
+    if (mysqli_num_rows($existentes) > 0) die('ok');
+    if ($iid > 0){
+      mysqli_query($GLOBALS['dblink'],
+          "INSERT INTO collabs SET 
+            id_idioma = ".$iid.", id = ".generateId().",
+            id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
+    };
+    die('ok');
+  };
+
+  if ($_GET['action']=='ajaxGravarRealidade') {
+    /* 
+    collabs: $('#collabs').val()
+    */
+
+    if($_GET['rid']>0){ 
+      $sqlQuerys = "UPDATE realidades SET 
+        titulo = '".$_POST['titulo']."',
+        descricao = '".str_replace("'",'"',$_POST['descricao'])."',
+        publico = '".$_POST['publico']."',
+        id_idioma_descricao = '".$_POST['idioma_descricao']."',
+        status = '".$_POST['status']."',
+        id_usuario = ".$_SESSION['KondisonairUzatorIDX']."
+        WHERE id = ".$_GET['rid']." LIMIT 1;";
+      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+      $iid = $_GET['rid'];
+
+      //logAcao(1,'diom',$iid);
+
+    } else {  
+        $iid = generateId();
+        $sqlQuerys = "INSERT INTO realidades SET  id = $iid,
+        titulo = '".$_POST['titulo']."',
+        descricao = '".str_replace("'",'"',$_POST['descricao'])."',
+        publico = '".$_POST['publico']."',
+        id_idioma_descricao = '".$_POST['idioma_descricao']."',
+        status = '".$_POST['status']."',
+        id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+
+        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+        //logAcao(0,'diom',$iid);
+    }; 
+    echo $iid;
+    die();
+  };
+
+  if ($_GET['action'] == 'ajaxGravarEntityType') {
+    $rule = strlen($_GET['rule']) > 0 ? $_GET['rule'] : 'other';
+    if ($_GET['tid'] > 0) {
+        $sqlQuerys = "UPDATE entidades_tipos SET 
+            nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
+            id_superior = " . (int)$_POST['superior'] . ",
+            descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
+            data_modificacao = NOW()
+            WHERE id = " . (int)$_GET['tid'] . " LIMIT 1;";
+        mysqli_query($GLOBALS['dblink'], $sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+        echo $_GET['tid'];
+    } else {
+        $eid = generateId();
+        $sqlQuerys = "INSERT INTO entidades_tipos SET  id = $eid,
+            nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
+            id_superior = " . (int)$_POST['superior'] . ",
+            rule = '$rule',
+            id_usuario = ".(int)$_SESSION['KondisonairUzatorIDX'].",
+            descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
+            id_realidade = " . (int)$_GET['rid'] . ";";
+        mysqli_query($GLOBALS['dblink'], $sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+        echo $eid;
+    }
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxDelEntityType') {
+    $sqlQuerys = "DELETE FROM entidades_tipos WHERE id = " . (int)$_GET['tid'] . " LIMIT 1;";
+    mysqli_query($GLOBALS['dblink'], $sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxGravarEntidade') {
+    $eid = (int)$_GET['eid'];
+    $rid = (int)$_GET['rid'];
+    $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
+    $id_tipo = (int)$_POST['id_tipo'];
+    $publico = 1; //(int)$_POST['publico'];
+    $descricao_curta = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao_curta']);
+    $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
+    $privado = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['privado']);
+    $tags = is_array($_POST['tags']) ? $_POST['tags'] : [];
+    $rule = strlen($_GET['et']>0) ? $_GET['et'] : 'other';
+
+    if ($eid > 0) {
+        $sql = "UPDATE entidades SET 
+            nome_legivel = '$nome',
+            id_tipo = $id_tipo,
+            descricao_curta = '$descricao_curta',
+            descricao = '$descricao',
+            publico = '$publico',
+            data_modificacao = NOW(),
+            privado = '$privado'
+            WHERE id = $eid LIMIT 1;";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    } else {
+        $eid = generateId();
+        $sql = "INSERT INTO entidades SET  id = $eid,
+            id_realidade = $rid,
+            nome_legivel = '$nome',
+            id_tipo = $id_tipo,
+            descricao_curta = '$descricao_curta',
+            descricao = '$descricao',
+            publico = '$publico',
+            rule = '$rule',
+            id_criador = ".$_SESSION['KondisonairUzatorIDX'].",
+            privado = '$privado';";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    }
+
+    // nomes em outras línguas ou outros locais
+    mysqli_query($GLOBALS['dblink'],
+        "DELETE FROM entidades_nomes WHERE id_entidade = ".$eid.";") or die(mysqli_error($GLOBALS['dblink']));
+
+    foreach($_POST['oiids'] as $oiid){
+      if (strlen($oiid['name'])==0) continue;
+      mysqli_query($GLOBALS['dblink'],
+        "INSERT INTO entidades_nomes SET id = ".generateId().",
+          id_entidade = ".$eid.",
+          id_idioma = ".$oiid['iid'].",
+          nome = '".$oiid['name']."',
+          info = '".$oiid['info']."';") or die(mysqli_error($GLOBALS['dblink']));
+    }
+
+    // Atualizar tags
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM tags WHERE tipo_dest = 'entity' AND id_dest = $eid;") or die(mysqli_error($GLOBALS['dblink']));
+    foreach ($tags as $tag) {
+        $sql = "INSERT INTO tags SET id = ".generateId().", tipo_dest = 'entity', id_dest = $eid, tag = '$tag';";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    }
+
+    echo $eid;
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxGravarHistoria') {
+      $hid = (int)$_GET['hid'];
+      $rid = (int)$_GET['rid'];
+      $titulo = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['titulo']);
+      $status = in_array($_POST['status'], ['rascunho', 'publicado', 'arquivado']) ? $_POST['status'] : 'rascunho';
+      $id_superior = (int)$_POST['id_superior'];
+      $id_tipo = (int)$_POST['id_tipo'];
+      $id_momento = (int)$_POST['id_momento'];
+      $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
+      $texto = isset($_POST['texto']) ? "texto='".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['texto'])."'," : '';
+      $id_usuario = (int)$_SESSION['KondisonairUzatorIDX'];
+      $entidades = isset($_POST['entidades']) ? array_map('intval', $_POST['entidades']) : [];
+      $stats_valores = isset($_POST['stats_valores']) ? $_POST['stats_valores'] : [];
+      $superior = isset($_POST['id_superior']) ? "id_superior = ".$_POST['id_superior']."," : '';
+      $updateEntidades = isset($_GET['update']);
+
+      if ($hid > 0) {
+          $sql = "UPDATE historias SET 
+              titulo = '$titulo',
+              status = '$status',
+              $superior
+              $texto
+              id_tipo = $id_tipo,
+              id_momento = $id_momento,
+              descricao = '$descricao'
+              
+              WHERE id = $hid AND id_realidade = $rid LIMIT 1;";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+        } else {
+          $hid = generateId();
+          $sql = "INSERT INTO historias SET  id = $hid,
+              id_realidade = $rid,
+              id_usuario = $id_usuario,
+              titulo = '$titulo',
+              status = '$status',
+              $superior
+              $texto
+              id_tipo = $id_tipo,
+              id_momento = $id_momento,
+              descricao = '$descricao';";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      }
+
+      if ($updateEntidades/*empty($stats_valores) /*!empty($entidades)/* && $id_momento > 0*/) {
+
+          $sql = "DELETE FROM historias_entidades WHERE id_historia = $hid AND id_realidade = $rid;";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+
+          $values = [];
+          foreach ($entidades as $id_entidade) {
+              $id = generateId();
+              $values[] = "($id, $id_entidade, $hid, $rid)";
+          }
+          $sql = "INSERT INTO historias_entidades (id, id_entidade, id_historia, id_realidade) VALUES " . implode(',', $values) . ";";
+          if (!empty($values)) mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      }
+
+      if (/*$id_momento > 0 && */!empty($stats_valores)) {
+
+          // Delete existing stats for this story and moment
+          $sql = "DELETE FROM stats_entidades 
+              WHERE id_momento = $id_momento;"; // AND id_stat AND id_entidade
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+
+          // Insert new stats
+          $values = [];
+          foreach ($stats_valores as $stat) {
+              $id_entidade = (int)$stat['id_entidade'];
+              $id_stat = (int)$stat['id_stat'];
+              $id_entidade_relacionada = (int)$stat['id_entidade_relacionada'];
+              $valor = (float)$stat['valor'];
+              $id = generateId();
+              $values[] = "($id, $id_entidade, $id_momento, $valor, $id_stat, $id_entidade_relacionada)";
+          }
+          if (!empty($values)) {
+              $sql = "INSERT INTO stats_entidades (id, id_entidade, id_momento, valor, id_stat, id_entidade_relacionada) 
+                  VALUES " . implode(',', $values) . ";";
+              mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+          }
+      }
+
+      echo $hid;
+      die();
+  }
+    
+  if ($_GET['action'] == 'ajaxGravarStatsTipo') {
+      $tid = (int)$_GET['tid'];
+      $rid = (int)$_GET['rid'];
+      $stats = isset($_POST['stats']) ? array_map('intval', $_POST['stats']) : [];
+      
+      // Deletar associações existentes
+      mysqli_query($GLOBALS['dblink'], "DELETE FROM entidades_tipos_stats 
+          WHERE id_entidade_tipo = $tid;") or die(mysqli_error($GLOBALS['dblink']));
+      
+      // Inserir novas associações
+      foreach ($stats as $stat_id) {
+          $id = generateId();
+          mysqli_query($GLOBALS['dblink'], "INSERT INTO entidades_tipos_stats 
+              (id, id_entidade_tipo, id_stat) 
+              VALUES ($id, $tid, $stat_id);") or die(mysqli_error($GLOBALS['dblink']));
+      }
+      
+      echo 'ok';
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxGravarMomento') {
+      $mid = (int)$_GET['mid'];
+      $rid = (int)$_GET['rid'];
+      $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
+      $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
+      $data_calendario = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['data_calendario']); // apenas temporário
+      $ordem = (float)$_POST['ordem']; // Use float to handle averages (e.g., 150.5)
+      $superior = (int)$_POST['superior'];
+      $id_usuario = (int)$_SESSION['KondisonairUzatorIDX'];
+      $time_system = (int)$_POST['time_system'];
+      $time_value = (int)$_POST['time_value'];
+
+      // Validate inputs
+      if (empty($nome)) {
+          echo 'Erro: Nome obrigatório.';
+          die();
+      }
+
+      // Insert or update the moment
+      if ($mid > 0) {
+          // Update existing moment
+          $sql = "UPDATE momentos SET 
+              nome = '$nome',
+              descricao = '$descricao',
+              data_calendario = '$data_calendario',
+              id_time_system = $time_system,
+              time_value = $time_value,
+              ordem = $ordem
+              WHERE id = $mid AND id_realidade = $rid LIMIT 1;";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      } else {
+        // Insert new moment
+          $mid = generateId();
+          $sql = "INSERT INTO momentos SET  id = $mid,
+              id_realidade = $rid,
+              nome = '$nome',
+              descricao = '$descricao',
+              id_superior = $superior,
+              data_calendario = '$data_calendario',
+              id_time_system = $time_system,
+              time_value = $time_value,
+              id_usuario = $id_usuario,
+              ordem = $ordem;";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      }
+
+      // Fetch all moments with the same id_realidade and id_superior
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id, time_value, ordem 
+          FROM momentos 
+          WHERE id_realidade = $rid AND id_superior = $superior 
+          ORDER BY time_value ASC, ordem ASC, id ASC;") or die(mysqli_error($GLOBALS['dblink']));
+      
+      $momentos = [];
+      while ($row = mysqli_fetch_assoc($result)) {
+          $momentos[] = [
+              'id' => (int)$row['id'],
+              'time_value' => is_null($row['time_value']) ? PHP_INT_MAX : (float)$row['time_value'],
+              'ordem' => (float)$row['ordem']
+          ];
+      }
+
+      // Find the position for the current moment (new or updated)
+      $current_moment = [
+          'id' => $mid,
+          'time_value' => is_null($time_value) ? PHP_INT_MAX : (float)$time_value, // Use provided time_value or max
+          'ordem' => (float)$ordem
+      ];
+
+      $momentos = array_filter($momentos, function($m) use ($mid) {
+          return $m['id'] != $mid; // Remove the current moment if updating
+      });
+      $momentos[] = $current_moment; // Add the current moment
+
+      // Sort moments by ordem (and id for stability)
+      /*usort($momentos, function($a, $b) {
+          if ($a['ordem'] == $b['ordem']) {
+              return $a['id'] <=> $b['id'];
+          }
+          return $a['ordem'] <=> $b['ordem'];
+      });
+      */
+      usort($momentos, function($a, $b) {
+          // Compare time_value first
+          if ($a['time_value'] != $b['time_value']) {
+              return $a['time_value'] <=> $b['time_value'];
+          }
+          // If time_value is equal, compare ordem
+          if ($a['ordem'] != $b['ordem']) {
+              return $a['ordem'] <=> $b['ordem'];
+          }
+          // If ordem is equal, compare id
+          return $a['id'] <=> $b['id'];
+      });
+
+      // Reassign sequential ordem values (1, 2, 3, ...)
+      foreach ($momentos as $index => $momento) {
+          $new_ordem = $index + 1;
+          $sql = "UPDATE momentos SET ordem = $new_ordem WHERE id = {$momento['id']} AND id_realidade = $rid LIMIT 1;";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      }
+
+      echo $mid;
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxSalvarSistemaTempo') {
+      if ($_GET['sid'] > 0) {
+          $sql = "UPDATE time_systems SET 
+              nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
+              descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
+              data_padrao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['data_padrao']) . "',
+              publico = " . (int)$_POST['publico'] . "
+              WHERE id = " . (int)$_GET['sid'] . " LIMIT 1;";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+          echo $_GET['sid'];
+      } else {
+        $tid = generateId(); 
+          $sql = "INSERT INTO time_systems SET  id = $tid, 
+              nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
+              descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
+              data_padrao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['data_padrao']) . "',
+              publico = " . (int)$_POST['publico'] . ",
+              id_realidade = " . (int)$_POST['rid'] . ";";
+          mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+          echo $tid;
+      }
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxSetSistemaPadrao') {
+      mysqli_query($GLOBALS['dblink'], "UPDATE time_systems SET padrao = 0 WHERE id_realidade = " . (int)$_GET['rid'] . ";") or die(mysqli_error($GLOBALS['dblink']));
+      mysqli_query($GLOBALS['dblink'], "UPDATE time_systems SET padrao = 1 WHERE id = " . (int)$_GET['sid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+      echo 'ok';
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxNovoSistemaTempo') {
+      $tid = generateId();
+      $sql = "INSERT INTO time_systems SET  id = $tid,
+          nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_GET['n']) . "',
+          id_realidade = " . (int)$_GET['rid'] . ";";
+      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      echo $tid;
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxAddUnidadeTempo') {
+      $rid = (int)$_GET['rid'];
+      $sid = (int)$_GET['sid'];
+      $uid = (int)$_GET['uid'];
+      $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
+      $duracao = (float)$_POST['duracao'];
+      $equivalente = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['equivalente']);
+      $ref = (int)$_POST['ref'];
+      $quantidade = (float)$_POST['quantidade'];
+      $subNames = json_decode($_POST['subNames'], true);
+
+      if ($uid > 0) {
+          // Atualizar unidade existente
+          $query = "UPDATE time_units SET nome='$nome', duracao=$duracao, equivalente='$equivalente' 
+                    WHERE id=$uid AND id_time_system=$sid AND id_realidade=$rid";
+          mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
+      } else {
+          // Inserir nova unidade
+          $uid = generateId();
+          $query = "INSERT INTO time_units (id, id_time_system, id_realidade, nome, duracao, equivalente) 
+                    VALUES ($uid, $sid, $rid, '$nome', $duracao, '$equivalente')";
+          mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
+      }
+
+      // Atualizar ou inserir ciclo
+      if ($ref > 0 && $quantidade > 0) {
+          $cycle_query = "SELECT id FROM time_cycles WHERE id_unidade=$uid AND id_unidade_ref=$ref AND id_time_system=$sid";
+          $cycle_result = mysqli_query($GLOBALS['dblink'], $cycle_query);
+          if (mysqli_num_rows($cycle_result) > 0) {
+              $query = "UPDATE time_cycles SET quantidade=$quantidade WHERE id_unidade=$uid AND id_unidade_ref=$ref AND id_time_system=$sid";
+          } else {
+              $tcid = generateId();
+              $query = "INSERT INTO time_cycles (id, id_time_system, id_unidade, id_unidade_ref, quantidade) 
+                        VALUES ($tcid, $sid, $uid, $ref, $quantidade)";
+          }
+          mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
+      }
+
+      // Salvar nomes das subunidades
+      if (!empty($subNames)) {
+          // Deletar nomes existentes para a unidade
+          mysqli_query($GLOBALS['dblink'], "DELETE FROM time_names WHERE id_time_system=$sid AND id_unidade=$uid") or die(mysqli_error($GLOBALS['dblink']));
+          // Inserir novos nomes
+          foreach ($subNames as $subName) {
+              $nome = mysqli_real_escape_string($GLOBALS['dblink'], $subName['nome']);
+              $posicao = (int)$subName['posicao'];
+              $quantidadeSub = isset($subName['quantidade_subunidade']) ? $subName['quantidade_subunidade'] : 'null';
+              $query = "INSERT INTO time_names (id, id_time_system, id_unidade, nome, posicao, quantidade_subunidade) 
+                        VALUES (".generateId().", $sid, $uid, '$nome', $posicao, $quantidadeSub)";
+              mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
+          }
+      }
+
+      echo $uid;
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxDeleteUnidadeTempo') {
+      mysqli_query($GLOBALS['dblink'], "DELETE FROM time_units WHERE id = " . (int)$_GET['uid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+      echo 'ok';
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxAddCicloTempo') {
+      $id = generateId();
+      $sql = "INSERT INTO time_cycles SET id = $id,
+          id_time_system = " . (int)$_GET['sid'] . ",
+          id_unidade = " . (int)$_POST['id_unidade'] . ",
+          id_unidade_ref = " . (int)$_POST['id_unidade_ref'] . ",
+          quantidade = " . (float)$_POST['quantidade'] . "
+          ON DUPLICATE KEY UPDATE quantidade = " . (float)$_POST['quantidade'] . ";";
+      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+      echo $id; //mysqli_insert_id($GLOBALS['dblink']) ? mysqli_insert_id($GLOBALS['dblink']) : 1;
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxAddRelacao') {
+    $eid = (int)$_GET['eid'];
+    $rid = (int)$_GET['rid'];
+    $id_entidade2 = (int)$_POST['id_entidade2'];
+    $inicio = (int)$_POST['inicio'];
+    $fim = (int)$_POST['fim'];
+    $tipo_relacao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['tipo_relacao']);
+    $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
+
+    if ($rid > 0) {
+        $sql = "UPDATE entidades_relacoes SET 
+            id_entidade2 = $id_entidade2,
+            tipo_relacao = '$tipo_relacao',
+            id_momento_inicio = '$inicio',
+            id_momento_fim = '$fim',
+            descricao = '$descricao'
+            WHERE id = $rid LIMIT 1;";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+        echo $rid;
+    } else {
+        $rid = generateId();
+        $sql = "INSERT INTO entidades_relacoes SET  id = $rid,
+            id_entidade1 = $eid,
+            id_entidade2 = $id_entidade2,
+            tipo_relacao = '$tipo_relacao',
+            id_momento_inicio = '$inicio',
+            id_momento_fim = '$fim',
+            descricao = '$descricao';";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+        echo $rid;
+    }
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxDeleteRelacao') {
+    $rid = (int)$_GET['rid'];
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM entidades_relacoes WHERE id = $rid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxAddStat') {
+    $eid = (int)$_GET['eid'];
+    $sid = (int)$_GET['sid'];
+    $id_stat = (int)$_POST['id_stat'];
+    $id_momento = (int)$_POST['id_momento'];
+    $valor = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['valor']);
+
+    // Validar tipo_dado
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT tipo FROM stats WHERE id = $id_stat LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    if ($row = mysqli_fetch_assoc($result)) {
+        $tipo_dado = $row['tipo_dado'];
+        if ($tipo_dado == 'integer' && !is_numeric($valor) || $tipo_dado == 'decimal' && !is_numeric($valor)) {
+            echo _t('Valor inválido para o tipo de dado.');
+            die();
+        }
+    }
+
+    if ($sid > 0) {
+        $sql = "UPDATE stats_entidades SET 
+            valor = '$valor'
+            WHERE id_stat = $id_stat 
+              AND id_entidade = $eid
+              AND id_momento = $id_momento LIMIT 1;";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+        echo $sid;
+    } else {
+        $sid = generateId();
+        $sql = "INSERT INTO stats_entidades SET id = $sid,
+            id_entidade = $eid,
+            id_stat = $id_stat,
+            id_momento = $id_momento,
+            valor = '$valor';";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+        echo $sid;
+    }
+    die();
+  }
+
+  if ($_GET['action'] == 'importarIdioma') {
+
+      ob_start();
+      header('Content-Type: application/json; charset=utf-8');
+
+      $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
+      if ($mysqli->connect_error) {
+          http_response_code(500);
+          echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+          ob_end_flush();
+          exit;
+      }
+
+      // Ensure UTF-8 encoding for MySQL
+      if (!$mysqli->set_charset('utf8mb4')) {
+          error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
+          $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+      }
+
+      try {
+          if (!isset($_SESSION['KondisonairUzatorIDX'])) {
+              http_response_code(401);
+              echo json_encode(['error' => 'User not authenticated']);
+              ob_end_flush();
+              exit;
+          }
+          $userId = (int)$_SESSION['KondisonairUzatorIDX'];
+
+          if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+              throw new Exception('No valid file uploaded.');
+          }
+
+          $zip = new ZipArchive();
+          if ($zip->open($_FILES['file']['tmp_name']) !== true) {
+              throw new Exception('Failed to open ZIP file.');
+          }
+
+          $jsonFile = null;
+          for ($i = 0; $i < $zip->numFiles; $i++) {
+              $filename = $zip->getNameIndex($i);
+              if (preg_match('/^\d+\.json$/', $filename)) {
+                  $jsonFile = $filename;
+                  break;
+              }
+          }
+          if (!$jsonFile) {
+              $zip->close();
+              throw new Exception('No <id_idioma>.json file found in ZIP.');
+          }
+
+          $json = $zip->getFromName($jsonFile);
+          if ($json === false) {
+              $zip->close();
+              throw new Exception('Failed to read JSON file from ZIP.');
+          }
+
+          if (!mb_check_encoding($json, 'UTF-8')) {
+              $json = mb_convert_encoding($json, 'UTF-8', 'auto');
+              if (!mb_check_encoding($json, 'UTF-8')) {
+                  error_log("Failed to convert JSON to UTF-8");
+                  $zip->close();
+                  throw new Exception('Invalid character encoding in JSON file');
+              }
+          }
+          $data = json_decode($json, true);
+          if (json_last_error() !== JSON_ERROR_NONE) {
+              $zip->close();
+              throw new Exception('Invalid JSON format: ' . json_last_error_msg());
+          }
+
+          $mysqli->begin_transaction();
+          $stats = ['inserted' => 0, 'updated' => 0, 'existing' => []];
+
+          function checkExistingIds($mysqli, $table, $ids) {
+              if (empty($ids)) {
+                  return [];
+              }
+              $placeholders = implode(',', array_fill(0, count($ids), '?'));
+              $query = "SELECT id FROM `$table` WHERE id IN ($placeholders)";
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+              $types = str_repeat('i', count($ids));
+              $stmt->bind_param($types, ...$ids);
+              $stmt->execute();
+              $result = $stmt->get_result();
+              $existing = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
+              $stmt->close();
+              return $existing;
+          }
+
+          function checkExistingCollab($mysqli, $id_usuario, $id_idioma) {
+              $query = "SELECT id FROM collabs WHERE id_usuario = ? AND id_idioma = ?";
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for collabs check: " . $mysqli->error);
+              }
+              $stmt->bind_param('ii', $id_usuario, $id_idioma);
+              $stmt->execute();
+              $result = $stmt->get_result();
+              $exists = $result->num_rows > 0;
+              $stmt->close();
+              return $exists;
+          }
+
+          function upsertRecords($mysqli, $table, $records, &$stats) {
+              if (empty($records)) {
+                  return;
+              }
+              $records = is_array($records) ? $records : [$records];
+              $ids = array_filter(array_column($records, 'id'), 'is_numeric');
+              $existingIds = checkExistingIds($mysqli, $table, $ids);
+              if (!empty($existingIds)) {
+                  $stats['existing'][] = "$table: " . count($existingIds) . " record(s) will be overwritten";
+              }
+
+              $firstRow = $records[0];
+              $columns = array_keys($firstRow);
+              $placeholders = implode(',', array_fill(0, count($columns), '?'));
+              $updatePairs = array_map(function ($col) {
+                  return "`$col` = VALUES(`$col`)";
+              }, $columns);
+              $updateSql = implode(',', $updatePairs);
+              $query = "INSERT INTO `$table` (`" . implode('`,`', $columns) . "`) VALUES ($placeholders) ON DUPLICATE KEY UPDATE $updateSql";
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+
+              foreach ($records as $row) {
+                  $values = [];
+                  $types = '';
+                  $isExisting = isset($row['id']) && in_array($row['id'], $existingIds);
+                  foreach ($columns as $col) {
+                      $value = $row[$col];
+                      // Ensure UTF-8 for strings
+                      if (is_string($value) && !mb_check_encoding($value, 'UTF-8')) {
+                          $original = $value;
+                          $value = mb_convert_encoding($value, 'UTF-8', 'auto');
+                          if (!mb_check_encoding($value, 'UTF-8')) {
+                              error_log("Failed to convert string in $col for $table: " . substr($original, 0, 50));
+                              $value = '';
+                          }
+                      }
+                      $values[] = $value;
+                      $types .= is_numeric($value) && !is_float($value + 0) ? 'i' : 's';
+                  }
+                  $stmt->bind_param($types, ...$values);
+                  $stmt->execute();
+                  if ($isExisting) {
+                      $stats['updated']++;
+                  } else {
+                      $stats['inserted']++;
+                  }
+              }
+              $stmt->close();
+          }
+
+          if (!isset($data['idiomas']) || empty($data['idiomas'])) {
+              throw new Exception('Missing idiomas data');
+          }
+          // $data['idiomas']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
+          upsertRecords($mysqli, 'idiomas', [$data['idiomas']], $stats);
+          $newIdiomaId = $data['idiomas']['id'];
+
+          if (!isset($data['usuarios']) || empty($data['usuarios'])) {
+              throw new Exception('Missing usuarios data');
+          }
+          upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
+
+          $allTables = [
+              'artygs',
+              'blocos',
+              'collabs',
+              'classes',
+              'classesSom',
+              'concordancias',
+              'escritas',
+              'frases',
+              'generos',
+              'inventarios',
+              'ipaTitulos',
+              'palavras',
+              'sonsPersonalizados',
+              'soundChanges',
+              'studason_tests',
+              'formasSilaba',
+              'nivelUsoPalavra',
+              'artyg_dest',
+              'fontes',
+              'autosubstituicoes',
+              'drawChars',
+              'glifos',
+              'formaSilabaComponente',
+              'itensConcordancias',
+              'gloss_itens',
+              'itens_flexoes',
+              'flexoes',
+              'itens_palavras',
+              'palavrasNativas',
+              'palavras_origens',
+              'palavras_referentes',
+              'palavras_usos',
+              'significados_idiomas',
+              'sons_classes',
+              'teclas',
+              'classesGeneros'
+          ];
+
+          foreach ($allTables as $table) {
+              if (isset($data[$table]) && !empty($data[$table])) {
+                  foreach ($data[$table] as &$row) {
+                      if (isset($row['id_idioma'])) {
+                          $row['id_idioma'] = $newIdiomaId;
+                      }
+                  }
+                  upsertRecords($mysqli, $table, $data[$table], $stats);
+              }
+          }
+
+          if ($userId != $data['idiomas']['id_usuario']) {
+              if (!checkExistingCollab($mysqli, $userId, $newIdiomaId)) {
+                  $collabId = generateId();
+                  $collabRecord = [
+                      'id' => $collabId,
+                      'id_idioma' => $newIdiomaId,
+                      'id_usuario' => $userId
+                  ];
+                  upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
+              } else {
+                  $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on language $newIdiomaId)";
+              }
+          }
+
+          $uploadDirs = [];
+          for ($i = 0; $i < $zip->numFiles; $i++) {
+              $filename = $zip->getNameIndex($i);
+              if ($filename === $jsonFile) {
+                  continue;
+              }
+              
+              $parts = explode('/', $filename);
+              if (count($parts) < 1) {
+                  continue; // Skip files without a directory
+              }
+              $topDir = $parts[0];
+              if (!isset($uploadDirs[$topDir])) {
+                  $baseDir = in_array($topDir, ['audio', 'image']) ? "$topDir/$newIdiomaId" : $topDir;
+                  $uploadDirs[$topDir] = "$baseDir/";
+                  if (!is_dir($uploadDirs[$topDir]) && !mkdir($uploadDirs[$topDir], 0755, true)) {
+                      $zip->close();
+                      throw new Exception("Failed to create directory: {$uploadDirs[$topDir]}");
+                  }
+              }
+              $targetDir = in_array($topDir, ['audio', 'image']) ? "$topDir/$newIdiomaId/" : '.';
+              if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true)) {
+                  $zip->close();
+                  throw new Exception("Failed to create directory: $targetDir");
+              }
+              if ($zip->extractTo($targetDir, $filename) === false) {
+                  error_log("Failed to extract $filename");
+              } else {
+                  if ( in_array($topDir, ['audio', 'image']) ) rename($targetDir.$filename, $targetDir.basename($filename));
+              }
+              rmdir($targetDir.'audio/');
+              rmdir($targetDir.'image/');
+          }
+          $zip->close();
+
+          $mysqli->commit();
+
+          $message = _t("Importado com sucesso: %1 registros inseridos, %2 registros atualizados.",[$stats['inserted'],$stats['updated']]);
+          if (!empty($stats['existing'])) {
+              $message .= " Warning: " . implode('; ', $stats['existing']);
+          }
+          echo json_encode(['message' => $message]);
+      } catch (Exception $e) {
+          $mysqli->rollback();
+          error_log("Import error: " . $e->getMessage());
+          http_response_code(500);
+          echo json_encode(['error' => $e->getMessage()]);
+      }
+
+      ob_end_flush();
+      $mysqli->close();
+      die(); 
+  };
+
+  if ($_GET['action'] == 'importarRealidade') {
+
+      ob_start();
+      header('Content-Type: application/json; charset=utf-8');
+
+      $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
+      if ($mysqli->connect_error) {
+          http_response_code(500);
+          echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+          ob_end_flush();
+          exit;
+      }
+
+      // Ensure UTF-8 encoding for MySQL
+      if (!$mysqli->set_charset('utf8mb4')) {
+          error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
+          $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+      }
+
+      try {
+          if (!isset($_SESSION['KondisonairUzatorIDX'])) {
+              http_response_code(401);
+              echo json_encode(['error' => 'User not authenticated']);
+              ob_end_flush();
+              exit;
+          }
+          $userId = (int)$_SESSION['KondisonairUzatorIDX'];
+
+          if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+              throw new Exception('No valid file uploaded.');
+          }
+
+          $zip = new ZipArchive();
+          if ($zip->open($_FILES['file']['tmp_name']) !== true) {
+              throw new Exception('Failed to open ZIP file.');
+          }
+
+          $jsonFile = null;
+          for ($i = 0; $i < $zip->numFiles; $i++) {
+              $filename = $zip->getNameIndex($i);
+              if (preg_match('/^\d+\.json$/', $filename)) {
+                  $jsonFile = $filename;
+                  break;
+              }
+          }
+          if (!$jsonFile) {
+              $zip->close();
+              throw new Exception('No <id_realidade>.json file found in ZIP.');
+          }
+
+          $json = $zip->getFromName($jsonFile);
+          if ($json === false) {
+              $zip->close();
+              throw new Exception('Failed to read JSON file from ZIP.');
+          }
+
+          if (!mb_check_encoding($json, 'UTF-8')) {
+              $json = mb_convert_encoding($json, 'UTF-8', 'auto');
+              if (!mb_check_encoding($json, 'UTF-8')) {
+                  error_log("Failed to convert JSON to UTF-8");
+                  $zip->close();
+                  throw new Exception('Invalid character encoding in JSON file');
+              }
+          }
+          $data = json_decode($json, true);
+          if (json_last_error() !== JSON_ERROR_NONE) {
+              $zip->close();
+              throw new Exception('Invalid JSON format: ' . json_last_error_msg());
+          }
+
+          $mysqli->begin_transaction();
+          $stats = ['inserted' => 0, 'updated' => 0, 'existing' => []];
+
+          function checkExistingIds($mysqli, $table, $ids) {
+              if (empty($ids)) {
+                  return [];
+              }
+              $placeholders = implode(',', array_fill(0, count($ids), '?'));
+              $query = "SELECT id FROM `$table` WHERE id IN ($placeholders)";
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+              $types = str_repeat('i', count($ids));
+              $stmt->bind_param($types, ...$ids);
+              $stmt->execute();
+              $result = $stmt->get_result();
+              $existing = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
+              $stmt->close();
+              return $existing;
+          }
+
+          function checkExistingCollab($mysqli, $id_usuario, $id_realidade) {
+              $query = "SELECT id FROM collabs_realidades WHERE id_usuario = ? AND id_realidade = ?";
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for collabs check: " . $mysqli->error);
+              }
+              $stmt->bind_param('ii', $id_usuario, $id_realidade);
+              $stmt->execute();
+              $result = $stmt->get_result();
+              $exists = $result->num_rows > 0;
+              $stmt->close();
+              return $exists;
+          }
+
+          function upsertRecords($mysqli, $table, $records, &$stats) {
+              if (empty($records)) {
+                  return;
+              }
+              $records = is_array($records) ? $records : [$records];
+              $ids = array_filter(array_column($records, 'id'), 'is_numeric');
+              $existingIds = checkExistingIds($mysqli, $table, $ids);
+              if (!empty($existingIds)) {
+                  $stats['existing'][] = "$table: " . count($existingIds) . " record(s) will be overwritten";
+              }
+
+              $firstRow = $records[0];
+              $columns = array_keys($firstRow);
+              $placeholders = implode(',', array_fill(0, count($columns), '?'));
+              $updatePairs = array_map(function ($col) {
+                  return "`$col` = VALUES(`$col`)";
+              }, $columns);
+              $updateSql = implode(',', $updatePairs);
+              $query = "INSERT INTO `$table` (`" . implode('`,`', $columns) . "`) VALUES ($placeholders) ON DUPLICATE KEY UPDATE $updateSql";
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+
+              foreach ($records as $row) {
+                  $values = [];
+                  $types = '';
+                  $isExisting = isset($row['id']) && in_array($row['id'], $existingIds);
+                  foreach ($columns as $col) {
+                      $value = $row[$col];
+                      // Ensure UTF-8 for strings
+                      if (is_string($value) && !mb_check_encoding($value, 'UTF-8')) {
+                          $original = $value;
+                          $value = mb_convert_encoding($value, 'UTF-8', 'auto');
+                          if (!mb_check_encoding($value, 'UTF-8')) {
+                              error_log("Failed to convert string in $col for $table: " . substr($original, 0, 50));
+                              $value = '';
+                          }
+                      }
+                      $values[] = $value;
+                      $types .= is_numeric($value) && !is_float($value + 0) ? 'i' : 's';
+                  }
+                  $stmt->bind_param($types, ...$values);
+                  $stmt->execute();
+                  if ($isExisting) {
+                      $stats['updated']++;
+                  } else {
+                      $stats['inserted']++;
+                  }
+              }
+              $stmt->close();
+          }
+
+          if (!isset($data['realidades']) || empty($data['realidades'])) {
+              throw new Exception('Missing realidades data');
+          }
+          // $data['realidades']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
+          upsertRecords($mysqli, 'realidades', [$data['realidades']], $stats);
+          $newRealidadeId = $data['realidades']['id'];
+
+          if (!isset($data['usuarios']) || empty($data['usuarios'])) {
+              throw new Exception('Missing usuarios data');
+          }
+          upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
+
+          $allTables = [
+              'collabs_realidades',
+              'entidades',
+              'entidades_tipos',
+              'historias',
+              'historias_tipos',
+              'momentos',
+              'stats',
+              'time_systems',
+              'time_cycles',
+              'time_names',
+              'time_adjustment_rules',
+              'time_units',
+              'stats_entidades',
+              'entidades_nomes',
+              'historias_entidades',
+              'entidades_relacoes',
+              'entidades_tipos_stats'
+          ];
+
+          foreach ($allTables as $table) {
+              if (isset($data[$table]) && !empty($data[$table])) {
+                  foreach ($data[$table] as &$row) {
+                      if (isset($row['id_realidade'])) {
+                          $row['id_realidade'] = $newRealidadeId;
+                      }
+                  }
+                  upsertRecords($mysqli, $table, $data[$table], $stats);
+              }
+          }
+
+          if ($userId != $data['realidades']['id_usuario']) {
+              if (!checkExistingCollab($mysqli, $userId, $newRealidadeId)) {
+                  $collabId = generateId();
+                  $collabRecord = [
+                      'id' => $collabId,
+                      'id_realidade' => $newRealidadeId,
+                      'id_usuario' => $userId
+                  ];
+                  upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
+              } else {
+                  $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on reality $newRealidadeId)";
+              }
+          }
+
+          $zip->close();
+
+          $mysqli->commit();
+
+          $message = _t("Importado com sucesso: %1 registros inseridos, %2 registros atualizados.",[$stats['inserted'],$stats['updated']]);
+          if (!empty($stats['existing'])) {
+              $message .= " Warning: " . implode('; ', $stats['existing']);
+          }
+          echo json_encode(['message' => $message]);
+      } catch (Exception $e) {
+          $mysqli->rollback();
+          error_log("Import error: " . $e->getMessage());
+          http_response_code(500);
+          echo json_encode(['error' => $e->getMessage()]);
+      }
+
+      ob_end_flush();
+      $mysqli->close();
+      die(); 
+  };
+
+  if ($_GET['action'] == 'updateMaxSilabas') {
+      mysqli_query($GLOBALS['dblink'],"UPDATE idiomas SET silabas = ".$_GET['n']."
+          WHERE id = ".$_GET['i']." LIMIT 1;");
+      die('ok');
+  };
+
+  if ($_GET['action'] == 'publicaTexto') { 
+
+
+    $query = "SELECT t.*,
+      (SELECT separadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as separadores,
+          (SELECT binario FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as binario,
+      (SELECT iniciadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores,
+      (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid
+      FROM studason_tests t
+      WHERE t.id = ".$_GET['id']." AND t.id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;";
+
+    $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
+    $separadorLinhas = array("\n");
+    while($r = mysqli_fetch_assoc($result)){
+      if ($r['num_palavras']>0) die('jaw');
+
+      $textoSentencas = $r['texto'];
+      if ($r['binario']>0) $bin = ' BINARY ';
+      $id_idioma = $r['id_idioma'];
+      $eid = $r['eid'];
+
+      $separadorPalavras = preg_split('//u', $r['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
+
+      $iniciadoresPalavras = preg_split('//u', $r['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
+      foreach ($iniciadoresPalavras as $sep){
+        $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
+      }
+
+      $palDesc = 0;
+      $palCon = 0;
+      $palTotal = 0;
+      $palStud = 0;
+      $palNovas = 0;
+      $palOk = 0;
+
+      $btnConferir = '';
+
+      $listaPalavrasUnicas = array();
+
+      $linhas = multiexplode($separadorLinhas,$textoSentencas);
+      
+      foreach ($linhas as $linha){
+
+        $palavras = separarPalavrasLinha($separadorPalavras,$linha,$id_idioma, $eid, $bin, '','')[0];
+
+        foreach ($palavras as $p){
+          if ($p == '') continue;
+          $pids = '';
+        
+          if ($eid > 0){
+          $sql = "SELECT p.*, c.id as clid, pn.palavra as nativa, c.nome as cnome,
+              (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
+            FROM palavras p
+            LEFT JOIN classes c ON p.id_classe = c.id 
+            LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
+            WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." 
+            ORDER BY p.id_forma_dicionario DESC;"; 
+          }else{
+            $sql = "SELECT p.*, c.id as clid, p.romanizacao as nativa, c.nome as cnome,
+                (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
+              FROM palavras p
+              LEFT JOIN classes c ON p.id_classe = c.id 
+              WHERE ".$bin." p.romanizacao = '".$p."' AND p.id_idioma = ".$id_idioma." 
+              ORDER BY p.id_forma_dicionario DESC;"; 
+          }
+            // AND p.id_forma_dicionario = 0
+          //echo $sql;
+          $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
+          $palTotal++;
+          if (mysqli_num_rows($a)<1){
+            $palDesc++;
+          }else{
+            $palCon++;
+            
+            while($qpid = mysqli_fetch_assoc($a)){
+              $pids .= $qpid['id'].',';
+            }
+            
+            if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
+            else $listaPalavrasUnicas[$p]['q'] = 1;
+            
+            $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
+            $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
+            if (mysqli_num_rows($qpstres)<1){
+              $palNovas++;
+            }else{
+              $qpst = mysqli_fetch_assoc($qpstres);
+              $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
+
+              $listaPalavrasUnicas[$p]['s'] = $pst;
+
+              if ($qpst['status_aprendido']==5) $palOk++;
+              else if ($qpst['status_aprendido']>0) $palStud++;
+              else $palNovas++;
+            }
+          }
+          // echo ' '.$p.' ';
+        }
+      }
+
+      $novasUnicas = 0;
+      foreach($listaPalavrasUnicas as $pal => $pu){if ($pu['s']<1) { $novasUnicas++; } };
+
+      if ($palDesc>0) { // ;
+        die(_t('Ainda há %1 palavras fora do dicionário', [$palDesc]));
+      }else{
+        //update 
+        mysqli_query($GLOBALS['dblink'],"UPDATE studason_tests SET
+          num_palavras = ".$novasUnicas."
+          WHERE id = ".$r['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+      }
+          
+    };
+
+    die('ok');
+  };
+
+  if ($_GET['action'] == 'ajaxPublicarListaSC') {
+      if ($_GET['id']>0) {
+        $id = (int)$_GET['id'];
+        $result = mysqli_query($GLOBALS['dblink'], "
+            UPDATE soundChanges SET publico = 1
+            WHERE id = $id
+        ") or die(mysqli_error($GLOBALS['dblink']));
+      }
+      echo 'ok';
+      die();
+  };
+
+  if ($_GET['action'] == 'ajaxRemoverCatSom') { // otimizar sql queries
+      //echo listarSonsAdicionaveis($_GET['iid'],$_GET['id']);
+      // 
+      mysqli_query($GLOBALS['dblink'],"DELETE FROM sons_classes WHERE id_classeSom = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+      mysqli_query($GLOBALS['dblink'],"DELETE FROM classesSom WHERE id = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+      die('ok');
+  }
+
+  if ($_GET['action'] == 'ajaxDelStat') {
+    $sid = (int)$_GET['sid'];
+    // Verificar se há valores associados
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT COUNT(*) as count FROM stats_entidades WHERE id_stat = $sid;") or die(mysqli_error($GLOBALS['dblink']));
+    $row = mysqli_fetch_assoc($result);
+    if ($row['count'] > 0) {
+        echo _t('Não é possível apagar este tipo de estatística, pois há valores associados.');
+        die();
+    }
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM stats WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxDelHistoria') {
+    $hid = (int)$_GET['hid'];
+    // Verificar se há histórias filhas
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT COUNT(*) as count FROM historias WHERE id_superior = $hid;") or die(mysqli_error($GLOBALS['dblink']));
+    $row = mysqli_fetch_assoc($result);
+    if ($row['count'] > 0) {
+        echo _t('Não é possível apagar esta história, pois há histórias filhas associadas.');
+        die();
+    }
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM historias WHERE id = $hid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxDelMomento') {
+    $mid = (int)$_GET['mid'];
+    // Verificar dependências
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT 
+        (SELECT COUNT(*) FROM historias WHERE id_momento = $mid) as historias,
+        (SELECT COUNT(*) FROM stats_entidades WHERE id_momento = $mid) as stats");
+    $row = mysqli_fetch_assoc($result);
+    if ($row['historias'] > 0 || $row['stats'] > 0) {
+        echo _t('Não é possível apagar este momento, pois há histórias ou estatísticas associadas.');
+        die();
+    }
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM momentos WHERE id = $mid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    die();
+  }
+
+  if ($_GET['action'] == 'ajaxDeleteSistemaTempo') {
+      mysqli_query($GLOBALS['dblink'], "DELETE FROM time_systems WHERE id = " . (int)$_GET['sid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+      echo 'ok';
+      die();
+  }
+
+  if ($_GET['action'] == 'ajaxDeleteStat') {
+    $sid = (int)$_GET['sid'];
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM stats_entidades WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    echo 'ok';
+    die();
+  }
+
+  if ($_GET['action'] == 'deleteStatsByEntityAndStat') {
+      $eid = (int)$_POST['eid'];
+      $id_stat = (int)$_POST['id_stat'];
+      $result = mysqli_query($GLOBALS['dblink'], "
+          DELETE FROM stats_entidades 
+          WHERE id_entidade = $eid AND id_stat = $id_stat
+      ") or die(mysqli_error($GLOBALS['dblink']));
+      
+      echo json_encode(['success' => true]);
+      die();
+  }
+
+  if ($_GET['action'] == 'apagarIdioma') {
+      ob_start();
+
+      ini_set('default_charset', 'UTF-8');
+      header('Content-Type: application/json; charset=utf-8');
+
+      $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
+      if ($mysqli->connect_error) {
+          http_response_code(500);
+          echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+          ob_end_flush();
+          exit;
+      }
+
+      if (!$mysqli->set_charset('utf8mb4')) {
+          error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
+          $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+      }
+
+      try {
+          if (!isset($_SESSION['KondisonairUzatorIDX'])) {
+              http_response_code(401);
+              echo json_encode(['error' => 'User not authenticated']);
+              ob_end_flush();
+              exit;
+          }
+          $userId = (int)$_SESSION['KondisonairUzatorIDX'];
+
+          if (!isset($_POST['id_idioma']) || !is_numeric($_POST['id_idioma']) || !isset($_POST['password'])) {
+              http_response_code(400);
+              echo json_encode(['error' => 'Missing or invalid language ID or password']);
+              ob_end_flush();
+              exit;
+          }
+          $idIdioma = (int)$_POST['id_idioma'];
+          $password = $_POST['password'];
+
+          $stmt = $mysqli->prepare("SELECT senha FROM usuarios WHERE id = ?");
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for password check: " . $mysqli->error);
+          }
+          $stmt->bind_param('i', $userId);
+          $stmt->execute();
+          $result = $stmt->get_result();
+          $user = $result->fetch_assoc();
+          $stmt->close();
+
+          if (!$user || !password_verify($password, $user['senha'])) {
+              http_response_code(401);
+              echo json_encode(['error' => 'Invalid password']);
+              ob_end_flush();
+              exit;
+          }
+
+          $stmt = $mysqli->prepare(
+              "SELECT id FROM idiomas WHERE id = ? AND (id_usuario = ? OR EXISTS (
+                  SELECT 1 FROM collabs WHERE id_idioma = ? AND id_usuario = ?
+              ))"
+          );
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for permission check: " . $mysqli->error);
+          }
+          $stmt->bind_param('iiii', $idIdioma, $userId, $idIdioma, $userId);
+          $stmt->execute();
+          $result = $stmt->get_result();
+          if ($result->num_rows === 0) {
+              http_response_code(403);
+              echo json_encode(['error' => 'User not authorized to delete this language']);
+              ob_end_flush();
+              exit;
+          }
+          $stmt->close();
+
+          $mysqli->begin_transaction();
+
+          $stmt = $mysqli->prepare("SELECT id FROM escritas WHERE id_idioma = ?");
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for escritas IDs: " . $mysqli->error);
+          }
+          $stmt->bind_param('i', $idIdioma);
+          $stmt->execute();
+          $result = $stmt->get_result();
+          $escritasIds = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
+          $stmt->close();
+
+          $stmt = $mysqli->prepare(
+              "SELECT arquivo FROM fontes WHERE id IN (
+                  SELECT id_fonte FROM escritas WHERE id_idioma = ?
+                  AND id_fonte NOT IN (SELECT id_fonte FROM escritas WHERE id_idioma != ?)
+              )"
+          );
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for fontes arquivo: " . $mysqli->error);
+          }
+          $stmt->bind_param('ii', $idIdioma, $idIdioma);
+          $stmt->execute();
+          $result = $stmt->get_result();
+          $fontesArquivos = array_column($result->fetch_all(MYSQLI_ASSOC), 'arquivo');
+          $stmt->close();
+
+          $dirsToDelete = [
+              "audio/$idIdioma",
+              "image/$idIdioma"
+          ];
+          foreach ($dirsToDelete as $dir) {
+              $path = "$dir";
+              if (is_dir($path)) {
+                  foreach (glob("$path/*") as $arquivo) {
+                      if (file_exists($arquivo) && !unlink($arquivo)) {
+                          error_log("Failed to delete file: $arquivo", 3, '/tmp/delete_debug.txt');
+                      }
+                  }
+                  // Remove directory if empty
+                  @rmdir($path);
+              }
+          }
+          foreach ($escritasIds as $eid) {
+              $path = "writing/$eid";
+              if (is_dir($path)) {
+                  foreach (glob("$path/*") as $arquivo) {
+                      if (file_exists($arquivo) && !unlink($arquivo)) {
+                          error_log("Failed to delete file: $arquivo", 3, '/tmp/delete_debug.txt');
+                      }
+                  }
+                  @rmdir($path);
+              }
+          }
+          foreach ($fontesArquivos as $arquivo) {
+              $path = "fonts/" . basename($arquivo);
+              if (file_exists($path) && !unlink($path)) {
+                  error_log("Failed to delete font file: $path", 3, '/tmp/delete_debug.txt');
+              }
+          }
+
+          $indirectTables = [
+              'gloss_itens' => "DELETE FROM gloss_itens WHERE id_item IN (SELECT id FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?))",
+              'itens_flexoes' => "DELETE FROM itens_flexoes WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?) OR id_item IN (SELECT id FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)) OR id_genero IN (SELECT id FROM generos WHERE id_idioma = ?)",
+              'itensConcordancias' => "DELETE FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)",
+              'formaSilabaComponente' => "DELETE FROM formaSilabaComponente WHERE id_formaSilaba IN (SELECT id FROM formasSilaba WHERE id_idioma = ?)",
+              'autosubstituicoes' => "DELETE FROM autosubstituicoes WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma = ?)",
+              'drawChars' => "DELETE FROM drawChars WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma = ?)",
+              'glifos' => "DELETE FROM glifos WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma = ?)",
+              'itens_palavras' => "DELETE FROM itens_palavras WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
+              'palavrasNativas' => "DELETE FROM palavrasNativas WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
+              'palavras_origens' => "DELETE FROM palavras_origens WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
+              'palavras_referentes' => "DELETE FROM palavras_referentes WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
+              'palavras_usos' => "DELETE FROM palavras_usos WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
+              'significados_idiomas' => "DELETE FROM significados_idiomas WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
+              'sons_classes' => "DELETE FROM sons_classes WHERE id_classeSom IN (SELECT id FROM classesSom WHERE id_idioma = ?)",
+              'teclas' => "DELETE FROM teclas WHERE id_inventario IN (SELECT id FROM inventarios WHERE id_idioma = ?)",
+              'artyg_dest' => "DELETE FROM artyg_dest WHERE id_artyg IN (SELECT id FROM artygs WHERE id_idioma = ?)",
+              'classesGeneros' => "DELETE FROM classesGeneros WHERE id_genero IN (SELECT id FROM generos WHERE id_idioma = ?)"
+          ];
+
+          $stmt = $mysqli->prepare("
+              DELETE FROM flexoes 
+              WHERE id IN (
+                  SELECT id_flexao 
+                  FROM itens_flexoes 
+                  WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)
+              )
+          ");
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for flexoes: " . $mysqli->error);
+          }
+          $stmt->bind_param('i', $idIdioma);
+          $stmt->execute();
+          $stmt->close();
+
+          foreach ($indirectTables as $table => $query) {
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+              if ($table === 'itens_flexoes') {
+                  $stmt->bind_param('iii', $idIdioma, $idIdioma, $idIdioma);
+              } else {
+                  $stmt->bind_param('i', $idIdioma);
+              }
+              $stmt->execute();
+              $stmt->close();
+          }
+
+          $stmt = $mysqli->prepare(
+              "DELETE FROM fontes WHERE id IN (
+                  SELECT id_fonte FROM escritas WHERE id_idioma = ?
+                  AND id_fonte NOT IN (SELECT id_fonte FROM escritas WHERE id_idioma != ?)
+              )"
+          );
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for fontes: " . $mysqli->error);
+          }
+          $stmt->bind_param('ii', $idIdioma, $idIdioma);
+          $stmt->execute();
+          $stmt->close();
+
+          // Delete direct tables
+          $directTables = [
+              'artygs',
+              'blocos',
+              'classes',
+              'classesSom',
+              'collabs',
+              'concordancias',
+              'escritas',
+              'frases',
+              'generos',
+              'inventarios',
+              'ipaTitulos',
+              'palavras',
+              'sonsPersonalizados',
+              'soundChanges',
+              'studason_tests',
+              'formasSilaba',
+              'nivelUsoPalavra'
+          ];
+
+          foreach ($directTables as $table) {
+              $stmt = $mysqli->prepare("DELETE FROM `$table` WHERE id_idioma = ?");
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+              $stmt->bind_param('i', $idIdioma);
+              $stmt->execute();
+              $stmt->close();
+          }
+
+          // Delete idiomas
+          if ($idIdioma > 10000){
+              $stmt = $mysqli->prepare("DELETE FROM idiomas WHERE id = ?");
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for idiomas: " . $mysqli->error);
+              }
+              $stmt->bind_param('i', $idIdioma);
+              $stmt->execute();
+              if ($stmt->affected_rows === 0) {
+                  throw new Exception("Language not found");
+              }
+              $stmt->close();
+          }
+
+          $mysqli->commit();
+          echo json_encode(['message' => _t('Idioma apagado com sucesso')]);
+      } catch (Exception $e) {
+          $mysqli->rollback();
+          error_log("Delete error: " . $e->getMessage());
+          http_response_code(500);
+          echo json_encode(['error' => $e->getMessage()]);
+      }
+
+      ob_end_flush();
+      $mysqli->close();
+      die(); 
+  };
+
+  if ($_GET['action'] == 'apagarRealidade') {
+      ob_start();
+
+      ini_set('default_charset', 'UTF-8');
+      header('Content-Type: application/json; charset=utf-8');
+
+      $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
+      if ($mysqli->connect_error) {
+          http_response_code(500);
+          echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+          ob_end_flush();
+          exit;
+      }
+
+      if (!$mysqli->set_charset('utf8mb4')) {
+          error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
+          $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+      }
+
+      try {
+          if (!isset($_SESSION['KondisonairUzatorIDX'])) {
+              http_response_code(401);
+              echo json_encode(['error' => 'User not authenticated']);
+              ob_end_flush();
+              exit;
+          }
+          $userId = (int)$_SESSION['KondisonairUzatorIDX'];
+
+          if (!isset($_POST['id_realidade']) || !is_numeric($_POST['id_realidade']) || !isset($_POST['password'])) {
+              http_response_code(400);
+              echo json_encode(['error' => 'Missing or invalid reality ID or password']);
+              ob_end_flush();
+              exit;
+          }
+          $idRealidade = (int)$_POST['id_realidade'];
+          $password = $_POST['password'];
+
+          $stmt = $mysqli->prepare("SELECT senha FROM usuarios WHERE id = ?");
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for password check: " . $mysqli->error);
+          }
+          $stmt->bind_param('i', $userId);
+          $stmt->execute();
+          $result = $stmt->get_result();
+          $user = $result->fetch_assoc();
+          $stmt->close();
+
+          if (!$user || !password_verify($password, $user['senha'])) {
+              http_response_code(401);
+              echo json_encode(['error' => 'Invalid password']);
+              ob_end_flush();
+              exit;
+          }
+
+          $stmt = $mysqli->prepare(
+              "SELECT id FROM realidades WHERE id = ? AND (id_usuario = ? OR EXISTS (
+                  SELECT 1 FROM collabs_realidades WHERE id_realidade = ? AND id_usuario = ?
+              ))"
+          );
+          if ($stmt === false) {
+              throw new Exception("Prepare failed for permission check: " . $mysqli->error);
+          }
+          $stmt->bind_param('iiii', $idRealidade, $userId, $idRealidade, $userId);
+          $stmt->execute();
+          $result = $stmt->get_result();
+          if ($result->num_rows === 0) {
+              http_response_code(403);
+              echo json_encode(['error' => 'User not authorized to delete this reality']);
+              ob_end_flush();
+              exit;
+          }
+          $stmt->close();
+
+          $mysqli->begin_transaction();
+
+          $indirectTables = [
+              'entidades_tipos_stats' => "DELETE FROM entidades_tipos_stats WHERE id_entidade_tipo IN (SELECT id FROM entidades_tipos WHERE id_realidade = ?)",
+              'stats_entidades' => "DELETE FROM stats_entidades WHERE id_entidade IN (SELECT id FROM entidades WHERE id_realidade = ?)",
+              'entidades_nomes' => "DELETE FROM entidades_nomes WHERE id_entidade IN (SELECT id FROM entidades WHERE id_realidade = ?)",
+              'historias_entidades' => "DELETE FROM historias_entidades WHERE id_entidade IN (SELECT id FROM entidades WHERE id_realidade = ?)",
+              'entidades_relacoes' => "DELETE FROM entidades_relacoes WHERE id_entidade1 IN (SELECT id FROM entidades WHERE id_realidade = ?) AND id_entidade2 IN (SELECT id FROM entidades WHERE id_realidade = ?) ",
+              'time_cycles' => "DELETE FROM time_cycles WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)",
+              'time_names' => "DELETE FROM time_names WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)",
+              'time_adjustment_rules' => "DELETE FROM time_adjustment_rules WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)",
+              'time_units' => "DELETE FROM time_units WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)"
+          ];
+
+          foreach ($indirectTables as $table => $query) {
+              $stmt = $mysqli->prepare($query);
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+              if ($table === 'entidades_relacoes') {
+                  $stmt->bind_param('ii', $idRealidade, $idRealidade);
+              } else {
+                  $stmt->bind_param('i', $idRealidade);
+              }
+              $stmt->execute();
+              $stmt->close();
+          }
+
+          // Delete direct tables
+          $directTables = [
+              'collabs_realidades',
+              'entidades',
+              'entidades_tipos',
+              'historias',
+              'historias_tipos',
+              'momentos',
+              'stats',
+              'time_systems'
+          ];
+
+          foreach ($directTables as $table) {
+              $stmt = $mysqli->prepare("DELETE FROM `$table` WHERE id_realidade = ?");
+              if ($stmt === false) {
+                  throw new Exception("Prepare failed for $table: " . $mysqli->error);
+              }
+              $stmt->bind_param('i', $idRealidade);
+              $stmt->execute();
+              $stmt->close();
+          }
+
+          $mysqli->commit();
+          echo json_encode(['message' => _t('Realidade apagada com sucesso')]);
+      } catch (Exception $e) {
+          $mysqli->rollback();
+          error_log("Delete error: " . $e->getMessage());
+          http_response_code(500);
+          echo json_encode(['error' => $e->getMessage()]);
+      }
+
+      ob_end_flush();
+      $mysqli->close();
+      die(); 
+  };
+
 }else{
-  
+  if ($_GET['action']=='ajaxDelHistoria')  die('not_user');
+  if ($_GET['action']=='apagarRealidade')  die('not_user');
+  if ($_GET['action']=='deleteStatsByEntityAndStat')  die('not_user');
+  if ($_GET['action']=='ajaxDelStat')  die('not_user');
+  if ($_GET['action']=='ajaxRemoverCatSom')  die('not_user');
+  if ($_GET['action']=='ajaxPublicarListaSC')  die('not_user');
+  if ($_GET['action']=='ajaxDelMomento')  die('not_user');
+  if ($_GET['action']=='publicaTexto')  die('not_user');
+  if ($_GET['action']=='updateMaxSilabas')  die('not_user');
+  if ($_GET['action']=='apagarIdioma')  die('not_user');
+  if ($_GET['action']=='ajaxDeleteStat')  die('not_user');
+  if ($_GET['action']=='ajaxDeleteSistemaTempo')  die('not_user');
+  if ($_GET['action']=='importarIdioma')  die('not_user');
+  if ($_GET['action']=='importarRealidade')  die('not_user');
+  if ($_GET['action']=='ajaxDeleteRelacao')  die('not_user');
+  if ($_GET['action']=='ajaxAddStat')  die('not_user');
+  if ($_GET['action']=='ajaxAddRelacao')  die('not_user');
+  if ($_GET['action']=='ajaxAddCicloTempo')  die('not_user');
+  if ($_GET['action']=='ajaxNovoSistemaTempo')  die('not_user');
+  if ($_GET['action']=='ajaxAddUnidadeTempo')  die('not_user');
+  if ($_GET['action']=='ajaxDeleteUnidadeTempo')  die('not_user');
+  if ($_GET['action']=='ajaxSetSistemaPadrao')  die('not_user');
+  if ($_GET['action']=='ajaxSalvarSistemaTempo')  die('not_user');
+  if ($_GET['action']=='ajaxGravarMomento')  die('not_user');
+  if ($_GET['action']=='ajaxGravarStatsTipo')  die('not_user');
+  if ($_GET['action']=='ajaxMoverFormaPalavra')  die('not_user');
+  if ($_GET['action']=='ajaxMoverSom')  die('not_user');
+  if ($_GET['action']=='studasonPalSigSalvar')  die('not_user');
+  if ($_GET['action']=='studasonPalSalvar')  die('not_user');
+  if ($_GET['action']=='ajaxGravarStat')  die('not_user');
+  if ($_GET['action']=='getAcessoColaborador')  die('not_user');
+  if ($_GET['action']=='ajaxGravarRealidade')  die('not_user');
+  if ($_GET['action']=='ajaxGravarEntityType')  die('not_user');
+  if ($_GET['action']=='ajaxDelEntityType')  die('not_user');
+  if ($_GET['action']=='ajaxGravarEntidade')  die('not_user');
+  if ($_GET['action']=='ajaxGravarHistoria')  die('not_user');
+  if ($_GET['action']=='testSalvar')  die('not_user');
   if ($_GET['action']=='ajaxGetLigacoesArtyg')  die('not_user');
   if ($_GET['action']=='fleksons')  die('not_user');
   if ($_GET['action']=='ajaxGravarPerfyl')  die('not_user');
@@ -8609,150 +10997,6 @@ if ($_GET['action'] == 'ajaxCarregarListaPalavras') {
     echo $r[$_GET['t']]."\n";
   };
   die();
-};
-
-function getLastChange($tipo,$id = 0) { // lastupdated
-  if (! $id > 0) return 0;
-
-  if($tipo=='lexicon'){ // incluir writing e drawchars
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM palavras WHERE id_idioma = ".$id."
-            UNION
-            SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM escritas WHERE id_idioma = ".$id."
-            UNION
-            SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
-              FROM drawChars WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma=".$id.")
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-  }else if($tipo=='ref'){
-
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(modificado, '%Y%m%d%H%i%s') as d 
-              FROM referentes
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-
-  }else if($tipo=='entities'){ //xxxxx falta
-
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM entidades WHERE id_realidade = ".$id."
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-
-
-  }else if($tipo=='characters'){ //xxxxx falta
-
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM entidades WHERE id_realidade = ".$id." AND rule = 'character'
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-
-
-  }else if($tipo=='items'){ //xxxxx falta
-
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM entidades WHERE id_realidade = ".$id." AND rule = 'item'
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-
-
-  }else if($tipo=='places'){ //xxxxx falta
-
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM entidades WHERE id_realidade = ".$id." AND rule = 'place'
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-
-  }else if($tipo=='autosubstituicoes'){
-
-      $last = mysqli_query($GLOBALS['dblink'],
-        "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-              FROM autosubstituicoes WHERE id_escrita = '".$id."'
-            ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-  }else if($tipo=='moments'){ //xxxxx falta
-
-        $rid = (int)$id;
-        // Buscar timestamp da última alteração na tabela momentos
-        $result = mysqli_query($GLOBALS['dblink'], "SELECT MAX(updated_at) as last_change 
-            FROM momentos 
-            WHERE id_realidade = $rid;") or die(mysqli_error($GLOBALS['dblink']));
-        
-        $row = mysqli_fetch_assoc($result);
-        $timestamp = strtotime($row['last_change']) ?: time();
-        return $timestamp;
-
-  }else if($tipo=='origens'){
-
-      // geral
-      return '1';
-
-  }else if($tipo=='calendar'){
-      $cid = (int)$id;
-      $result = mysqli_query($GLOBALS['dblink'], "SELECT GREATEST(
-          COALESCE((SELECT MAX(updated_at) FROM time_systems WHERE id = $cid), 0),
-          COALESCE((SELECT MAX(updated_at) FROM time_units WHERE id_time_system = $cid), 0),
-          COALESCE((SELECT MAX(updated_at) FROM time_cycles WHERE id_time_system = $cid), 0),
-          COALESCE((SELECT MAX(updated_at) FROM time_names WHERE id_time_system = $cid), 0)
-      ) as last_change;") or die(mysqli_error($GLOBALS['dblink']));
-      
-      //, COALESCE((SELECT MAX(updated_at) FROM time_adjustment_rules WHERE id_time_system = $cid), 0)
-      
-      $row = mysqli_fetch_assoc($result);
-      $timestamp = strtotime($row['last_change']) ?: time(); 
-      return $timestamp ? $timestamp : 0;
-
-  }else if($tipo=='fonts'){
-
-      $result = mysqli_query($GLOBALS['dblink'], "SELECT id
-            FROM fontes ORDER BY id DESC LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-        
-      $row = mysqli_fetch_assoc($result);
-      return $row['id'] ? $row['id'] : 0;
-
-  }else if($tipo=='sounds'){  //xxxxx falta em editsounds ???
-      $last = mysqli_query($GLOBALS['dblink'],
-      "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
-            FROM inventarios WHERE id_idioma = ".$id." 
-          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-  }else if($tipo=='glifos'){ 
-      $last = mysqli_query($GLOBALS['dblink'],
-      "SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
-            FROM glifos WHERE id_escrita = ".$id." 
-          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-  }else if($tipo=='writing'){ //xxxxx falta ?
-      $last = mysqli_query($GLOBALS['dblink'],
-      "SELECT DATE_FORMAT(data_modificacao, '%Y%m%d%H%i%s') as d 
-            FROM escritas WHERE id = ".$id."
-          UNION
-          SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
-            FROM glifos WHERE id_escrita = ".$id."
-          UNION
-          SELECT DATE_FORMAT(data_modificado, '%Y%m%d%H%i%s') as d 
-            FROM drawChars WHERE id_escrita = ".$id."
-          ORDER BY d DESC LIMIT 1") or die(mysqli_error($GLOBALS['dblink']));
-      $l = mysqli_fetch_assoc($last);
-      return $l['d'] ? $l['d'] : 0;
-  }
-
-  return 0;
 };
 
 if ($_GET['action'] == 'getLastChange') { // lastupdated
@@ -9477,12 +11721,6 @@ if ($_GET['action'] == 'getDetalhesFlexao') {
     die();
 }
 
-if ($_GET['action'] == 'updateMaxSilabas') {
-    mysqli_query($GLOBALS['dblink'],"UPDATE idiomas SET silabas = ".$_GET['n']."
-        WHERE id = ".$_GET['i']." LIMIT 1;");
-    die('ok');
-};
-
 if ($_GET['action'] == 'getSintazBazic') {
 
     $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM idiomas 
@@ -9564,238 +11802,6 @@ if ($_GET['action'] == 'getDetalhesGenero') {
   die();
 };
 
-if ($_GET['action'] == 'ajaxMoverFormaPalavra') {
-
-    $cex = null;
-    if(isset($_POST['cex'])){
-      $cex = $_POST['cex'];
-    };
-    $idioma = $_GET['iid'];
-
-    if (strlen($_POST['from'])>0){
-
-        $from = explode("-",$_POST['from']);
-        if($from[0]>0 && $from[5]>0 && $from[1]==0&& $from[2]==0&& $from[3]==0&& $from[4]==0){
-
-            // echo 'ok'; die();
-
-            // aqui pra mover das órfãs: insert into itens_palavras
-            $taVazio = false;
-            $to = explode("-",$_POST['to']);
-            if($to[3]>0){}else{
-              echo'ok';die();
-            }
-
-            // ver o destino
-            $tox = $to[1];
-            $toy = $to[2];
-            $toz = $cex[0]['val'];
-            $textra = 0;
-            
-            $pid = $from[0];
-            $dic = $from[5];
-            $linhas = $tox;
-            $colunas = $toy;
-            // ver se tem palavra no destino
-            // inserir em itens_palavras
-
-            $sql = "SELECT p.* FROM palavras p WHERE p.id_idioma = ".$idioma;
-            $sql .= " AND (p.id = ".$dic." OR p.id_forma_dicionario = ".$dic.")  "; // $sql .= " AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.")  ";
-            $sql .= " AND (SELECT ip1.id FROM itens_palavras ip1 WHERE ip1.id_palavra = p.id AND ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$to[3]/*$x*/." AND ip1.usar = 1 ) IS NOT NULL ";
-            if ($to[4]>0) $sql .= " AND (SELECT ip2.id FROM itens_palavras ip2 WHERE ip2.id_palavra = p.id AND ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$to[4]/*$y2*/." AND ip2.usar = 1 ) IS NOT NULL ";
-            if ($toz>0) $sql .= " AND (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did']." AND ip3.id_item = ".$toz." AND ip3.usar = 1 ) IS NOT NULL ";
-            
-            $sql .= " ;";
-
-            $ps = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
-            if (mysqli_num_rows($ps)==0) $taVazio = true;
-
-            if ( $taVazio ) {// aqui vai mover se estiver td certo acima
-              
-                mysqli_query($GLOBALS['dblink'], "DELETE FROM itens_palavras WHERE id_palavra = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
-                $sql = "INSERT INTO itens_palavras (id, id_item, id_concordancia, id_palavra, usar) VALUES ";
-
-                $sql .= "(".generateId().",".$to[3].",".$linhas.",".$pid.",1),";
-                if ($to[4]>0) $sql .= "(".generateId().",".$to[4].",".$colunas.",".$pid.",1),";
-                if ($toz>0) $sql .= "(".generateId().",".$toz.",".$cex[0]['did'].",".$pid.",1),";
-
-                mysqli_query($GLOBALS['dblink'],substr($sql,0,-1)) or die(mysqli_error($GLOBALS['dblink']));
-
-                $ccs = mysqli_query($GLOBALS['dblink'],"SELECT * FROM concordancias WHERE id = $linhas") or die(mysqli_error($GLOBALS['dblink']));
-                $cc = mysqli_fetch_assoc($ccs);
-                $dependencia = $cc['depende'] > 0 ? (int)$cc['depende'] : 0;
-                
-                $il = 0; // limite de subtabelas
-                while($dependencia > 0){ 
-                    $ccs = mysqli_query($GLOBALS['dblink'],"SELECT *, c.nome as titulo FROM concordancias c 
-                        LEFT JOIN itensConcordancias ic ON ic.id_concordancia = c.id 
-                        WHERE ic.id = ".$dependencia.";") or die(mysqli_error($GLOBALS['dblink']));
-                    $cc = mysqli_fetch_assoc($ccs);
-
-                    $sqlQuerys = "INSERT INTO itens_palavras SET 
-                      id_palavra = ".$pid.", id = ".generateId().",
-                      id_concordancia = ".$cc['id_concordancia'].",
-                      id_item = ".$dependencia.",
-                      usar = 1;";
-                    mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-
-                    if ($cc['depende']>0) $dependencia = $cc['depende'];
-                    else $dependencia = 0;
-                    
-                    $il++; if($il>10) $dependencia = 0;
-                }  
-            }
-
-            echo 'ok';
-
-        }else if($_POST['to']=='lixo' && $from[5]>0){
-            // delete
-            mysqli_query($GLOBALS['dblink'],"DELETE FROM itens_palavras
-                        WHERE id_palavra = ".$from[0].";") or die(mysqli_error($GLOBALS['dblink']));
-            echo 'ok';
-        }else if ($from[5]==0) {
-          $result = mysqli_query($GLOBALS['dblink'],"SELECT *, 
-              (SELECT paradigma FROM classes c WHERE c.id = p.id_classe LIMIT 1) as paradigma
-              FROM palavras p 
-              WHERE p.id = ".$from[0].";") or die('1834'.mysqli_error($GLOBALS['dblink']));
-          $r = mysqli_fetch_assoc($result);
-          $parad = (int)$r['paradigma'];
-          if ($parad == 1) {
-              $to = explode("-",$_POST['to']);
-              $linhas = $to[1];
-              $colunas = $to[2];
-              $x = $to[3];
-              $y2 = $to[4];
-
-              if ($to[5] == 0) echo '0';
-              else if ($to[0] > 0 || $to[5] > 0) echo "0";
-              else {
-                  $id = generateId();
-                  mysqli_query($GLOBALS['dblink'],
-                      "INSERT INTO itens_palavras (id, id_concordancia, id_palavra, usar, id_item)
-                      VALUES (".$id.", ".$linhas.", ".$from[0].", 1, ".$x.")
-                      ON DUPLICATE KEY UPDATE id_item = ".$x.";")
-                      or die(mysqli_error($GLOBALS['dblink']));
-
-                  $id = generateId();
-                  mysqli_query($GLOBALS['dblink'],
-                      "INSERT INTO itens_palavras (id, id_concordancia, id_palavra, usar, id_item)
-                      VALUES (".$id.", ".$colunas.", ".$from[0].", 1, ".$y2.")
-                      ON DUPLICATE KEY UPDATE id_item = ".$y2.";")
-                      or die(mysqli_error($GLOBALS['dblink']));
-                  echo 'ok';
-              }
-          } else echo '0';
-        }else if ($from[0] > 0 && strlen($_POST['to'])>0) {
-                
-            /*
-              TO DO
-                - não pode mover nada onde já tem palavra
-            */
-
-            if (is_numeric($_POST['to']) && $_POST['to'] > 0){
-                $tox = $from[1];
-                $toy = $from[2];
-                $toz = $_POST['to'];
-                $textra = 0;
-                
-                $linhas = $tox;
-                $colunas = $toy;
-                
-                $pid = $from[0];
-                $dic = $from[5];
-                
-                //$toz = $from[3];
-                $textra = $from[4];
-                $x = $toz;
-                $y2 = $textra;
-
-                if ($toz == $cex[0]['val']) echo '0';
-                else {
-                    $taVazio = false;
-
-                    $extraPadrao = 0;
-                    $resdef = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias
-                        WHERE id_concordancia = ".$cex[0]['did']." AND padrao < 2 ORDER BY padrao DESC, ordem;") or die(mysqli_error($GLOBALS['dblink']));
-                    $rc = mysqli_fetch_assoc($resdef);
-                    if ($rc['id']==$cex[0]['val']) $extraPadrao = 1;
-
-                    //echo $extraPadrao."\n";
-                    //echo 'de '.$_POST['from'].' para '.$_POST['to']."\n";
-
-                    //xxxxx ver se existe uma palavra nessa posição na outra dimensão
-
-                    $sql = "SELECT p.* FROM palavras p WHERE p.id_idioma = ".$idioma;
-                    $sql .= " AND (p.id = ".$dic." OR p.id_forma_dicionario = ".$dic.")  "; // $sql .= " AND ( p.id_forma_dicionario = ".$pid." OR p.id = ".$pid.")  ";
-                    $sql .= " AND (SELECT ip1.id FROM itens_palavras ip1 WHERE ip1.id_palavra = p.id AND ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$from[3]/*$x*/." AND ip1.usar = 1 ) IS NOT NULL ";
-                    $sql .= " AND (SELECT ip2.id FROM itens_palavras ip2 WHERE ip2.id_palavra = p.id AND ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$from[4]/*$y2*/." AND ip2.usar = 1 ) IS NOT NULL ";
-                        
-                    if($extraPadrao == 1){ 
-                        $sql .= " AND ( 
-                            (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did']." AND ip3.id_item = ".$toz." AND ip3.usar = 1 ) IS NOT NULL
-                            OR
-                            (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did'].") IS NULL 
-                          ) ";
-                    }else{
-                        $sql .= " AND (SELECT ip3.id FROM itens_palavras ip3 WHERE ip3.id_palavra = p.id AND ip3.id_concordancia = ".$cex[0]['did']." AND ip3.id_item = ".$toz." AND ip3.usar = 1 ) IS NOT NULL ";
-                    }
-                        
-                    $sql .= " ;";
-
-                    $ps = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
-                    // TESTE:
-                    //echo $sql."\n";
-                    // $pal = mysqli_fetch_assoc($ps); 
-                    //print_r($pal);
-                    if (mysqli_num_rows($ps)==0) $taVazio = true;
-
-                    //echo 'ok mudar';
-
-                    // echo "UPDATE itens_palavras SET id_item = ".$toz." WHERE id_concordancia = ".$cex[0]['did']." AND id_palavra = ".$pid." AND usar = 1;";
-                    if ( $taVazio ) // aqui vai mover se estiver td certo acima
-                        mysqli_query($GLOBALS['dblink'],
-                            "UPDATE itens_palavras SET id_item = ".$toz." WHERE id_concordancia = ".$cex[0]['did']." AND id_palavra = ".$pid." AND usar = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-
-                    echo 'ok';
-                }
-
-            }else{
-
-                $to = explode("-",$_POST['to']);
-                $tox = $to[1];
-                $toy = $to[2];
-                $toz = $to[3];
-                $textra = $to[4];
-
-                $linhas = $tox;
-                $colunas = $toy;
-                $x = $toz;
-                $y2 = $textra;
-
-                $pid = $from[0];
-                $dic = $from[5];
-
-                if ($to[5] == 0) echo '0'; // é a forma de dicionário, padrão!
-                else if ($to[0] > 0 || $to[5] > 0) echo "0"; // tem uma palavra aqui
-                else {
-                        mysqli_query($GLOBALS['dblink'],
-                            "UPDATE itens_palavras SET id_item = ".$x." WHERE id_concordancia = ".$linhas." AND id_palavra = ".$pid." AND usar = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-                            
-                        mysqli_query($GLOBALS['dblink'],
-                            "UPDATE itens_palavras SET id_item = ".$y2." WHERE id_concordancia = ".$colunas." AND id_palavra = ".$pid." AND usar = 1 LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-
-                    echo 'ok';
-                }
-            }
-        }else{
-            echo '0';
-        }
-    }else echo '0';
-    die();
-};
-
 if ($_GET['action'] == 'carregarTabelaSons') { // otimizar sql queries
   // GET iid = idioma
   // GET ed = completa e editavel 0/1
@@ -9867,118 +11873,6 @@ if ($_GET['action'] == 'carregarTabelaSons') { // otimizar sql queries
   die();
 };
 
-if ($_GET['action'] == 'ajaxMoverSom') {
-  
-    // // ajaxMoverSom  POST from = 'cell_30_40' to = 'cell_30_40'
-    if ( is_numeric($_POST['from']) && $_POST['from']>0 && strlen($_POST['to'])>0){
-        $to = explode('_',$_POST['to']);
-        $tox = $to[1];
-        $toy = $to[2];
-        $tipo = $_GET['t'];
-        
-        $is = mysqli_query($GLOBALS['dblink'],"SELECT *, i.id_tipoSom as tipo, s.id as idSom, i.id as id_inventario FROM inventarios i 
-              LEFT JOIN sons s ON i.id_som = s.id 
-              WHERE i.id = ".$_POST['from'].";") or die(mysqli_error($GLOBALS['dblink']));
-        $i = mysqli_fetch_assoc($is);
-
-        if ($i['tipo']==0){
-
-            mysqli_query($GLOBALS['dblink'],"UPDATE sonsPersonalizados SET
-                posx = ".$tox.",
-                posy = ".$toy."
-                WHERE id = ".$i['idSom'].";") or die(mysqli_error($GLOBALS['dblink']));
-            mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET data_modificado = NOW() 
-              WHERE id = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
-
-        }else{
-          
-            $id = generateId();
-            mysqli_query($GLOBALS['dblink'],"INSERT INTO sonsPersonalizados SET id = $id,
-                  nome = '".$i['nome']."',
-                  ipa = '".$i['ipa']."',
-                  id_referente = 0,
-                  posx = ".$tox.",
-                  posy = ".$toy.",
-                  posz = ".$i['posz'].",
-                  id_tipoSom = ".$i['id_tipoSom'].",
-                  id_idioma = '".$i['id_idioma']."';") or die(mysqli_error($GLOBALS['dblink']));
-            
-            // atualiza no inventario, de som default pra personalizado
-            mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET 
-                  id_som = ".$id.", data_modificado = NOW(),
-                  id_tipoSom = 0
-                  WHERE id = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
-
-        }
-
-    }else if ( strlen($_POST['from'])>0 && strlen($_POST['to'])>0){
-        $from = explode('_',$_POST['from']);
-        $fromx = $from[1];
-        $fromy = $from[2];
-        $to = explode('_',$_POST['to']);
-        $tox = $to[1];
-        $toy = $to[2];
-        $tipo = $_GET['t'];
-
-        $is = mysqli_query($GLOBALS['dblink'],"SELECT *, i.id as id_inventario FROM inventarios i 
-              LEFT JOIN sons s ON i.id_som = s.id 
-              WHERE s.posx = ".$fromx." AND s.posy = ".$fromy." 
-                AND s.id_tipoSom = ".$tipo." AND i.id_tipoSom > 0 
-                AND i.id_idioma = ".$_GET['iid']." ORDER BY s.posz;") or die(mysqli_error($GLOBALS['dblink']));
-          
-        while($i = mysqli_fetch_assoc($is)){
-
-            //print_r($i);
-
-            // SONS PADRAO NÂO MOVE ?  CONVERTER PRA PERSONALIZADOS ?
-
-            // insere nos personalizaos - Copiar do som original
-            $id = generateId();
-            mysqli_query($GLOBALS['dblink'],"INSERT INTO sonsPersonalizados SET  id = $id,
-                  nome = '".$i['nome']."',
-                  ipa = '".$i['ipa']."',
-                  id_referente = 0,
-                  posx = ".$tox.",
-                  posy = ".$toy.",
-                  posz = ".$i['posz'].",
-                  id_tipoSom = ".$i['id_tipoSom'].",
-                  id_idioma = '".$i['id_idioma']."';") or die(mysqli_error($GLOBALS['dblink']));
-            
-            // atualiza no inventario, de som default pra personalizado
-            mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET 
-                  id_som = ".$id.", data_modificado = NOW(),
-                  id_tipoSom = 0
-                  WHERE id = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
-            
-            /*
-            $keys = mysqli_query($GLOBALS['dblink'],"SELECT * FROM teclas WHERE id_inventario = ".$i['id_inventario'].";") or die(mysqli_error($GLOBALS['dblink']));
-            $key = mysqli_fetch_assoc($keys);
-            if ($key['tecla']=='') $key = '<span class="celulaSom" title="'.$i['nome'].'">/'.$i['ipa'].'/</span><br>';
-            else $key = '<span class="celulaSom" title="'.$i['nome'].'">'.$key['tecla'].' /'.$i['ipa'].'/</span><br>';
-            echo $key;
-            */
-        }
-
-        $is = mysqli_query($GLOBALS['dblink'],"SELECT *, s.id as idSom, i.id as id_inventario FROM inventarios i 
-            LEFT JOIN sonsPersonalizados s ON i.id_som = s.id 
-              WHERE s.posx = ".$fromx." AND s.posy = ".$fromy." AND i.id_tipoSom = 0 AND s.id_tipoSom = ".$tipo."
-                AND s.id_idioma = ".$_GET['iid'].";") or die(mysqli_error($GLOBALS['dblink']));
-          
-        while($i = mysqli_fetch_assoc($is)){
-
-            mysqli_query($GLOBALS['dblink'],"UPDATE sonsPersonalizados SET
-                posx = ".$tox.",
-                posy = ".$toy."
-                WHERE id = ".$i['idSom'].";") or die(mysqli_error($GLOBALS['dblink']));
-        }
-        mysqli_query($GLOBALS['dblink'],"UPDATE inventarios SET data_modificado = NOW(),
-                  WHERE id = ".$i['id_inventario'].";");
-        
-    }else die('0');
-
-    die('ok');
-};
-
 if ($_GET['action'] == 'listarCategoriasSom') { // otimizar sql queries
 
   $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM classesSom
@@ -10028,14 +11922,6 @@ if ($_GET['action'] == 'listarCategoriasSom') { // otimizar sql queries
 
   die();
 };
-
-if ($_GET['action'] == 'ajaxRemoverCatSom') { // otimizar sql queries
-    //echo listarSonsAdicionaveis($_GET['iid'],$_GET['id']);
-    // 
-    mysqli_query($GLOBALS['dblink'],"DELETE FROM sons_classes WHERE id_classeSom = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-    mysqli_query($GLOBALS['dblink'],"DELETE FROM classesSom WHERE id = ".$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-    die('ok');
-}
 
 if ($_GET['action'] == 'listarSonsAdicionaveis') { // otimizar sql queries
     echo listarSonsAdicionaveis($_GET['iid'],$_GET['id']);
@@ -10338,203 +12224,6 @@ if ($_GET['action'] == 'getStudPal') {
   die();
 };
 
-if ($_GET['action'] == 'studasonPalSigSalvar') { 
-
-    $sql = "INSERT INTO pal_sig_comunidade SET id = ".generateId().",
-      palavra = '".$_GET['p']."',  
-      id_idioma = ".$_GET['iid'].",
-      id_usuario = '".$_SESSION['KondisonairUzatorIDX']."', 
-      significado = '".$_GET['s']."';";
-    $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
-    die('ok');
-};
-
-if ($_GET['action'] == 'studasonPalSalvar') { 
-
-    if (!$_SESSION['KondisonairUzatorIDX']>0) die('invalid');
-
-    // parse aqui ou ao abrir?
-    if ($_GET['aid']>0){
-      //updatew
-      $sql = "UPDATE studason_palavrs SET
-        status_aprendido = ".$_GET['s'].",  
-        pids = '".$_GET['pids']."' 
-        WHERE id = ".$_GET['aid'].";";
-      $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo $_GET['aid'];
-    }else{
-      $id = generateId();
-      $sql = "INSERT INTO studason_palavrs SET id = $id,
-        pids = '".$_GET['pids']."' ,
-        status_aprendido = ".$_GET['s'].",
-        id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
-
-      $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo $id;
-    }
-
-    die();
-
-};
-
-if ($_GET['action'] == 'publicaTexto') { 
-
-
-  $query = "SELECT t.*,
-    (SELECT separadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as separadores,
-        (SELECT binario FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as binario,
-    (SELECT iniciadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores,
-    (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid
-    FROM studason_tests t
-    WHERE t.id = ".$_GET['id']." AND t.id_usuario = ".$_SESSION['KondisonairUzatorIDX']." ;";
-
-  $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
-  $separadorLinhas = array("\n");
-  while($r = mysqli_fetch_assoc($result)){
-    if ($r['num_palavras']>0) die('jaw');
-
-    $textoSentencas = $r['texto'];
-    if ($r['binario']>0) $bin = ' BINARY ';
-    $id_idioma = $r['id_idioma'];
-    $eid = $r['eid'];
-
-    $separadorPalavras = preg_split('//u', $r['separadores'] ?? $separadorRomanizacao, null, PREG_SPLIT_NO_EMPTY); // explode($e['separadores']); // array(" ",",",".");
-
-    $iniciadoresPalavras = preg_split('//u', $r['iniciadores'], null, PREG_SPLIT_NO_EMPTY);
-    foreach ($iniciadoresPalavras as $sep){
-      $textoSentencas = str_replace($sep," ".$sep,$textoSentencas);
-    }
-
-    $palDesc = 0;
-    $palCon = 0;
-    $palTotal = 0;
-    $palStud = 0;
-    $palNovas = 0;
-    $palOk = 0;
-
-    $btnConferir = '';
-
-    $listaPalavrasUnicas = array();
-
-    $linhas = multiexplode($separadorLinhas,$textoSentencas);
-    
-    foreach ($linhas as $linha){
-
-      $palavras = separarPalavrasLinha($separadorPalavras,$linha,$id_idioma, $eid, $bin, '','')[0];
-
-      foreach ($palavras as $p){
-        if ($p == '') continue;
-        $pids = '';
-      
-        if ($eid > 0){
-        $sql = "SELECT p.*, c.id as clid, pn.palavra as nativa, c.nome as cnome,
-            (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
-          FROM palavras p
-          LEFT JOIN classes c ON p.id_classe = c.id 
-          LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id 
-          WHERE ".$bin." pn.palavra = '".$p."' AND p.id_idioma = ".$id_idioma." 
-          ORDER BY p.id_forma_dicionario DESC;"; 
-        }else{
-          $sql = "SELECT p.*, c.id as clid, p.romanizacao as nativa, c.nome as cnome,
-              (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
-            FROM palavras p
-            LEFT JOIN classes c ON p.id_classe = c.id 
-            WHERE ".$bin." p.romanizacao = '".$p."' AND p.id_idioma = ".$id_idioma." 
-            ORDER BY p.id_forma_dicionario DESC;"; 
-        }
-          // AND p.id_forma_dicionario = 0
-        //echo $sql;
-        $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-        $palTotal++;
-        if (mysqli_num_rows($a)<1){
-          $palDesc++;
-        }else{
-          $palCon++;
-          
-          while($qpid = mysqli_fetch_assoc($a)){
-            $pids .= $qpid['id'].',';
-          }
-          
-          if ($listaPalavrasUnicas[$p]['q'] > 0) $listaPalavrasUnicas[$p]['q'] = $listaPalavrasUnicas[$p]['q'] + 1;
-          else $listaPalavrasUnicas[$p]['q'] = 1;
-          
-          $sqlPst = "SELECT * FROM studason_palavrs WHERE pids LIKE '".substr($pids,0,-1)."%' AND id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
-          $qpstres = mysqli_query($GLOBALS['dblink'],$sqlPst) or die(mysqli_error($GLOBALS['dblink']));
-          if (mysqli_num_rows($qpstres)<1){
-            $palNovas++;
-          }else{
-            $qpst = mysqli_fetch_assoc($qpstres);
-            $pst = $qpst['status_aprendido']==''?'0':$qpst['status_aprendido'];
-
-            $listaPalavrasUnicas[$p]['s'] = $pst;
-
-            if ($qpst['status_aprendido']==5) $palOk++;
-            else if ($qpst['status_aprendido']>0) $palStud++;
-            else $palNovas++;
-          }
-        }
-        // echo ' '.$p.' ';
-      }
-    }
-
-    $novasUnicas = 0;
-    foreach($listaPalavrasUnicas as $pal => $pu){if ($pu['s']<1) { $novasUnicas++; } };
-
-    if ($palDesc>0) { // ;
-      die(_t('Ainda há %1 palavras fora do dicionário', [$palDesc]));
-    }else{
-      //update 
-      mysqli_query($GLOBALS['dblink'],"UPDATE studason_tests SET
-        num_palavras = ".$novasUnicas."
-        WHERE id = ".$r['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-    }
-        
-  };
-
-  die('ok');
-};
-
-if ($_GET['action'] == 'testSalvar') { 
-
-  $listaOrdem = "ordem = 0,"; // ver ordem pelo último da lista, e lista se tem no POST ou 0
-  $sqlLista = "id_lista = ".($_POST['lista']??0).",";
-  if ($_POST['lista']>0){
-  }
-
-  if ($_GET['id']>0){
-    //updatew
-    $sql = "UPDATE studason_tests SET
-      titulo = '".$_POST['titulo']."',
-      link_origem = '',
-      link_audio = '',
-      data_modificacao = now(),
-      texto = '".$_POST['texto']."',
-      $sqlLista $listaOrdem
-      num_palavras = 0
-      WHERE id = ".$_GET['id'].";";
-  }else{
-
-    //xxxxx LIMIT textos/aulas
-
-    $sql = "INSERT INTO studason_tests SET id = ".generateId().",
-      id_idioma = ".$_GET['iid'].",
-      titulo = '".$_POST['titulo']."',
-      link_origem = '',
-      link_audio = '',
-      texto = '".$_POST['texto']."',
-      $sqlLista $listaOrdem
-      num_palavras = 0,
-      id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
-  }
-
-  //echo $sql;
-  $langs = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
-
-  die('ok');
-
-};
-
 if ($_GET['action'] == 'getGlobalFonts') {   
     $globalcustomfonts = '';
     $ees = mysqli_query($GLOBALS['dblink'],"SELECT e.id, e.tamanho, f.arquivo FROM escritas e 
@@ -10659,54 +12348,6 @@ if($_GET['gason']!=''&& $_SESSION['KondisonairUzatorIDX']>0){
   die();
 };
 
-if ($_GET['action'] == 'ajaxGravarStat') {
-  $sid = (int)$_GET['sid'];
-  $rid = (int)$_GET['rid'];
-  $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
-  $tipo_dado = in_array($_POST['tipo_dado'], ['integer', 'decimal', 'text']) ? $_POST['tipo_dado'] : 'integer';
-  $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
-  $tipo_entidade =(int)$_POST['tipo_entidade'];
-
-  if ($sid > 0) {
-      $sql = "UPDATE stats SET 
-          titulo = '$nome',
-          tipo = '$tipo_dado',
-          tipo_entidade = '$tipo_entidade', data_modificacao = NOW(),
-          descricao = '$descricao'
-          WHERE id = $sid AND id_realidade = $rid LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-  } else {
-      $sid = generateId();
-      $sql = "INSERT INTO stats SET  id = $sid,
-          id_realidade = $rid,
-          titulo = '$nome',
-          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].",
-          tipo = '$tipo_dado',
-          tipo_entidade = '$tipo_entidade',
-          descricao = '$descricao';";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-  }
-
-  echo $sid;
-  die();
-}
-
-if ($_GET['action'] == 'getAcessoColaborador') {
-  $iid = (int)$_GET['iid'];
-  $existentes = mysqli_query($GLOBALS['dblink'],
-        "SELECT * FROM collabs WHERE 
-          id_idioma = ".$iid." AND
-          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
-  if (mysqli_num_rows($existentes) > 0) die('ok');
-  if ($iid > 0){
-    mysqli_query($GLOBALS['dblink'],
-        "INSERT INTO collabs SET 
-          id_idioma = ".$iid.", id = ".generateId().",
-          id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";") or die('Erro');
-  };
-  die('ok');
-};
-
 if ($_GET['action'] == 'listStats') {
   $rule = strlen($_GET['et']) > 0 ? $_GET['et'] : 'other';
   $rid = (int)$_GET['rid'];
@@ -10743,56 +12384,6 @@ if ($_GET['action'] == 'getDetalhesStat') {
   echo json_encode($stats);
   die();
 }
-
-if ($_GET['action'] == 'ajaxDelStat') {
-  $sid = (int)$_GET['sid'];
-  // Verificar se há valores associados
-  $result = mysqli_query($GLOBALS['dblink'], "SELECT COUNT(*) as count FROM stats_entidades WHERE id_stat = $sid;") or die(mysqli_error($GLOBALS['dblink']));
-  $row = mysqli_fetch_assoc($result);
-  if ($row['count'] > 0) {
-      echo _t('Não é possível apagar este tipo de estatística, pois há valores associados.');
-      die();
-  }
-  mysqli_query($GLOBALS['dblink'], "DELETE FROM stats WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-  echo 'ok';
-  die();
-}
-
-if ($_GET['action']=='ajaxGravarRealidade') {
-  /* 
-  collabs: $('#collabs').val()
-  */
-
-  if($_GET['rid']>0){ 
-    $sqlQuerys = "UPDATE realidades SET 
-      titulo = '".$_POST['titulo']."',
-      descricao = '".str_replace("'",'"',$_POST['descricao'])."',
-      publico = '".$_POST['publico']."',
-      id_idioma_descricao = '".$_POST['idioma_descricao']."',
-      status = '".$_POST['status']."',
-      id_usuario = ".$_SESSION['KondisonairUzatorIDX']."
-      WHERE id = ".$_GET['rid']." LIMIT 1;";
-    mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-    $iid = $_GET['rid'];
-
-    //logAcao(1,'diom',$iid);
-
-  } else {  
-      $iid = generateId();
-      $sqlQuerys = "INSERT INTO realidades SET  id = $iid,
-      titulo = '".$_POST['titulo']."',
-      descricao = '".str_replace("'",'"',$_POST['descricao'])."',
-      publico = '".$_POST['publico']."',
-      id_idioma_descricao = '".$_POST['idioma_descricao']."',
-      status = '".$_POST['status']."',
-      id_usuario = ".$_SESSION['KondisonairUzatorIDX'].";";
-
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      //logAcao(0,'diom',$iid);
-  }; 
-  echo $iid;
-  die();
-};
 
 if ($_GET['action'] == 'ajaxLoadUnidadesTempo') {
     $sid = (int)$_GET['sid'];
@@ -10867,102 +12458,6 @@ if ($_GET['action'] == 'getDetalhesEntityType') {
   die();
 }
 
-if ($_GET['action'] == 'ajaxGravarEntityType') {
-  $rule = strlen($_GET['rule']) > 0 ? $_GET['rule'] : 'other';
-  if ($_GET['tid'] > 0) {
-      $sqlQuerys = "UPDATE entidades_tipos SET 
-          nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
-          id_superior = " . (int)$_POST['superior'] . ",
-          descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
-          data_modificacao = NOW()
-          WHERE id = " . (int)$_GET['tid'] . " LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'], $sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      echo $_GET['tid'];
-  } else {
-      $eid = generateId();
-      $sqlQuerys = "INSERT INTO entidades_tipos SET  id = $eid,
-          nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
-          id_superior = " . (int)$_POST['superior'] . ",
-          rule = '$rule',
-          id_usuario = ".(int)$_SESSION['KondisonairUzatorIDX'].",
-          descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
-          id_realidade = " . (int)$_GET['rid'] . ";";
-      mysqli_query($GLOBALS['dblink'], $sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-      echo $eid;
-  }
-  die();
-}
-
-if ($_GET['action'] == 'ajaxDelEntityType') {
-  $sqlQuerys = "DELETE FROM entidades_tipos WHERE id = " . (int)$_GET['tid'] . " LIMIT 1;";
-  mysqli_query($GLOBALS['dblink'], $sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-  echo 'ok';
-  die();
-}
-
-if ($_GET['action'] == 'ajaxGravarEntidade') {
-  $eid = (int)$_GET['eid'];
-  $rid = (int)$_GET['rid'];
-  $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
-  $id_tipo = (int)$_POST['id_tipo'];
-  $publico = 1; //(int)$_POST['publico'];
-  $descricao_curta = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao_curta']);
-  $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
-  $privado = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['privado']);
-  $tags = is_array($_POST['tags']) ? $_POST['tags'] : [];
-  $rule = strlen($_GET['et']>0) ? $_GET['et'] : 'other';
-
-  if ($eid > 0) {
-      $sql = "UPDATE entidades SET 
-          nome_legivel = '$nome',
-          id_tipo = $id_tipo,
-          descricao_curta = '$descricao_curta',
-          descricao = '$descricao',
-          publico = '$publico',
-          data_modificacao = NOW(),
-          privado = '$privado'
-          WHERE id = $eid LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-  } else {
-      $eid = generateId();
-      $sql = "INSERT INTO entidades SET  id = $eid,
-          id_realidade = $rid,
-          nome_legivel = '$nome',
-          id_tipo = $id_tipo,
-          descricao_curta = '$descricao_curta',
-          descricao = '$descricao',
-          publico = '$publico',
-          rule = '$rule',
-          id_criador = ".$_SESSION['KondisonairUzatorIDX'].",
-          privado = '$privado';";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-  }
-
-  // nomes em outras línguas ou outros locais
-  mysqli_query($GLOBALS['dblink'],
-      "DELETE FROM entidades_nomes WHERE id_entidade = ".$eid.";") or die(mysqli_error($GLOBALS['dblink']));
-
-  foreach($_POST['oiids'] as $oiid){
-    if (strlen($oiid['name'])==0) continue;
-    mysqli_query($GLOBALS['dblink'],
-      "INSERT INTO entidades_nomes SET id = ".generateId().",
-        id_entidade = ".$eid.",
-        id_idioma = ".$oiid['iid'].",
-        nome = '".$oiid['name']."',
-        info = '".$oiid['info']."';") or die(mysqli_error($GLOBALS['dblink']));
-  }
-
-  // Atualizar tags
-  mysqli_query($GLOBALS['dblink'], "DELETE FROM tags WHERE tipo_dest = 'entity' AND id_dest = $eid;") or die(mysqli_error($GLOBALS['dblink']));
-  foreach ($tags as $tag) {
-      $sql = "INSERT INTO tags SET id = ".generateId().", tipo_dest = 'entity', id_dest = $eid, tag = '$tag';";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-  }
-
-  echo $eid;
-  die();
-}
-
 if ($_GET['action'] == 'ajaxGetDetalhesEntidade') {
   $eid = (int)$_GET['eid'];
   $result = mysqli_query($GLOBALS['dblink'], "SELECT e.*, GROUP_CONCAT(t.tag) as tags 
@@ -10991,91 +12486,6 @@ if ($_GET['action'] == 'ajaxGetDetalhesEntidade') {
       echo '{}';
   }
   die();
-}
-
-if ($_GET['action'] == 'ajaxGravarHistoria') {
-    $hid = (int)$_GET['hid'];
-    $rid = (int)$_GET['rid'];
-    $titulo = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['titulo']);
-    $status = in_array($_POST['status'], ['rascunho', 'publicado', 'arquivado']) ? $_POST['status'] : 'rascunho';
-    $id_superior = (int)$_POST['id_superior'];
-    $id_tipo = (int)$_POST['id_tipo'];
-    $id_momento = (int)$_POST['id_momento'];
-    $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
-    $texto = isset($_POST['texto']) ? "texto='".mysqli_real_escape_string($GLOBALS['dblink'], $_POST['texto'])."'," : '';
-    $id_usuario = (int)$_SESSION['KondisonairUzatorIDX'];
-    $entidades = isset($_POST['entidades']) ? array_map('intval', $_POST['entidades']) : [];
-    $stats_valores = isset($_POST['stats_valores']) ? $_POST['stats_valores'] : [];
-    $superior = isset($_POST['id_superior']) ? "id_superior = ".$_POST['id_superior']."," : '';
-    $updateEntidades = isset($_GET['update']);
-
-    if ($hid > 0) {
-        $sql = "UPDATE historias SET 
-            titulo = '$titulo',
-            status = '$status',
-            $superior
-            $texto
-            id_tipo = $id_tipo,
-            id_momento = $id_momento,
-            descricao = '$descricao'
-            
-            WHERE id = $hid AND id_realidade = $rid LIMIT 1;";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-      } else {
-        $hid = generateId();
-        $sql = "INSERT INTO historias SET  id = $hid,
-            id_realidade = $rid,
-            id_usuario = $id_usuario,
-            titulo = '$titulo',
-            status = '$status',
-            $superior
-            $texto
-            id_tipo = $id_tipo,
-            id_momento = $id_momento,
-            descricao = '$descricao';";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    if ($updateEntidades/*empty($stats_valores) /*!empty($entidades)/* && $id_momento > 0*/) {
-
-        $sql = "DELETE FROM historias_entidades WHERE id_historia = $hid AND id_realidade = $rid;";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-
-        $values = [];
-        foreach ($entidades as $id_entidade) {
-            $id = generateId();
-            $values[] = "($id, $id_entidade, $hid, $rid)";
-        }
-        $sql = "INSERT INTO historias_entidades (id, id_entidade, id_historia, id_realidade) VALUES " . implode(',', $values) . ";";
-        if (!empty($values)) mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    if (/*$id_momento > 0 && */!empty($stats_valores)) {
-
-        // Delete existing stats for this story and moment
-        $sql = "DELETE FROM stats_entidades 
-            WHERE id_momento = $id_momento;"; // AND id_stat AND id_entidade
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-
-        // Insert new stats
-        $values = [];
-        foreach ($stats_valores as $stat) {
-            $id_entidade = (int)$stat['id_entidade'];
-            $id_stat = (int)$stat['id_stat'];
-            $id_entidade_relacionada = (int)$stat['id_entidade_relacionada'];
-            $valor = (float)$stat['valor'];
-            $id = generateId();
-            $values[] = "($id, $id_entidade, $id_momento, $valor, $id_stat, $id_entidade_relacionada)";
-        }
-        if (!empty($values)) {
-            $sql = "INSERT INTO stats_entidades (id, id_entidade, id_momento, valor, id_stat, id_entidade_relacionada) 
-                VALUES " . implode(',', $values) . ";";
-            mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-        }
-    }
-
-    echo $hid;
-    die();
 }
 
 if ($_GET['action'] == 'ajaxCarregarHistoriaStats') {
@@ -11256,20 +12666,6 @@ if ($_GET['action'] == 'listStories') {
     die();
 }
 
-if ($_GET['action'] == 'ajaxDelHistoria') {
-  $hid = (int)$_GET['hid'];
-  // Verificar se há histórias filhas
-  $result = mysqli_query($GLOBALS['dblink'], "SELECT COUNT(*) as count FROM historias WHERE id_superior = $hid;") or die(mysqli_error($GLOBALS['dblink']));
-  $row = mysqli_fetch_assoc($result);
-  if ($row['count'] > 0) {
-      echo _t('Não é possível apagar esta história, pois há histórias filhas associadas.');
-      die();
-  }
-  mysqli_query($GLOBALS['dblink'], "DELETE FROM historias WHERE id = $hid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-  echo 'ok';
-  die();
-}
-
 if ($_GET['action'] == 'listEntities') {
     $rid = (int)$_GET['rid'];
     $rule = strlen($_GET['et']) > 0 ? $_GET['et'] : 'other';
@@ -11292,160 +12688,6 @@ if ($_GET['action'] == 'listEntities') {
     
     //header('Content-Type: application/json');
     echo json_encode($entidades);
-    die();
-}
-
-if ($_GET['action'] == 'ajaxGravarStatsTipo') {
-    $tid = (int)$_GET['tid'];
-    $rid = (int)$_GET['rid'];
-    $stats = isset($_POST['stats']) ? array_map('intval', $_POST['stats']) : [];
-    
-    // Deletar associações existentes
-    mysqli_query($GLOBALS['dblink'], "DELETE FROM entidades_tipos_stats 
-        WHERE id_entidade_tipo = $tid;") or die(mysqli_error($GLOBALS['dblink']));
-    
-    // Inserir novas associações
-    foreach ($stats as $stat_id) {
-        $id = generateId();
-        mysqli_query($GLOBALS['dblink'], "INSERT INTO entidades_tipos_stats 
-            (id, id_entidade_tipo, id_stat) 
-            VALUES ($id, $tid, $stat_id);") or die(mysqli_error($GLOBALS['dblink']));
-    }
-    
-    echo 'ok';
-    die();
-}
-
-function formatTimeValue($id_time_system, $time_value, $dia, $mes, $ano, $dblink) {
-    if (!$id_time_system || $time_value === null) {
-        return '';
-    }
-    $units = [];
-    $result = mysqli_query($dblink, "SELECT u.id, u.nome, u.duracao, c.id_unidade_ref, c.quantidade 
-        FROM time_units u 
-        LEFT JOIN time_cycles c ON c.id_unidade = u.id 
-        WHERE u.id_time_system = $id_time_system 
-        ORDER BY u.duracao DESC;") or die(mysqli_error($dblink));
-    while ($u = mysqli_fetch_assoc($result)) {
-        $units[$u['id']] = [
-            'nome' => $u['nome'],
-            'duracao' => $u['duracao'],
-            'ref' => $u['id_unidade_ref'],
-            'quantidade' => $u['quantidade'] ?: 1
-        ];
-    }
-    // Usar dia, mes, ano armazenados
-    if ($dia !== null && $mes !== null && $ano !== null) {
-        $unit_names = array_column($units, 'nome', 'id');
-        $mes_nome = $unit_names[2] ?? 'Solis'; // Assumindo id 2 = Solis
-        $ano_nome = $unit_names[3] ?? 'Ano';   // Assumindo id 3 = Ano
-        return "$dia $mes_nome, $ano_nome $ano";
-    }
-    return '';
-}
-
-if ($_GET['action'] == 'ajaxGravarMomento') {
-    $mid = (int)$_GET['mid'];
-    $rid = (int)$_GET['rid'];
-    $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
-    $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
-    $data_calendario = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['data_calendario']); // apenas temporário
-    $ordem = (float)$_POST['ordem']; // Use float to handle averages (e.g., 150.5)
-    $superior = (int)$_POST['superior'];
-    $id_usuario = (int)$_SESSION['KondisonairUzatorIDX'];
-    $time_system = (int)$_POST['time_system'];
-    $time_value = (int)$_POST['time_value'];
-
-    // Validate inputs
-    if (empty($nome)) {
-        echo 'Erro: Nome obrigatório.';
-        die();
-    }
-
-    // Insert or update the moment
-    if ($mid > 0) {
-        // Update existing moment
-        $sql = "UPDATE momentos SET 
-            nome = '$nome',
-            descricao = '$descricao',
-            data_calendario = '$data_calendario',
-            id_time_system = $time_system,
-            time_value = $time_value,
-            ordem = $ordem
-            WHERE id = $mid AND id_realidade = $rid LIMIT 1;";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    } else {
-      // Insert new moment
-        $mid = generateId();
-        $sql = "INSERT INTO momentos SET  id = $mid,
-            id_realidade = $rid,
-            nome = '$nome',
-            descricao = '$descricao',
-            id_superior = $superior,
-            data_calendario = '$data_calendario',
-            id_time_system = $time_system,
-            time_value = $time_value,
-            id_usuario = $id_usuario,
-            ordem = $ordem;";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    // Fetch all moments with the same id_realidade and id_superior
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, time_value, ordem 
-        FROM momentos 
-        WHERE id_realidade = $rid AND id_superior = $superior 
-        ORDER BY time_value ASC, ordem ASC, id ASC;") or die(mysqli_error($GLOBALS['dblink']));
-    
-    $momentos = [];
-    while ($row = mysqli_fetch_assoc($result)) {
-        $momentos[] = [
-            'id' => (int)$row['id'],
-            'time_value' => is_null($row['time_value']) ? PHP_INT_MAX : (float)$row['time_value'],
-            'ordem' => (float)$row['ordem']
-        ];
-    }
-
-    // Find the position for the current moment (new or updated)
-    $current_moment = [
-        'id' => $mid,
-        'time_value' => is_null($time_value) ? PHP_INT_MAX : (float)$time_value, // Use provided time_value or max
-        'ordem' => (float)$ordem
-    ];
-
-    $momentos = array_filter($momentos, function($m) use ($mid) {
-        return $m['id'] != $mid; // Remove the current moment if updating
-    });
-    $momentos[] = $current_moment; // Add the current moment
-
-    // Sort moments by ordem (and id for stability)
-    /*usort($momentos, function($a, $b) {
-        if ($a['ordem'] == $b['ordem']) {
-            return $a['id'] <=> $b['id'];
-        }
-        return $a['ordem'] <=> $b['ordem'];
-    });
-    */
-    usort($momentos, function($a, $b) {
-        // Compare time_value first
-        if ($a['time_value'] != $b['time_value']) {
-            return $a['time_value'] <=> $b['time_value'];
-        }
-        // If time_value is equal, compare ordem
-        if ($a['ordem'] != $b['ordem']) {
-            return $a['ordem'] <=> $b['ordem'];
-        }
-        // If ordem is equal, compare id
-        return $a['id'] <=> $b['id'];
-    });
-
-    // Reassign sequential ordem values (1, 2, 3, ...)
-    foreach ($momentos as $index => $momento) {
-        $new_ordem = $index + 1;
-        $sql = "UPDATE momentos SET ordem = $new_ordem WHERE id = {$momento['id']} AND id_realidade = $rid LIMIT 1;";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    echo $mid;
     die();
 }
 
@@ -11711,22 +12953,6 @@ if ($_GET['action'] == 'ajaxGetMomentStats') {
     die();
 }
 
-if ($_GET['action'] == 'ajaxDelMomento') {
-  $mid = (int)$_GET['mid'];
-  // Verificar dependências
-  $result = mysqli_query($GLOBALS['dblink'], "SELECT 
-      (SELECT COUNT(*) FROM historias WHERE id_momento = $mid) as historias,
-      (SELECT COUNT(*) FROM stats_entidades WHERE id_momento = $mid) as stats");
-  $row = mysqli_fetch_assoc($result);
-  if ($row['historias'] > 0 || $row['stats'] > 0) {
-      echo _t('Não é possível apagar este momento, pois há histórias ou estatísticas associadas.');
-      die();
-  }
-  mysqli_query($GLOBALS['dblink'], "DELETE FROM momentos WHERE id = $mid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-  echo 'ok';
-  die();
-}
-
 if ($_GET['action'] == 'getStatsTipo') {
     $tid = (int)$_GET['tid'];
     $rid = (int)$_GET['rid'];
@@ -11804,117 +13030,6 @@ if ($_GET['action'] == 'carregarMomento') {
     die();
 }
 
-if ($_GET['action'] == 'ajaxSalvarSistemaTempo') {
-    if ($_GET['sid'] > 0) {
-        $sql = "UPDATE time_systems SET 
-            nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
-            descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
-            data_padrao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['data_padrao']) . "',
-            publico = " . (int)$_POST['publico'] . "
-            WHERE id = " . (int)$_GET['sid'] . " LIMIT 1;";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-        echo $_GET['sid'];
-    } else {
-      $tid = generateId(); 
-        $sql = "INSERT INTO time_systems SET  id = $tid, 
-            nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']) . "',
-            descricao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']) . "',
-            data_padrao = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_POST['data_padrao']) . "',
-            publico = " . (int)$_POST['publico'] . ",
-            id_realidade = " . (int)$_POST['rid'] . ";";
-        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-        echo $tid;
-    }
-    die();
-}
-
-if ($_GET['action'] == 'ajaxSetSistemaPadrao') {
-    mysqli_query($GLOBALS['dblink'], "UPDATE time_systems SET padrao = 0 WHERE id_realidade = " . (int)$_GET['rid'] . ";") or die(mysqli_error($GLOBALS['dblink']));
-    mysqli_query($GLOBALS['dblink'], "UPDATE time_systems SET padrao = 1 WHERE id = " . (int)$_GET['sid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-    echo 'ok';
-    die();
-}
-
-if ($_GET['action'] == 'ajaxDeleteSistemaTempo') {
-    mysqli_query($GLOBALS['dblink'], "DELETE FROM time_systems WHERE id = " . (int)$_GET['sid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-    echo 'ok';
-    die();
-}
-
-if ($_GET['action'] == 'ajaxNovoSistemaTempo') {
-    $tid = generateId();
-    $sql = "INSERT INTO time_systems SET  id = $tid,
-        nome = '" . mysqli_real_escape_string($GLOBALS['dblink'], $_GET['n']) . "',
-        id_realidade = " . (int)$_GET['rid'] . ";";
-    mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    echo $tid;
-    die();
-}
-
-if ($_GET['action'] == 'ajaxAddUnidadeTempo') {
-    $rid = (int)$_GET['rid'];
-    $sid = (int)$_GET['sid'];
-    $uid = (int)$_GET['uid'];
-    $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
-    $duracao = (float)$_POST['duracao'];
-    $equivalente = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['equivalente']);
-    $ref = (int)$_POST['ref'];
-    $quantidade = (float)$_POST['quantidade'];
-    $subNames = json_decode($_POST['subNames'], true);
-
-    if ($uid > 0) {
-        // Atualizar unidade existente
-        $query = "UPDATE time_units SET nome='$nome', duracao=$duracao, equivalente='$equivalente' 
-                  WHERE id=$uid AND id_time_system=$sid AND id_realidade=$rid";
-        mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    } else {
-        // Inserir nova unidade
-        $uid = generateId();
-        $query = "INSERT INTO time_units (id, id_time_system, id_realidade, nome, duracao, equivalente) 
-                  VALUES ($uid, $sid, $rid, '$nome', $duracao, '$equivalente')";
-        mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    // Atualizar ou inserir ciclo
-    if ($ref > 0 && $quantidade > 0) {
-        $cycle_query = "SELECT id FROM time_cycles WHERE id_unidade=$uid AND id_unidade_ref=$ref AND id_time_system=$sid";
-        $cycle_result = mysqli_query($GLOBALS['dblink'], $cycle_query);
-        if (mysqli_num_rows($cycle_result) > 0) {
-            $query = "UPDATE time_cycles SET quantidade=$quantidade WHERE id_unidade=$uid AND id_unidade_ref=$ref AND id_time_system=$sid";
-        } else {
-            $tcid = generateId();
-            $query = "INSERT INTO time_cycles (id, id_time_system, id_unidade, id_unidade_ref, quantidade) 
-                      VALUES ($tcid, $sid, $uid, $ref, $quantidade)";
-        }
-        mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-    }
-
-    // Salvar nomes das subunidades
-    if (!empty($subNames)) {
-        // Deletar nomes existentes para a unidade
-        mysqli_query($GLOBALS['dblink'], "DELETE FROM time_names WHERE id_time_system=$sid AND id_unidade=$uid") or die(mysqli_error($GLOBALS['dblink']));
-        // Inserir novos nomes
-        foreach ($subNames as $subName) {
-            $nome = mysqli_real_escape_string($GLOBALS['dblink'], $subName['nome']);
-            $posicao = (int)$subName['posicao'];
-            $quantidadeSub = isset($subName['quantidade_subunidade']) ? $subName['quantidade_subunidade'] : 'null';
-            $query = "INSERT INTO time_names (id, id_time_system, id_unidade, nome, posicao, quantidade_subunidade) 
-                      VALUES (".generateId().", $sid, $uid, '$nome', $posicao, $quantidadeSub)";
-            mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
-        }
-    }
-
-    echo $uid;
-    die();
-}
-
-// Deletar Unidade
-if ($_GET['action'] == 'ajaxDeleteUnidadeTempo') {
-    mysqli_query($GLOBALS['dblink'], "DELETE FROM time_units WHERE id = " . (int)$_GET['uid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-    echo 'ok';
-    die();
-}
-
 // Obter Duração de Unidade
 if ($_GET['action'] == 'ajaxGetUnidadeDuracao') {
     $result = mysqli_query($GLOBALS['dblink'], "SELECT duracao FROM time_units WHERE id = " . (int)$_GET['uid'] . " LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
@@ -11969,19 +13084,6 @@ if ($_GET['action'] == 'ajaxVerificarCiclos') {
     die();
 }
 
-if ($_GET['action'] == 'ajaxAddCicloTempo') {
-    $id = generateId();
-    $sql = "INSERT INTO time_cycles SET id = $id,
-        id_time_system = " . (int)$_GET['sid'] . ",
-        id_unidade = " . (int)$_POST['id_unidade'] . ",
-        id_unidade_ref = " . (int)$_POST['id_unidade_ref'] . ",
-        quantidade = " . (float)$_POST['quantidade'] . "
-        ON DUPLICATE KEY UPDATE quantidade = " . (float)$_POST['quantidade'] . ";";
-    mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-    echo $id; //mysqli_insert_id($GLOBALS['dblink']) ? mysqli_insert_id($GLOBALS['dblink']) : 1;
-    die();
-}
-
 if ($_GET['action'] == 'ajaxLoadRelacoes') {
   $eid = (int)$_GET['eid'];
   $result = mysqli_query($GLOBALS['dblink'], "SELECT r.*, e2.nome_legivel as nome_entidade2 
@@ -11999,47 +13101,6 @@ if ($_GET['action'] == 'ajaxLoadRelacoes') {
       </div></div>';
   }
   echo $html ?: '<div class="list-group-item">'._t('Nenhuma relação cadastrada.').'</div>';
-  die();
-}
-
-if ($_GET['action'] == 'ajaxAddRelacao') {
-  $eid = (int)$_GET['eid'];
-  $rid = (int)$_GET['rid'];
-  $id_entidade2 = (int)$_POST['id_entidade2'];
-  $inicio = (int)$_POST['inicio'];
-  $fim = (int)$_POST['fim'];
-  $tipo_relacao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['tipo_relacao']);
-  $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao']);
-
-  if ($rid > 0) {
-      $sql = "UPDATE entidades_relacoes SET 
-          id_entidade2 = $id_entidade2,
-          tipo_relacao = '$tipo_relacao',
-          id_momento_inicio = '$inicio',
-          id_momento_fim = '$fim',
-          descricao = '$descricao'
-          WHERE id = $rid LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo $rid;
-  } else {
-      $rid = generateId();
-      $sql = "INSERT INTO entidades_relacoes SET  id = $rid,
-          id_entidade1 = $eid,
-          id_entidade2 = $id_entidade2,
-          tipo_relacao = '$tipo_relacao',
-          id_momento_inicio = '$inicio',
-          id_momento_fim = '$fim',
-          descricao = '$descricao';";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo $rid;
-  }
-  die();
-}
-
-if ($_GET['action'] == 'ajaxDeleteRelacao') {
-  $rid = (int)$_GET['rid'];
-  mysqli_query($GLOBALS['dblink'], "DELETE FROM entidades_relacoes WHERE id = $rid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-  echo 'ok';
   die();
 }
 
@@ -12061,51 +13122,6 @@ if ($_GET['action'] == 'ajaxLoadStats') {
       </div></div>';
   }
   echo $html ?: '<div class="list-group-item">'._t('Nenhuma estatística cadastrada.').'</div>';
-  die();
-}
-
-if ($_GET['action'] == 'ajaxAddStat') {
-  $eid = (int)$_GET['eid'];
-  $sid = (int)$_GET['sid'];
-  $id_stat = (int)$_POST['id_stat'];
-  $id_momento = (int)$_POST['id_momento'];
-  $valor = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['valor']);
-
-  // Validar tipo_dado
-  $result = mysqli_query($GLOBALS['dblink'], "SELECT tipo FROM stats WHERE id = $id_stat LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-  if ($row = mysqli_fetch_assoc($result)) {
-      $tipo_dado = $row['tipo_dado'];
-      if ($tipo_dado == 'integer' && !is_numeric($valor) || $tipo_dado == 'decimal' && !is_numeric($valor)) {
-          echo _t('Valor inválido para o tipo de dado.');
-          die();
-      }
-  }
-
-  if ($sid > 0) {
-      $sql = "UPDATE stats_entidades SET 
-          valor = '$valor'
-          WHERE id_stat = $id_stat 
-            AND id_entidade = $eid
-            AND id_momento = $id_momento LIMIT 1;";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo $sid;
-  } else {
-      $sid = generateId();
-      $sql = "INSERT INTO stats_entidades SET id = $sid,
-          id_entidade = $eid,
-          id_stat = $id_stat,
-          id_momento = $id_momento,
-          valor = '$valor';";
-      mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
-      echo $sid;
-  }
-  die();
-}
-
-if ($_GET['action'] == 'ajaxDeleteStat') {
-  $sid = (int)$_GET['sid'];
-  mysqli_query($GLOBALS['dblink'], "DELETE FROM stats_entidades WHERE id = $sid LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
-  echo 'ok';
   die();
 }
 
@@ -12453,18 +13469,6 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
     die();
 }
 
-if ($_GET['action'] == 'deleteStatsByEntityAndStat') {
-    $eid = (int)$_POST['eid'];
-    $id_stat = (int)$_POST['id_stat'];
-    $result = mysqli_query($GLOBALS['dblink'], "
-        DELETE FROM stats_entidades 
-        WHERE id_entidade = $eid AND id_stat = $id_stat
-    ") or die(mysqli_error($GLOBALS['dblink']));
-    
-    echo json_encode(['success' => true]);
-    die();
-}
-
 if ($_GET['action'] == 'ajaxGetListasSC') {
     echo '<option value="0" data-date=" " selected>'._t('Personalizado').'</option>';
     
@@ -12515,58 +13519,6 @@ if ($_GET['action'] == 'ajaxGetListasSC') {
     }
     die();
 };
-
-if ($_GET['action'] == 'ajaxPublicarListaSC') {
-    if ($_GET['id']>0) {
-      $id = (int)$_GET['id'];
-      $result = mysqli_query($GLOBALS['dblink'], "
-          UPDATE soundChanges SET publico = 1
-          WHERE id = $id
-      ") or die(mysqli_error($GLOBALS['dblink']));
-    }
-    echo 'ok';
-    die();
-};
-
-function gerarLinksIdiomas($idioma_atual, $use_js = true) {
-    global $idiomas_sistema;
-    $html = '';
-    foreach ($idiomas_sistema as $id => $nome) {
-        if ($id != $idioma_atual) {
-            if ($use_js) {
-                $html .= '<li class="list-inline-item"><a onclick="setLang(' . $id . ')" class="link-secondary">' . htmlspecialchars($nome) . '</a></li>';
-            } else {
-                $url = str_replace('&lang=', '&nus=', $_SERVER['REQUEST_URI']) . '&lang=' . $id;
-                $html .= '<li class="list-inline-item"><a href="' . htmlspecialchars($url) . '" class="link-secondary">' . htmlspecialchars($nome) . '</a></li>';
-            }
-        }
-    }
-    return $html;
-}
-
-function getDescricaoIdioma($id_idioma) {
-    global $idiomas_sistema;
-    if (isset($idiomas_sistema[$id_idioma])) {
-        return _t($idiomas_sistema[$id_idioma]);
-    }
-    return '';
-}
-
-function gerarSelectIdiomas($id_select, $idioma_selecionado, $onchange = '', $use_translation = true) {
-    global $idiomas_sistema;
-    $html = '<select id="' . htmlspecialchars($id_select) . '" name="' . htmlspecialchars($id_select) . '" class="chosen-select form-control"';
-    if ($onchange) {
-        $html .= ' onchange="' . htmlspecialchars($onchange) . '"';
-    }
-    $html .= '>';
-    foreach ($idiomas_sistema as $id => $nome) {
-        $nome_exibido = $use_translation ? _t($nome) : $nome;
-        $selected = ($id == $idioma_selecionado) ? ' selected' : '';
-        $html .= '<option value="' . $id . '"' . $selected . '>' . htmlspecialchars($nome_exibido) . '</option>';
-    }
-    $html .= '</select>';
-    return $html;
-}
 
 if ($_GET['action'] == 'exportarIdioma') {
 
@@ -13226,921 +14178,4 @@ if ($_GET['action'] == 'exportarRealidade') {
     die();
 };
 
-if ($_GET['action'] == 'apagarIdioma') {
-    ob_start();
-
-    ini_set('default_charset', 'UTF-8');
-    header('Content-Type: application/json; charset=utf-8');
-
-    $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
-    if ($mysqli->connect_error) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
-        ob_end_flush();
-        exit;
-    }
-
-    if (!$mysqli->set_charset('utf8mb4')) {
-        error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
-        $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
-    }
-
-    try {
-        if (!isset($_SESSION['KondisonairUzatorIDX'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'User not authenticated']);
-            ob_end_flush();
-            exit;
-        }
-        $userId = (int)$_SESSION['KondisonairUzatorIDX'];
-
-        if (!isset($_POST['id_idioma']) || !is_numeric($_POST['id_idioma']) || !isset($_POST['password'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing or invalid language ID or password']);
-            ob_end_flush();
-            exit;
-        }
-        $idIdioma = (int)$_POST['id_idioma'];
-        $password = $_POST['password'];
-
-        $stmt = $mysqli->prepare("SELECT senha FROM usuarios WHERE id = ?");
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for password check: " . $mysqli->error);
-        }
-        $stmt->bind_param('i', $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result->fetch_assoc();
-        $stmt->close();
-
-        if (!$user || !password_verify($password, $user['senha'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Invalid password']);
-            ob_end_flush();
-            exit;
-        }
-
-        $stmt = $mysqli->prepare(
-            "SELECT id FROM idiomas WHERE id = ? AND (id_usuario = ? OR EXISTS (
-                SELECT 1 FROM collabs WHERE id_idioma = ? AND id_usuario = ?
-            ))"
-        );
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for permission check: " . $mysqli->error);
-        }
-        $stmt->bind_param('iiii', $idIdioma, $userId, $idIdioma, $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($result->num_rows === 0) {
-            http_response_code(403);
-            echo json_encode(['error' => 'User not authorized to delete this language']);
-            ob_end_flush();
-            exit;
-        }
-        $stmt->close();
-
-        $mysqli->begin_transaction();
-
-        $stmt = $mysqli->prepare("SELECT id FROM escritas WHERE id_idioma = ?");
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for escritas IDs: " . $mysqli->error);
-        }
-        $stmt->bind_param('i', $idIdioma);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $escritasIds = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
-        $stmt->close();
-
-        $stmt = $mysqli->prepare(
-            "SELECT arquivo FROM fontes WHERE id IN (
-                SELECT id_fonte FROM escritas WHERE id_idioma = ?
-                AND id_fonte NOT IN (SELECT id_fonte FROM escritas WHERE id_idioma != ?)
-            )"
-        );
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for fontes arquivo: " . $mysqli->error);
-        }
-        $stmt->bind_param('ii', $idIdioma, $idIdioma);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $fontesArquivos = array_column($result->fetch_all(MYSQLI_ASSOC), 'arquivo');
-        $stmt->close();
-
-        $dirsToDelete = [
-            "audio/$idIdioma",
-            "image/$idIdioma"
-        ];
-        foreach ($dirsToDelete as $dir) {
-            $path = "$dir";
-            if (is_dir($path)) {
-                foreach (glob("$path/*") as $arquivo) {
-                    if (file_exists($arquivo) && !unlink($arquivo)) {
-                        error_log("Failed to delete file: $arquivo", 3, '/tmp/delete_debug.txt');
-                    }
-                }
-                // Remove directory if empty
-                @rmdir($path);
-            }
-        }
-        foreach ($escritasIds as $eid) {
-            $path = "writing/$eid";
-            if (is_dir($path)) {
-                foreach (glob("$path/*") as $arquivo) {
-                    if (file_exists($arquivo) && !unlink($arquivo)) {
-                        error_log("Failed to delete file: $arquivo", 3, '/tmp/delete_debug.txt');
-                    }
-                }
-                @rmdir($path);
-            }
-        }
-        foreach ($fontesArquivos as $arquivo) {
-            $path = "fonts/" . basename($arquivo);
-            if (file_exists($path) && !unlink($path)) {
-                error_log("Failed to delete font file: $path", 3, '/tmp/delete_debug.txt');
-            }
-        }
-
-        $indirectTables = [
-            'gloss_itens' => "DELETE FROM gloss_itens WHERE id_item IN (SELECT id FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?))",
-            'itens_flexoes' => "DELETE FROM itens_flexoes WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?) OR id_item IN (SELECT id FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)) OR id_genero IN (SELECT id FROM generos WHERE id_idioma = ?)",
-            'itensConcordancias' => "DELETE FROM itensConcordancias WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)",
-            'formaSilabaComponente' => "DELETE FROM formaSilabaComponente WHERE id_formaSilaba IN (SELECT id FROM formasSilaba WHERE id_idioma = ?)",
-            'autosubstituicoes' => "DELETE FROM autosubstituicoes WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma = ?)",
-            'drawChars' => "DELETE FROM drawChars WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma = ?)",
-            'glifos' => "DELETE FROM glifos WHERE id_escrita IN (SELECT id FROM escritas WHERE id_idioma = ?)",
-            'itens_palavras' => "DELETE FROM itens_palavras WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
-            'palavrasNativas' => "DELETE FROM palavrasNativas WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
-            'palavras_origens' => "DELETE FROM palavras_origens WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
-            'palavras_referentes' => "DELETE FROM palavras_referentes WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
-            'palavras_usos' => "DELETE FROM palavras_usos WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
-            'significados_idiomas' => "DELETE FROM significados_idiomas WHERE id_palavra IN (SELECT id FROM palavras WHERE id_idioma = ?)",
-            'sons_classes' => "DELETE FROM sons_classes WHERE id_classeSom IN (SELECT id FROM classesSom WHERE id_idioma = ?)",
-            'teclas' => "DELETE FROM teclas WHERE id_inventario IN (SELECT id FROM inventarios WHERE id_idioma = ?)",
-            'artyg_dest' => "DELETE FROM artyg_dest WHERE id_artyg IN (SELECT id FROM artygs WHERE id_idioma = ?)",
-            'classesGeneros' => "DELETE FROM classesGeneros WHERE id_genero IN (SELECT id FROM generos WHERE id_idioma = ?)"
-        ];
-
-        $stmt = $mysqli->prepare("
-            DELETE FROM flexoes 
-            WHERE id IN (
-                SELECT id_flexao 
-                FROM itens_flexoes 
-                WHERE id_concordancia IN (SELECT id FROM concordancias WHERE id_idioma = ?)
-            )
-        ");
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for flexoes: " . $mysqli->error);
-        }
-        $stmt->bind_param('i', $idIdioma);
-        $stmt->execute();
-        $stmt->close();
-
-        foreach ($indirectTables as $table => $query) {
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-            if ($table === 'itens_flexoes') {
-                $stmt->bind_param('iii', $idIdioma, $idIdioma, $idIdioma);
-            } else {
-                $stmt->bind_param('i', $idIdioma);
-            }
-            $stmt->execute();
-            $stmt->close();
-        }
-
-        $stmt = $mysqli->prepare(
-            "DELETE FROM fontes WHERE id IN (
-                SELECT id_fonte FROM escritas WHERE id_idioma = ?
-                AND id_fonte NOT IN (SELECT id_fonte FROM escritas WHERE id_idioma != ?)
-            )"
-        );
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for fontes: " . $mysqli->error);
-        }
-        $stmt->bind_param('ii', $idIdioma, $idIdioma);
-        $stmt->execute();
-        $stmt->close();
-
-        // Delete direct tables
-        $directTables = [
-            'artygs',
-            'blocos',
-            'classes',
-            'classesSom',
-            'collabs',
-            'concordancias',
-            'escritas',
-            'frases',
-            'generos',
-            'inventarios',
-            'ipaTitulos',
-            'palavras',
-            'sonsPersonalizados',
-            'soundChanges',
-            'studason_tests',
-            'formasSilaba',
-            'nivelUsoPalavra'
-        ];
-
-        foreach ($directTables as $table) {
-            $stmt = $mysqli->prepare("DELETE FROM `$table` WHERE id_idioma = ?");
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-            $stmt->bind_param('i', $idIdioma);
-            $stmt->execute();
-            $stmt->close();
-        }
-
-        // Delete idiomas
-        if ($idIdioma > 10000){
-            $stmt = $mysqli->prepare("DELETE FROM idiomas WHERE id = ?");
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for idiomas: " . $mysqli->error);
-            }
-            $stmt->bind_param('i', $idIdioma);
-            $stmt->execute();
-            if ($stmt->affected_rows === 0) {
-                throw new Exception("Language not found");
-            }
-            $stmt->close();
-        }
-
-        $mysqli->commit();
-        echo json_encode(['message' => _t('Idioma apagado com sucesso')]);
-    } catch (Exception $e) {
-        $mysqli->rollback();
-        error_log("Delete error: " . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-
-    ob_end_flush();
-    $mysqli->close();
-    die(); 
-};
-
-if ($_GET['action'] == 'apagarRealidade') {
-    ob_start();
-
-    ini_set('default_charset', 'UTF-8');
-    header('Content-Type: application/json; charset=utf-8');
-
-    $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
-    if ($mysqli->connect_error) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
-        ob_end_flush();
-        exit;
-    }
-
-    if (!$mysqli->set_charset('utf8mb4')) {
-        error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
-        $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
-    }
-
-    try {
-        if (!isset($_SESSION['KondisonairUzatorIDX'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'User not authenticated']);
-            ob_end_flush();
-            exit;
-        }
-        $userId = (int)$_SESSION['KondisonairUzatorIDX'];
-
-        if (!isset($_POST['id_realidade']) || !is_numeric($_POST['id_realidade']) || !isset($_POST['password'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing or invalid reality ID or password']);
-            ob_end_flush();
-            exit;
-        }
-        $idRealidade = (int)$_POST['id_realidade'];
-        $password = $_POST['password'];
-
-        $stmt = $mysqli->prepare("SELECT senha FROM usuarios WHERE id = ?");
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for password check: " . $mysqli->error);
-        }
-        $stmt->bind_param('i', $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result->fetch_assoc();
-        $stmt->close();
-
-        if (!$user || !password_verify($password, $user['senha'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Invalid password']);
-            ob_end_flush();
-            exit;
-        }
-
-        $stmt = $mysqli->prepare(
-            "SELECT id FROM realidades WHERE id = ? AND (id_usuario = ? OR EXISTS (
-                SELECT 1 FROM collabs_realidades WHERE id_realidade = ? AND id_usuario = ?
-            ))"
-        );
-        if ($stmt === false) {
-            throw new Exception("Prepare failed for permission check: " . $mysqli->error);
-        }
-        $stmt->bind_param('iiii', $idRealidade, $userId, $idRealidade, $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($result->num_rows === 0) {
-            http_response_code(403);
-            echo json_encode(['error' => 'User not authorized to delete this reality']);
-            ob_end_flush();
-            exit;
-        }
-        $stmt->close();
-
-        $mysqli->begin_transaction();
-
-        $indirectTables = [
-            'entidades_tipos_stats' => "DELETE FROM entidades_tipos_stats WHERE id_entidade_tipo IN (SELECT id FROM entidades_tipos WHERE id_realidade = ?)",
-            'stats_entidades' => "DELETE FROM stats_entidades WHERE id_entidade IN (SELECT id FROM entidades WHERE id_realidade = ?)",
-            'entidades_nomes' => "DELETE FROM entidades_nomes WHERE id_entidade IN (SELECT id FROM entidades WHERE id_realidade = ?)",
-            'historias_entidades' => "DELETE FROM historias_entidades WHERE id_entidade IN (SELECT id FROM entidades WHERE id_realidade = ?)",
-            'entidades_relacoes' => "DELETE FROM entidades_relacoes WHERE id_entidade1 IN (SELECT id FROM entidades WHERE id_realidade = ?) AND id_entidade2 IN (SELECT id FROM entidades WHERE id_realidade = ?) ",
-            'time_cycles' => "DELETE FROM time_cycles WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)",
-            'time_names' => "DELETE FROM time_names WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)",
-            'time_adjustment_rules' => "DELETE FROM time_adjustment_rules WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)",
-            'time_units' => "DELETE FROM time_units WHERE id_time_system IN (SELECT id FROM time_systems WHERE id_realidade = ?)"
-        ];
-
-        foreach ($indirectTables as $table => $query) {
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-            if ($table === 'entidades_relacoes') {
-                $stmt->bind_param('ii', $idRealidade, $idRealidade);
-            } else {
-                $stmt->bind_param('i', $idRealidade);
-            }
-            $stmt->execute();
-            $stmt->close();
-        }
-
-        // Delete direct tables
-        $directTables = [
-            'collabs_realidades',
-            'entidades',
-            'entidades_tipos',
-            'historias',
-            'historias_tipos',
-            'momentos',
-            'stats',
-            'time_systems'
-        ];
-
-        foreach ($directTables as $table) {
-            $stmt = $mysqli->prepare("DELETE FROM `$table` WHERE id_realidade = ?");
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-            $stmt->bind_param('i', $idRealidade);
-            $stmt->execute();
-            $stmt->close();
-        }
-
-        $mysqli->commit();
-        echo json_encode(['message' => _t('Realidade apagada com sucesso')]);
-    } catch (Exception $e) {
-        $mysqli->rollback();
-        error_log("Delete error: " . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-
-    ob_end_flush();
-    $mysqli->close();
-    die(); 
-};
-
-if ($_GET['action'] == 'importarIdioma') {
-
-    ob_start();
-    header('Content-Type: application/json; charset=utf-8');
-
-    $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
-    if ($mysqli->connect_error) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
-        ob_end_flush();
-        exit;
-    }
-
-    // Ensure UTF-8 encoding for MySQL
-    if (!$mysqli->set_charset('utf8mb4')) {
-        error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
-        $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
-    }
-
-    try {
-        if (!isset($_SESSION['KondisonairUzatorIDX'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'User not authenticated']);
-            ob_end_flush();
-            exit;
-        }
-        $userId = (int)$_SESSION['KondisonairUzatorIDX'];
-
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('No valid file uploaded.');
-        }
-
-        $zip = new ZipArchive();
-        if ($zip->open($_FILES['file']['tmp_name']) !== true) {
-            throw new Exception('Failed to open ZIP file.');
-        }
-
-        $jsonFile = null;
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $filename = $zip->getNameIndex($i);
-            if (preg_match('/^\d+\.json$/', $filename)) {
-                $jsonFile = $filename;
-                break;
-            }
-        }
-        if (!$jsonFile) {
-            $zip->close();
-            throw new Exception('No <id_idioma>.json file found in ZIP.');
-        }
-
-        $json = $zip->getFromName($jsonFile);
-        if ($json === false) {
-            $zip->close();
-            throw new Exception('Failed to read JSON file from ZIP.');
-        }
-
-        if (!mb_check_encoding($json, 'UTF-8')) {
-            $json = mb_convert_encoding($json, 'UTF-8', 'auto');
-            if (!mb_check_encoding($json, 'UTF-8')) {
-                error_log("Failed to convert JSON to UTF-8");
-                $zip->close();
-                throw new Exception('Invalid character encoding in JSON file');
-            }
-        }
-        $data = json_decode($json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $zip->close();
-            throw new Exception('Invalid JSON format: ' . json_last_error_msg());
-        }
-
-        $mysqli->begin_transaction();
-        $stats = ['inserted' => 0, 'updated' => 0, 'existing' => []];
-
-        function checkExistingIds($mysqli, $table, $ids) {
-            if (empty($ids)) {
-                return [];
-            }
-            $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            $query = "SELECT id FROM `$table` WHERE id IN ($placeholders)";
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-            $types = str_repeat('i', count($ids));
-            $stmt->bind_param($types, ...$ids);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $existing = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
-            $stmt->close();
-            return $existing;
-        }
-
-        function checkExistingCollab($mysqli, $id_usuario, $id_idioma) {
-            $query = "SELECT id FROM collabs WHERE id_usuario = ? AND id_idioma = ?";
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for collabs check: " . $mysqli->error);
-            }
-            $stmt->bind_param('ii', $id_usuario, $id_idioma);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $exists = $result->num_rows > 0;
-            $stmt->close();
-            return $exists;
-        }
-
-        function upsertRecords($mysqli, $table, $records, &$stats) {
-            if (empty($records)) {
-                return;
-            }
-            $records = is_array($records) ? $records : [$records];
-            $ids = array_filter(array_column($records, 'id'), 'is_numeric');
-            $existingIds = checkExistingIds($mysqli, $table, $ids);
-            if (!empty($existingIds)) {
-                $stats['existing'][] = "$table: " . count($existingIds) . " record(s) will be overwritten";
-            }
-
-            $firstRow = $records[0];
-            $columns = array_keys($firstRow);
-            $placeholders = implode(',', array_fill(0, count($columns), '?'));
-            $updatePairs = array_map(function ($col) {
-                return "`$col` = VALUES(`$col`)";
-            }, $columns);
-            $updateSql = implode(',', $updatePairs);
-            $query = "INSERT INTO `$table` (`" . implode('`,`', $columns) . "`) VALUES ($placeholders) ON DUPLICATE KEY UPDATE $updateSql";
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-
-            foreach ($records as $row) {
-                $values = [];
-                $types = '';
-                $isExisting = isset($row['id']) && in_array($row['id'], $existingIds);
-                foreach ($columns as $col) {
-                    $value = $row[$col];
-                    // Ensure UTF-8 for strings
-                    if (is_string($value) && !mb_check_encoding($value, 'UTF-8')) {
-                        $original = $value;
-                        $value = mb_convert_encoding($value, 'UTF-8', 'auto');
-                        if (!mb_check_encoding($value, 'UTF-8')) {
-                            error_log("Failed to convert string in $col for $table: " . substr($original, 0, 50));
-                            $value = '';
-                        }
-                    }
-                    $values[] = $value;
-                    $types .= is_numeric($value) && !is_float($value + 0) ? 'i' : 's';
-                }
-                $stmt->bind_param($types, ...$values);
-                $stmt->execute();
-                if ($isExisting) {
-                    $stats['updated']++;
-                } else {
-                    $stats['inserted']++;
-                }
-            }
-            $stmt->close();
-        }
-
-        if (!isset($data['idiomas']) || empty($data['idiomas'])) {
-            throw new Exception('Missing idiomas data');
-        }
-        // $data['idiomas']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
-        upsertRecords($mysqli, 'idiomas', [$data['idiomas']], $stats);
-        $newIdiomaId = $data['idiomas']['id'];
-
-        if (!isset($data['usuarios']) || empty($data['usuarios'])) {
-            throw new Exception('Missing usuarios data');
-        }
-        upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
-
-        $allTables = [
-            'artygs',
-            'blocos',
-            'collabs',
-            'classes',
-            'classesSom',
-            'concordancias',
-            'escritas',
-            'frases',
-            'generos',
-            'inventarios',
-            'ipaTitulos',
-            'palavras',
-            'sonsPersonalizados',
-            'soundChanges',
-            'studason_tests',
-            'formasSilaba',
-            'nivelUsoPalavra',
-            'artyg_dest',
-            'fontes',
-            'autosubstituicoes',
-            'drawChars',
-            'glifos',
-            'formaSilabaComponente',
-            'itensConcordancias',
-            'gloss_itens',
-            'itens_flexoes',
-            'flexoes',
-            'itens_palavras',
-            'palavrasNativas',
-            'palavras_origens',
-            'palavras_referentes',
-            'palavras_usos',
-            'significados_idiomas',
-            'sons_classes',
-            'teclas',
-            'classesGeneros'
-        ];
-
-        foreach ($allTables as $table) {
-            if (isset($data[$table]) && !empty($data[$table])) {
-                foreach ($data[$table] as &$row) {
-                    if (isset($row['id_idioma'])) {
-                        $row['id_idioma'] = $newIdiomaId;
-                    }
-                }
-                upsertRecords($mysqli, $table, $data[$table], $stats);
-            }
-        }
-
-        if ($userId != $data['idiomas']['id_usuario']) {
-            if (!checkExistingCollab($mysqli, $userId, $newIdiomaId)) {
-                $collabId = generateId();
-                $collabRecord = [
-                    'id' => $collabId,
-                    'id_idioma' => $newIdiomaId,
-                    'id_usuario' => $userId
-                ];
-                upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
-            } else {
-                $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on language $newIdiomaId)";
-            }
-        }
-
-        $uploadDirs = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $filename = $zip->getNameIndex($i);
-            if ($filename === $jsonFile) {
-                continue;
-            }
-            
-            $parts = explode('/', $filename);
-            if (count($parts) < 1) {
-                continue; // Skip files without a directory
-            }
-            $topDir = $parts[0];
-            if (!isset($uploadDirs[$topDir])) {
-                $baseDir = in_array($topDir, ['audio', 'image']) ? "$topDir/$newIdiomaId" : $topDir;
-                $uploadDirs[$topDir] = "$baseDir/";
-                if (!is_dir($uploadDirs[$topDir]) && !mkdir($uploadDirs[$topDir], 0755, true)) {
-                    $zip->close();
-                    throw new Exception("Failed to create directory: {$uploadDirs[$topDir]}");
-                }
-            }
-            $targetDir = in_array($topDir, ['audio', 'image']) ? "$topDir/$newIdiomaId/" : '.';
-            if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true)) {
-                $zip->close();
-                throw new Exception("Failed to create directory: $targetDir");
-            }
-            if ($zip->extractTo($targetDir, $filename) === false) {
-                error_log("Failed to extract $filename");
-            } else {
-                if ( in_array($topDir, ['audio', 'image']) ) rename($targetDir.$filename, $targetDir.basename($filename));
-            }
-            rmdir($targetDir.'audio/');
-            rmdir($targetDir.'image/');
-        }
-        $zip->close();
-
-        $mysqli->commit();
-
-        $message = _t("Importado com sucesso: %1 registros inseridos, %2 registros atualizados.",[$stats['inserted'],$stats['updated']]);
-        if (!empty($stats['existing'])) {
-            $message .= " Warning: " . implode('; ', $stats['existing']);
-        }
-        echo json_encode(['message' => $message]);
-    } catch (Exception $e) {
-        $mysqli->rollback();
-        error_log("Import error: " . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-
-    ob_end_flush();
-    $mysqli->close();
-    die(); 
-};
-
-if ($_GET['action'] == 'importarRealidade') {
-
-    ob_start();
-    header('Content-Type: application/json; charset=utf-8');
-
-    $mysqli = new mysqli($mysql_host, $mysql_user, $mysql_pass, $mysql_db);
-    if ($mysqli->connect_error) {
-        http_response_code(500);
-        echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
-        ob_end_flush();
-        exit;
-    }
-
-    // Ensure UTF-8 encoding for MySQL
-    if (!$mysqli->set_charset('utf8mb4')) {
-        error_log("Failed to set charset to utf8mb4: " . $mysqli->error);
-        $mysqli->query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
-    }
-
-    try {
-        if (!isset($_SESSION['KondisonairUzatorIDX'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'User not authenticated']);
-            ob_end_flush();
-            exit;
-        }
-        $userId = (int)$_SESSION['KondisonairUzatorIDX'];
-
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('No valid file uploaded.');
-        }
-
-        $zip = new ZipArchive();
-        if ($zip->open($_FILES['file']['tmp_name']) !== true) {
-            throw new Exception('Failed to open ZIP file.');
-        }
-
-        $jsonFile = null;
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $filename = $zip->getNameIndex($i);
-            if (preg_match('/^\d+\.json$/', $filename)) {
-                $jsonFile = $filename;
-                break;
-            }
-        }
-        if (!$jsonFile) {
-            $zip->close();
-            throw new Exception('No <id_realidade>.json file found in ZIP.');
-        }
-
-        $json = $zip->getFromName($jsonFile);
-        if ($json === false) {
-            $zip->close();
-            throw new Exception('Failed to read JSON file from ZIP.');
-        }
-
-        if (!mb_check_encoding($json, 'UTF-8')) {
-            $json = mb_convert_encoding($json, 'UTF-8', 'auto');
-            if (!mb_check_encoding($json, 'UTF-8')) {
-                error_log("Failed to convert JSON to UTF-8");
-                $zip->close();
-                throw new Exception('Invalid character encoding in JSON file');
-            }
-        }
-        $data = json_decode($json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $zip->close();
-            throw new Exception('Invalid JSON format: ' . json_last_error_msg());
-        }
-
-        $mysqli->begin_transaction();
-        $stats = ['inserted' => 0, 'updated' => 0, 'existing' => []];
-
-        function checkExistingIds($mysqli, $table, $ids) {
-            if (empty($ids)) {
-                return [];
-            }
-            $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            $query = "SELECT id FROM `$table` WHERE id IN ($placeholders)";
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-            $types = str_repeat('i', count($ids));
-            $stmt->bind_param($types, ...$ids);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $existing = array_column($result->fetch_all(MYSQLI_ASSOC), 'id');
-            $stmt->close();
-            return $existing;
-        }
-
-        function checkExistingCollab($mysqli, $id_usuario, $id_realidade) {
-            $query = "SELECT id FROM collabs_realidades WHERE id_usuario = ? AND id_realidade = ?";
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for collabs check: " . $mysqli->error);
-            }
-            $stmt->bind_param('ii', $id_usuario, $id_realidade);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $exists = $result->num_rows > 0;
-            $stmt->close();
-            return $exists;
-        }
-
-        function upsertRecords($mysqli, $table, $records, &$stats) {
-            if (empty($records)) {
-                return;
-            }
-            $records = is_array($records) ? $records : [$records];
-            $ids = array_filter(array_column($records, 'id'), 'is_numeric');
-            $existingIds = checkExistingIds($mysqli, $table, $ids);
-            if (!empty($existingIds)) {
-                $stats['existing'][] = "$table: " . count($existingIds) . " record(s) will be overwritten";
-            }
-
-            $firstRow = $records[0];
-            $columns = array_keys($firstRow);
-            $placeholders = implode(',', array_fill(0, count($columns), '?'));
-            $updatePairs = array_map(function ($col) {
-                return "`$col` = VALUES(`$col`)";
-            }, $columns);
-            $updateSql = implode(',', $updatePairs);
-            $query = "INSERT INTO `$table` (`" . implode('`,`', $columns) . "`) VALUES ($placeholders) ON DUPLICATE KEY UPDATE $updateSql";
-            $stmt = $mysqli->prepare($query);
-            if ($stmt === false) {
-                throw new Exception("Prepare failed for $table: " . $mysqli->error);
-            }
-
-            foreach ($records as $row) {
-                $values = [];
-                $types = '';
-                $isExisting = isset($row['id']) && in_array($row['id'], $existingIds);
-                foreach ($columns as $col) {
-                    $value = $row[$col];
-                    // Ensure UTF-8 for strings
-                    if (is_string($value) && !mb_check_encoding($value, 'UTF-8')) {
-                        $original = $value;
-                        $value = mb_convert_encoding($value, 'UTF-8', 'auto');
-                        if (!mb_check_encoding($value, 'UTF-8')) {
-                            error_log("Failed to convert string in $col for $table: " . substr($original, 0, 50));
-                            $value = '';
-                        }
-                    }
-                    $values[] = $value;
-                    $types .= is_numeric($value) && !is_float($value + 0) ? 'i' : 's';
-                }
-                $stmt->bind_param($types, ...$values);
-                $stmt->execute();
-                if ($isExisting) {
-                    $stats['updated']++;
-                } else {
-                    $stats['inserted']++;
-                }
-            }
-            $stmt->close();
-        }
-
-        if (!isset($data['realidades']) || empty($data['realidades'])) {
-            throw new Exception('Missing realidades data');
-        }
-        // $data['realidades']['id_usuario'] = $data['usuarios'][0]['id']; // Ensure id_usuario matches imported usuarios
-        upsertRecords($mysqli, 'realidades', [$data['realidades']], $stats);
-        $newRealidadeId = $data['realidades']['id'];
-
-        if (!isset($data['usuarios']) || empty($data['usuarios'])) {
-            throw new Exception('Missing usuarios data');
-        }
-        upsertRecords($mysqli, 'usuarios', $data['usuarios'], $stats);
-
-        $allTables = [
-            'collabs_realidades',
-            'entidades',
-            'entidades_tipos',
-            'historias',
-            'historias_tipos',
-            'momentos',
-            'stats',
-            'time_systems',
-            'time_cycles',
-            'time_names',
-            'time_adjustment_rules',
-            'time_units',
-            'stats_entidades',
-            'entidades_nomes',
-            'historias_entidades',
-            'entidades_relacoes',
-            'entidades_tipos_stats'
-        ];
-
-        foreach ($allTables as $table) {
-            if (isset($data[$table]) && !empty($data[$table])) {
-                foreach ($data[$table] as &$row) {
-                    if (isset($row['id_realidade'])) {
-                        $row['id_realidade'] = $newRealidadeId;
-                    }
-                }
-                upsertRecords($mysqli, $table, $data[$table], $stats);
-            }
-        }
-
-        if ($userId != $data['realidades']['id_usuario']) {
-            if (!checkExistingCollab($mysqli, $userId, $newRealidadeId)) {
-                $collabId = generateId();
-                $collabRecord = [
-                    'id' => $collabId,
-                    'id_realidade' => $newRealidadeId,
-                    'id_usuario' => $userId
-                ];
-                upsertRecords($mysqli, 'collabs', [$collabRecord], $stats);
-            } else {
-                $stats['existing'][] = "collabs: Skipped adding collaborator (user $userId already collaborates on reality $newRealidadeId)";
-            }
-        }
-
-        $zip->close();
-
-        $mysqli->commit();
-
-        $message = _t("Importado com sucesso: %1 registros inseridos, %2 registros atualizados.",[$stats['inserted'],$stats['updated']]);
-        if (!empty($stats['existing'])) {
-            $message .= " Warning: " . implode('; ', $stats['existing']);
-        }
-        echo json_encode(['message' => $message]);
-    } catch (Exception $e) {
-        $mysqli->rollback();
-        error_log("Import error: " . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-    }
-
-    ob_end_flush();
-    $mysqli->close();
-    die(); 
-};
 ?>

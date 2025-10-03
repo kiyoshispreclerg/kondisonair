@@ -818,7 +818,7 @@ async function loadCalendar(
             if (momentsByDate[dateKey]) {
                 message += `\n\nMomentos neste dia:`;
                 momentsByDate[dateKey].forEach(m => {
-                    message += `\n- ${m.nome}: ${m.descricao || 'Sem descrição'}`;
+                    message += `\n<strong>${m.nome}</strong>: ${m.descricao || 'Sem descrição'}`;
                 });
             }
 

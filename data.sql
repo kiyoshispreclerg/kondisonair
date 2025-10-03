@@ -385,7 +385,8 @@ REPLACE INTO `opcoes_sistema` (`id`, `opcao`, `valor`) VALUES
 (10, 'lim_conc_lang', '8'),
 (11, 'lim_itens_conc', '8'),
 (15, 'lim_sons_lang', '80'),
-(16, 'frases_mes', '50');
+(16, 'frases_mes', '50'),
+(17, 'limite_likes_user', '5000');
 
 REPLACE INTO `referentes` (`id`, `modificado`) VALUES
 (106099661390050001, '2025-07-05 22:20:54'),
