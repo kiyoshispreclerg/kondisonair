@@ -23,6 +23,7 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Criador de paradigmas baseado em alterações sonoras
 
 ## Em consideração
+- Variações do mesmo idioma (para sotaques, diglossia etc)
 - Tabelas de sons personalizadas
 - Criação de fonte a partir dos caracteres desenhados
 - Adicionar áudio em textos

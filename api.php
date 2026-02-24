@@ -3810,6 +3810,39 @@ function getLastChange($tipo,$id = 0) { // lastupdated
   return 0;
 };
 
+function getOrigensPalavra($pid){
+  $sql = "SELECT po.*, p.romanizacao, p.pronuncia, p.id as pid, p.significado,
+        (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as escrita,
+        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
+          SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
+        ) LIMIT 1) as nativo,
+        (SELECT m.nome FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as momento,
+        (SELECT m.data_calendario FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as tempo
+        FROM palavras_origens po 
+        LEFT JOIN palavras p ON p.id = po.id_origem
+        LEFT JOIN idiomas i ON i.id = p.id_idioma
+        WHERE po.id_palavra = $pid ORDER BY po.ordem;";
+  
+  // time_value ou data_calendario ?
+        
+  $result = mysqli_query($GLOBALS['dblink'],$sql);
+  $origens = [];
+  while ($r = mysqli_fetch_assoc($result)) {
+      $origens[] = $r;
+  }
+  
+  return $origens;
+}
+
+function getOrigensPalavraRecursivo($pid) {
+    $origens = getOrigensPalavra($pid);
+    foreach ($origens as &$origem) {
+        // Busca recursivamente as origens de cada origem
+        $origem['origens'] = getOrigensPalavraRecursivo($origem['pid']);
+    }
+    return $origens;
+}
+
 /*
   AÇÕES KONDISONAIR - DE EDIÇÃO (PARA APENAS LOGADO)
 */
@@ -7369,37 +7402,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die('ok');
   };
 
-  function getOrigensPalavra($pid){
-    $sql = "SELECT po.*, p.romanizacao, p.pronuncia, p.id as pid, p.significado,
-          (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as escrita,
-          (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
-            SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
-          ) LIMIT 1) as nativo,
-          (SELECT m.nome FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as momento,
-          (SELECT m.data_calendario FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as tempo
-          FROM palavras_origens po 
-          LEFT JOIN palavras p ON p.id = po.id_origem
-          LEFT JOIN idiomas i ON i.id = p.id_idioma
-          WHERE po.id_palavra = $pid ORDER BY po.ordem;";
-    
-    // time_value ou data_calendario ?
-          
-    $result = mysqli_query($GLOBALS['dblink'],$sql);
-    $origens = [];
-    while ($r = mysqli_fetch_assoc($result)) {
-        $origens[] = $r;
-    }
-    
-    return $origens;
-  }
-  function getOrigensPalavraRecursivo($pid) {
-      $origens = getOrigensPalavra($pid);
-      foreach ($origens as &$origem) {
-          // Busca recursivamente as origens de cada origem
-          $origem['origens'] = getOrigensPalavraRecursivo($origem['pid']);
-      }
-      return $origens;
-  }
   if ($_GET['action'] == 'ajaxOrigemPalavra') {
     echo json_encode(getOrigensPalavraRecursivo($_GET['pid']));
     die();
@@ -8161,6 +8163,16 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     die();
   };
+
+  if ($_GET['action'] == 'getUnidadesRefCalendario') {
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT id, nome FROM time_units WHERE id_realidade = ".(int)$_GET['id'].";") or die(mysqli_error($GLOBALS['dblink']));
+    $data = [];
+    while ($r = mysqli_fetch_assoc($result)) {
+        $data[] = $r;
+    }
+    echo json_encode($data);
+    exit();
+  }
   
   if ($_GET['action']=='ajaxJoes') { 
     if (!$_SESSION['KondisonairUzatorIDX']>0) die('not_user');
@@ -9307,7 +9319,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $uid = (int)$_GET['uid'];
       $nome = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['nome']);
       $duracao = (float)$_POST['duracao'];
-      $equivalente = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['equivalente']);
+      $equivalente = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['equivalente'] ?? null);
       $ref = (int)$_POST['ref'];
       $quantidade = (float)$_POST['quantidade'];
       $subNames = json_decode($_POST['subNames'], true);
@@ -9320,8 +9332,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       } else {
           // Inserir nova unidade
           $uid = generateId();
-          $query = "INSERT INTO time_units (id, id_time_system, id_realidade, nome, duracao, equivalente) 
-                    VALUES ($uid, $sid, $rid, '$nome', $duracao, '$equivalente')";
+          $query = "INSERT INTO time_units (id, id_time_system, id_realidade, nome, duracao".($equivalente?", equivalente":'').") 
+                    VALUES ($uid, $sid, $rid, '$nome', $duracao ".($equivalente?", '$equivalente'":'').")";
           mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
       }
 

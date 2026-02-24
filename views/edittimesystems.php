@@ -16,10 +16,14 @@ if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['Kondis
 
 $contents = '';
 $script = '';
+$scriptCarregaCals = '';
 
 $sistemas = mysqli_query($GLOBALS['dblink'], "SELECT * FROM time_systems WHERE id_realidade = ".$id_realidade." ORDER BY padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 while ($s = mysqli_fetch_assoc($sistemas)) {
-    $script .= 'carregarTabelaUnidades(\''.$s['id'].'\');carregarCalendario(\''.$s['id'].'\'); changed[\''.$s['id'].'\'] = \''.getLastChange('calendar',$s['id']).'\';';
+    $script .= 'carregarTabelaUnidades(\''.$s['id'].'\');
+        changed[\''.$s['id'].'\'] = \''.getLastChange('calendar',$s['id']).'\';
+    ';
+    $scriptCarregaCals .= 'carregarCalendario(\''.$s['id'].'\');';
 
     $contents .= '<div class="col-12">
         <div class="card">
@@ -131,8 +135,9 @@ while ($s = mysqli_fetch_assoc($sistemas)) {
 
 <script>
 var changed = {};
+<?php echo $script; ?>
 $(document).ready(function(){
-    <?php echo $script; ?>
+<?php echo $scriptCarregaCals; ?>
 });
 
 function salvarSistema(id) {
@@ -200,7 +205,7 @@ function novoSistema() {
 function addUnidade(sid, uid = 0, nome = '', duracao = '', ref = 0, quantidade = '', equivalente = '', subNames = '[]', refsub = 0, quant_sub = 0) {
     $('#unome').val(nome);
     $('#uduracao').val(duracao);
-    $('#uref').val(ref);
+    loadRefsCalendario('<?=$id_realidade?>','uref',ref);
     $('#urefsub').val(refsub);
     $('#uquantidade').val(quantidade);
     $('#uquantidadesub').val(quant_sub);
@@ -427,7 +432,7 @@ function apagarUnidade(uid, sid) {
                     </div>
                     <div class="mb-3 col-md-3">
                         <label class="form-label"><?=_t('Duração (segundos)')?></label>
-                        <input type="number" class="form-control" id="uduracao" placeholder="<?=_t('Ex.: 86400 para um dia')?>" step="1.0" readonly />
+                        <input type="number" class="form-control" id="uduracao" placeholder="<?=_t('Ex.: 86400 para um dia')?>" step="1.0" />
                     </div>
                 </div>
                 <div class="row">
@@ -435,12 +440,6 @@ function apagarUnidade(uid, sid) {
                         <label class="form-label"><?=_t('Unidade de referência')?></label>
                         <select class="form-select" id="uref" onchange="updateDuracao()">
                             <option value="0" selected><?=_t('Nenhuma')?></option>
-                            <?php 
-                            $unidades = mysqli_query($GLOBALS['dblink'], "SELECT id, nome FROM time_units WHERE id_realidade = ".$id_realidade.";");
-                            while ($u = mysqli_fetch_assoc($unidades)) {
-                                echo '<option value="'.$u['id'].'">'.$u['nome'].'</option>';
-                            }
-                            ?>
                         </select>
                     </div>
                     <div class="mb-3 col-md-3">
@@ -510,7 +509,6 @@ function updateSubNames(subNamesArray = []) {
     const e = document.getElementById('uref');
     const refName = e.options[e.selectedIndex].text;
 
-
     if (nameSub === '1' && quantidade > 0) {
         for (let i = 1; i <= quantidade; i++) {
             subNamesDiv.innerHTML += `
@@ -545,7 +543,7 @@ function execAddUnidade() {
     var nameSub = $('#namesub').val();
 
     if (nome == '' || duracao == '') {
-        $.alert('Insira nome e duração da unidade!');
+        alert('Insira nome e duração da unidade!');
         return false;
     }
 

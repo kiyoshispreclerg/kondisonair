@@ -576,16 +576,16 @@ async function loadCalendar(
 ) {
     // Chaves para localStorage
     const calendarCacheKey = `k_calendar_${calId}`;
+    const calUpdatedCacheKey = `k_calendar_${calId}_updated`;
     const momentsCacheKey = `k_momentos_${rid}`;
 
     let calendarData, momentsData;
 
-    // changed checar aqui!!!
-
     try {
         // --- Carregar dados do calendário do localStorage ---
         let cachedCalendar = localStorage.getItem(calendarCacheKey);
-        if (!cachedCalendar) {
+        let updatedCalendar = localStorage.getItem(calUpdatedCacheKey);
+        if (!cachedCalendar || changed > updatedCalendar) {
             console.log('No cached calendar data, fetching from server');
             calendarData = await fetchCalendarData(calId);
             if (calendarData.error) {
@@ -1977,4 +1977,19 @@ function updateArtVinculado(tipo_dest = 'text', id_dest = '0', id_artigo = '0'){
             //
         }else alert(data);
 	})
+}
+
+function loadRefsCalendario(rid, el, selected = 0){
+    let ops = '<option value="0" selected>Nenhuma</option>';
+    fetch("?action=getUnidadesRefCalendario&id="+rid)
+    .then(response => response.json())
+    .then(json => {
+        json.forEach(r => {
+            let sel = '';
+            if (r.id == selected) sel = 'selected';
+            ops = ops + '<option value="' + r.id + '" '+sel+'>' + r.nome + '</option>';
+        })
+        $('#'+el).html(ops)
+    })
+
 }
