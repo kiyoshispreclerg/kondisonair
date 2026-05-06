@@ -75,7 +75,7 @@ $tamanho = $idioma['tamanho'];
                     <ol class="breadcrumb breadcrumb-arrows">
                       <li class="breadcrumb-item"><a href="index.php"><?=_t('Início')?></a></li>
                       <li class="breadcrumb-item"><a href="?page=wordbanks"><?=_t('Bancos de palavras')?></a></li>
-                      <li class="breadcrumb-item active"><a href="#"><?=_t('Importar')?></a></li>
+                      <li class="breadcrumb-item active"><a href="#"><?=$_SESSION['KondisonairUzatorIDX'] > 0 ? _t('Importar') : _t('Visualizar')?></a></li>
                     </ol>
                 </h2>
               </div>
@@ -91,6 +91,7 @@ $tamanho = $idioma['tamanho'];
             <div class="col-6">
                   <div class="card sticky-top">
                     <div class="card-header">
+                      <?php if ($_SESSION['KondisonairUzatorIDX'] > 0){ ?>
                       <h3 class="card-title"><?=_t('Gerar palavras')?></h3>
                       <div class="card-actions">
                         <?php if ($_GET['iid']>0){ ?>
@@ -99,11 +100,14 @@ $tamanho = $idioma['tamanho'];
                         </a>
                         <?php } ?>
                       </div>
+                      <?php }else{ ?>
+                        <h3 class="card-title"><?=_t('Palavras')?></h3>
+                      <?php } ?>
                     </div>
                     <div class="card-body">
 
                         <div class="row">
-                            <div class="col-6">
+                            <div class="col-auto">
                                 <label class="form-label"><?=_t('Idioma')?></label>
                                 <select class="form-select" id="idsig" onchange="window.location.href='?page=wordbank&id=<?=$_GET['id']?>&iid='+$('#idsig').val()">
                                     <option value="0" selected><?=_t('Selecionar idioma...')?></option><?php 
@@ -126,11 +130,12 @@ $tamanho = $idioma['tamanho'];
                                     ?>
                                 </select>
                             </div>
-                            
-                            <div class="col-6">
+                            <?php if ($_SESSION['KondisonairUzatorIDX'] > 0){ ?>
+                            <div class="col-4">
                                 <label class="form-label"><?=_t('Quantidade de palavras')?></label>
                                 <input type="text" class="form-control" name="example-text-input" id="num_palavras" value="100">
                             </div>
+                            <?php } ?>
                         </div>
                     </div>
                     <div class="card-body" style="overflow-y: auto;max-height: 60vh;">
@@ -148,7 +153,7 @@ $tamanho = $idioma['tamanho'];
                     <div class="card-header">
                         <h3 class="card-title"><?=$bancoDados['titulo']?></h3>
 						<div class="card-actions">
-                            <?php if($id_idioma>0 && $idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ ?>
+                            <?php if($_SESSION['KondisonairUzatorIDX'] > 0 && $id_idioma>0 && $idioma['id_usuario']==$_SESSION['KondisonairUzatorIDX']){ ?>
                                 <a href="#" class="btn btn-primary" onclick="aplicarImportacao()">
                                 <?=_t('Importar')?>
                                 </a>

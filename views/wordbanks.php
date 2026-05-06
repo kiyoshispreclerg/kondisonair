@@ -36,13 +36,13 @@
                         $result = mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
                         while($r = mysqli_fetch_assoc($result)){
  
-
+                            $abtnGerador = $_SESSION['KondisonairUzatorIDX'] > 0 ? '<a class="btn btn-primary" href="?page=wordbank&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Gerador de Palavras').'</a>' : '';
                             echo '<div class="list-group-item"><div class="row align-items-center">
                                     <div class="col">
                                         <a href="?page=wordbank&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'.$r['titulo'].'</a>
                                         <div class="text-secondary text-truncate mt-n1">'.$r['numRefs'].' '._t('referentes').' </div>
                                     </div><div class="col-auto">
-                                      <a class="btn btn-primary" href="?page=wordbank&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Gerador de Palavras').'</a>
+                                      '.$abtnGerador.'
                                       <a class="btn btn-primary" href="?page=wordcompare&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Comparador de Palavras').'</a>'.
                                         ($_SESSION['KondisonairUzatorIDX']>0&&$_SESSION['KondisonairUzatorIDX']==$r['id_usuario']?
                                           '<a class="btn btn-sm" href="?page=editwordbank&id='.$r['id'].($_GET['iid']>0 ? '&iid='.$_GET['iid'] : '').'">'._t('Editar').'</a>'.
