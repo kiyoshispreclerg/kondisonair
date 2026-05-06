@@ -3843,6 +3843,30 @@ function getOrigensPalavraRecursivo($pid) {
     return $origens;
 }
 
+function limparAcentos($string){
+    $comAcento = [
+        'á', 'à', 'ã', 'â', 'ä', 'Á', 'À', 'Ã', 'Â', 'Ä',
+        'é', 'è', 'ê', 'ë', 'É', 'È', 'Ê', 'Ë',
+        'í', 'ì', 'î', 'ï', 'Í', 'Ì', 'Î', 'Ï',
+        'ó', 'ò', 'õ', 'ô', 'ö', 'Ó', 'Ò', 'Õ', 'Ô', 'Ö',
+        'ú', 'ù', 'û', 'ü', 'Ú', 'Ù', 'Û', 'Ü',
+        'ç', 'Ç',
+        'ñ', 'Ñ'
+    ];
+
+    $semAcento = [
+        'a', 'a', 'a', 'a', 'a', 'A', 'A', 'A', 'A', 'A',
+        'e', 'e', 'e', 'e', 'E', 'E', 'E', 'E',
+        'i', 'i', 'i', 'i', 'I', 'I', 'I', 'I',
+        'o', 'o', 'o', 'o', 'o', 'O', 'O', 'O', 'O', 'O',
+        'u', 'u', 'u', 'u', 'U', 'U', 'U', 'U',
+        'c', 'C',
+        'n', 'N'
+    ];
+
+    return str_replace($comAcento, $semAcento, $string);
+}
+
 /*
   AÇÕES KONDISONAIR - DE EDIÇÃO (PARA APENAS LOGADO)
 */
@@ -12689,12 +12713,14 @@ if ($_GET['action'] == 'listEntities') {
     
     $entidades = [];
     while ($e = mysqli_fetch_assoc($result)) {
+        $lower = mb_strtolower($e['nome'].$e['descricao_curta']);
         $entidades[] = [
             'id' => $e['id'],
             'nome' => htmlspecialchars($e['nome']),
             'id_tipo' => $e['id_tipo'],
             'tipo_nome' => htmlspecialchars($e['tipo_nome'] ?? _t('Sem tipo')),
-            'descricao' => htmlspecialchars($e['descricao_curta'] ?? '')
+            'descricao' => htmlspecialchars($e['descricao_curta'] ?? ''),
+            'search' => htmlspecialchars( $e['nome'].$e['descricao_curta'].$lower.limparAcentos($lower) )
         ];
     }
     

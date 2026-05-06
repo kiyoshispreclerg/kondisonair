@@ -92,6 +92,7 @@ if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['Kondis
 
                         <div class="mt-5">
                             <a class="btn btn-primary w-100 mt-2" title="<?=_t($ruleManage)?>" href="?page=editentitytypes&rid=<?=$id_realidade?>&et=<?=$rule?>"><?=_t($ruleManage)?></a>
+                            <a class="btn btn-primary w-100 mt-2" onclick="loadEntidades(0,true)" title="<?=_t('Recarregar')?>"><?=_t('Recarregar')?></a>
                         </div>
 
                         <div class="mt-3">
