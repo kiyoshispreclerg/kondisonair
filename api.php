@@ -22,7 +22,7 @@ mysqli_set_charset( $GLOBALS['dblink'],'utf8');
 if (!isset($_SESSION)) session_start(); 
 //header('Content-Type: text/html; charset=ISO-8859-1');
 
-if (!isset($_SESSION['KondisonairUzatorIDX'])) $_SESSION['KondisonairUzatorIDX'] = 0;
+if (!isset($_SESSION['KondisonairUzatorIDX'])||$_SESSION['KondisonairUzatorIDX']<0) $_SESSION['KondisonairUzatorIDX'] = 0;
 
 if (isset($_COOKIE["KondisonairUzatorToken"])&&$_COOKIE["KondisonairUzatorToken"]) {
   $logged = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE token = '".$_COOKIE["KondisonairUzatorToken"]."';") or die(mysqli_error($GLOBALS['dblink']));
