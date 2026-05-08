@@ -9485,6 +9485,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
             id_entidade = $eid,
             id_stat = $id_stat,
             id_momento = $id_momento,
+            id_entidade_relacionada = 0,
             valor = '$valor';";
         mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
         echo $sid;
@@ -12397,10 +12398,10 @@ if ($_GET['action'] == 'listStats') {
   while ($s = mysqli_fetch_assoc($result)) {
       $tipo_dado = $s['tipo_dado'] == 'integer' ? _t('Inteiro') : ($s['tipo_dado'] == 'decimal' ? _t('Decimal') : _t('Texto'));
       $tipo_entidade = $s['tipo_entidade'] > 0 ? $s['entidade'] : _t('Qualquer');
-      $html .= '<div id="row_'.$s['id'].'" class="list-group-item" onclick="abrirStat('.$s['id'].')">
+      $html .= '<div id="row_'.$s['id'].'" class="list-group-item" onclick="abrirStat(\''.$s['id'].'\')">
           <div class="row">
               <div class="col">'.htmlspecialchars($s['nome']).'<br><small>'._t('Tipo').': '.$tipo_dado.' | '._t('Entidade').': '.$tipo_entidade.'</small></div>
-              <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="event.stopPropagation(); delStat('.$s['id'].')">X</a></div>
+              <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="event.stopPropagation(); delStat(\''.$s['id'].'\')">X</a></div>
           </div>
       </div>';
   }
@@ -12552,8 +12553,8 @@ if ($_GET['action'] == 'ajaxCarregarHistoriaStats') {
     while ($e = mysqli_fetch_assoc($entidades)) {
         $id_momento_atual = (int)$historia['id_momento'];
         $stats_query = mysqli_query($GLOBALS['dblink'], "SELECT ets.id_stat as id_stat, s.titulo as nome
-            FROM entidades_tipos_stats ets
-            LEFT JOIN stats s ON s.id = ets.id_stat
+            FROM stats s
+            LEFT JOIN entidades_tipos_stats ets ON s.id = ets.id_stat
             WHERE ets.id_entidade_tipo = {$e['id_tipo']} 
             ORDER BY s.titulo;") or die(mysqli_error($GLOBALS['dblink']));
         
@@ -13366,77 +13367,17 @@ if ($_GET['action'] == 'getDadosCalendario') {
 if ($_GET['action'] == 'ajaxGetJsonStats') {
     $eid = (int)$_GET['eid'];
 
-    // fenara: id 6, id_tipo 7 
-    // rafii:  id 8, id_tipo 7
-
-    // Primeiro, obter o id_tipo da entidade
-    $tipo_result = mysqli_query($GLOBALS['dblink'], "
-        SELECT id_tipo 
-        FROM entidades 
-        WHERE id = $eid
-    ") or die(mysqli_error($GLOBALS['dblink']));
-    $tipo_row = mysqli_fetch_assoc($tipo_result);
-    if (!$tipo_row) {
-        echo json_encode([
-            'series' => [],
-            'html' => '<div class="list-group-item">'._t('Entidade não encontrada.').'</div>'
-        ]);
-        die();
-    }
-    $id_tipo = (int)$tipo_row['id_tipo'];
-
-
-
-
     $result = mysqli_query($GLOBALS['dblink'], "
-        SELECT se.*, s.titulo as nome_stat, m.nome as nome_momento, m.time_value, m.ordem
-        FROM stats_entidades se 
-        JOIN stats s ON s.id = se.id_stat 
-        JOIN momentos m ON m.id = se.id_momento 
-        WHERE se.id_entidade = $eid 
-        ORDER BY m.time_value, m.ordem
-    ") or die(mysqli_error($GLOBALS['dblink']));
-    
-    // este lista os stats - sem os valores
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT ets.id, s.titulo as nome_stat
-        FROM entidades_tipos_stats ets
-        LEFT JOIN stats s ON s.id = ets.id_stat
-        WHERE ets.id_entidade_tipo = $id_tipo
-        ORDER BY s.titulo;") or die(mysqli_error($GLOBALS['dblink']));
-
-    // default ERRADO
-    $result = mysqli_query($GLOBALS['dblink'], "
-        SELECT se.*, s.titulo as nome_stat, m.nome as nome_momento, m.time_value, m.ordem
-        FROM stats_entidades se 
-        JOIN stats s ON s.id = se.id_stat 
-        JOIN momentos m ON m.id = se.id_momento 
-        WHERE se.id_entidade = $eid 
-        ORDER BY m.time_value, m.ordem
-    ") or die(mysqli_error($GLOBALS['dblink']));
-
-
-
-    // Query unificada
-    $result = mysqli_query($GLOBALS['dblink'], "
-        SELECT ets.id_stat, s.titulo as nome_stat, 
+        SELECT s.id as id_stat, s.titulo as nome_stat, 
                se.id as se_id, se.valor, se.id_momento, 
                m.nome as nome_momento, m.time_value, m.ordem
-        FROM entidades_tipos_stats ets
-        LEFT JOIN stats s ON s.id = ets.id_stat
-        LEFT JOIN stats_entidades se ON se.id_stat = ets.id_stat AND se.id_entidade = $eid
+        FROM stats s
+        LEFT JOIN entidades_tipos_stats ets ON s.id = ets.id_stat
+        LEFT JOIN stats_entidades se ON se.id_stat = s.id
         LEFT JOIN momentos m ON m.id = se.id_momento
-        WHERE ets.id_entidade_tipo = $id_tipo
+        WHERE se.id_entidade = $eid
         ORDER BY s.titulo, m.time_value, m.ordem
     ") or die(mysqli_error($GLOBALS['dblink']));
-
-
-
-
-
-
-
-
-
 
     $stats = [];
     while ($row = mysqli_fetch_assoc($result)) {
@@ -13482,7 +13423,7 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
         ]; 
         $valores_html = [];
         foreach ($stat['valores'] as $valor) {
-            $valores_html[] = '<a href="#" title="' . $valor['nome_momento'] . '" onclick="addStat(' . $id_stat . ',' . $id_stat . ',' . $valor['id_momento'] . ',\'' . $valor['valor'] . '\')">' 
+            $valores_html[] = '<a href="#" title="' . $valor['nome_momento'] . '" onclick="addStat(\'' . $id_stat . '\',\'' . $id_stat . '\',\'' . $valor['id_momento'] . '\',\'' . $valor['valor'] . '\')">' 
                             . $valor['valor'] . ' </a>';
         }
         $valores_str = implode(' - ', $valores_html);
@@ -13490,10 +13431,10 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
         $html .= '<div class="list-group-item"><div class="row">
             <div class="col">
                 <label>' . $stat['nome_stat'] . '</label>
-                <div class="text-body text-secondary"><small>' . _t('Valores') . ': ' . ($valores_str ?: _t('Nenhum valor registrado')) . ' - <a href="#" onclick="addStat(0,' . $id_stat . ',0,\'\')">Adicionar</a></small></div>
+                <div class="text-body text-secondary"><small>' . _t('Valores') . ': ' . ($valores_str ?: _t('Nenhum valor registrado')) . ' - <a href="#" onclick="addStat(0,\'' . $id_stat . '\',0,\'\')">Adicionar</a></small></div>
             </div>
             <!--div class="col-auto">
-                <a class="btn btn-sm btn-danger" onclick="apagarStatsPorEntidade(' . $eid . ',' . $id_stat . ')">X</a>
+                <a class="btn btn-sm btn-danger" onclick="apagarStatsPorEntidade(\'' . $eid . '\',\'' . $id_stat . '\')">X</a>
             </div-->
         </div></div>';
     }

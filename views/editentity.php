@@ -183,9 +183,9 @@ if ($_GET['et']=='character' || $e['rule']=='character') {
                         <div class="card"  >
                             <div class="card-header">
                                 <h3 class="card-title"><?=_t('Estatísticas')?></h3>
-                                <!--div class="card-actions">
+                                <div class="card-actions">
                                     <a href="#" class="btn btn-primary" onclick="addStat(0,0,0,'')"><?=_t('Adicionar')?></a>
-                                </div-->
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div id="stats">
@@ -385,7 +385,7 @@ function execAddStat() {
     var id_momento = $('#id_momento').val();
     var valor = $('#valor_stat').val();
     if (id_stat == '0' || id_momento == '0' || valor == '') {
-        $.alert('<?=_t('Selecione uma estatística, um momento e insira um valor!')?>');
+        alert('<?=_t('Selecione uma estatística, um momento e insira um valor!')?>');
         return false;
     }
     $.post("api.php?action=ajaxAddStat&eid="+$('#idEntidade').val()+"&sid="+sid, {
@@ -489,8 +489,7 @@ function apagarStat(sid) {
             </div>
             <div class="modal-body">
                 <input type="hidden" id="sid" />
-                <input type="hidden" id="id_stat" />
-                <!--div class="mb-3">
+                <div class="mb-3">
                     <label class="form-label"><?=_t('Estatística')?></label>
                     <select class="form-select" id="id_stat">
                         <option value="0" selected><?=_t('Selecione uma estatística')?></option>
@@ -501,7 +500,7 @@ function apagarStat(sid) {
                         }
                         ?>
                     </select>
-                </div-->
+                </div>
                 <div class="mb-3">
                     <label class="form-label"><?=_t('Momento')?></label>
                     <select class="form-select" id="id_momento">
