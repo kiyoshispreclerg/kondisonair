@@ -16,7 +16,9 @@ if ($realidade['titulo'] == '' || ($realidade['id_usuario'] != $_SESSION['Kondis
 }
 
 if ($hid > 0) {
-    $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM historias WHERE id = $hid AND id_realidade = $id_realidade LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
+    $result = mysqli_query($GLOBALS['dblink'], "SELECT h.*, m.time_value FROM historias h 
+        LEFT JOIN momentos m ON m.id = h.id_momento 
+        WHERE h.id = $hid AND h.id_realidade = $id_realidade LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
     $historia = mysqli_fetch_assoc($result);
     if (!$historia['id']>0) {
         echo '<script>window.location = "index.php";</script>';
@@ -70,146 +72,133 @@ if ($hid > 0) {
 
             <div class="col-4">
                 <div class="card">
-                    <div class="card-boy">
-                        <div class="accordion" id="accordion-example">
-
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading-1">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-1" aria-expanded="true">
-                                    Informações
-                                </button>
-                                </h2>
-                                <div id="collapse-1" class="accordion-collapse collapse show" data-bs-parent="#accordion-example" style="">
-                                    <div class="accordion-body pt-0">
-                                        <div class="mb-3">
-                                            <label class="form-label"><?=_t('Título')?>*</label>
-                                            <input type="text" class="form-control" id="titulo" value="<?=$historia['titulo']?>" onchange="showGravarHistoria()" placeholder="<?=_t('Ex.: A Batalha de Eldoria')?>">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label"><?=_t('Descrição')?></label>
-                                            <textarea class="form-control" id="descricao" rows="5" onchange="showGravarHistoria()" placeholder="<?=_t('Ex.: Resumo da história')?>"><?=$historia['descricao']?></textarea>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <label class="form-label"><?=_t('Status')?>*</label>
-                                                <select id="status" onchange="showGravarHistoria()" class="form-select">
-                                                    <option value="rascunho"><?=_t('Rascunho')?></option>
-                                                    <option value="publicado" <?php if($historia['status']=='publicado') echo 'selected'; ?>><?=_t('Publicado')?></option>
-                                                    <option value="arquivado" <?php if($historia['status']=='arquivado') echo 'selected'; ?>><?=_t('Arquivado')?></option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label"><?=_t('Momento')?></label>
-                                                <select id="id_momento" onchange="showGravarHistoria()" class="form-select">
-                                                    <option value="0" selected><?=_t('Nenhum')?></option>
-                                                    <?php
-                                                    $momentos = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, time_value, data_calendario FROM momentos WHERE id_realidade = $id_realidade ORDER BY time_value, ordem;") or die(mysqli_error($GLOBALS['dblink']));
-                                                    while ($m = mysqli_fetch_assoc($momentos)) {
-                                                        echo '<option value="'.$m['id'].'" data-date="'.$m['data_calendario'].'" ';
-                                                        if ($m['id'] == $historia['id_momento']) echo 'selected';
-                                                        echo '>'.$m['nome'].'</option>';
-                                                    }
-                                                    ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
+                  <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+                      <li class="nav-item">
+                        <a href="#tabs-1" class="nav-link active" data-bs-toggle="tab">Informações</a>
+                      </li>
+                      <li class="nav-item">
+                        <a href="#tabs-2" class="nav-link" data-bs-toggle="tab">Histórias</a>
+                      </li>
+                      <li class="nav-item">
+                        <a href="#tabs-3" class="nav-link" data-bs-toggle="tab">Entidades</a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="card-body">
+                    <div class="tab-content">
+                        <div class="tab-pane active show" id="tabs-1">
+                            <div class="mb-3">
+                                <label class="form-label"><?=_t('Título')?>*</label>
+                                <input type="text" class="form-control" id="titulo" value="<?=$historia['titulo']?>" onchange="showGravarHistoria()" placeholder="<?=_t('Ex.: A Batalha de Eldoria')?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label"><?=_t('Descrição')?></label>
+                                <textarea class="form-control" id="descricao" rows="5" onchange="showGravarHistoria()" placeholder="<?=_t('Ex.: Resumo da história')?>"><?=$historia['descricao']?></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label"><?=_t('Status')?>*</label>
+                                    <select id="status" onchange="showGravarHistoria()" class="form-select">
+                                        <option value="rascunho"><?=_t('Rascunho')?></option>
+                                        <option value="publicado" <?php if($historia['status']=='publicado') echo 'selected'; ?>><?=_t('Publicado')?></option>
+                                        <option value="arquivado" <?php if($historia['status']=='arquivado') echo 'selected'; ?>><?=_t('Arquivado')?></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><?=_t('Momento')?></label>
+                                    <select id="id_momento" onchange="showGravarHistoria()" class="form-select">
+                                        <option value="0" selected><?=_t('Nenhum')?></option>
+                                        <?php
+                                        $momentos = mysqli_query($GLOBALS['dblink'], "SELECT id, nome, time_value, data_calendario FROM momentos WHERE id_realidade = $id_realidade ORDER BY time_value, ordem;") or die(mysqli_error($GLOBALS['dblink']));
+                                        while ($m = mysqli_fetch_assoc($momentos)) {
+                                            echo '<option value="'.$m['id'].'" data-date="'.$m['data_calendario'].'" ';
+                                            if ($m['id'] == $historia['id_momento']) echo 'selected';
+                                            echo '>'.$m['nome'].'</option>';
+                                        }
+                                        ?>
+                                    </select>
                                 </div>
                             </div>
-
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading-2">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-2" aria-expanded="true">
-                                    Histórias
-                                </button>
-                                </h2>
-                                <div id="collapse-2" class="accordion-collapse collapse" data-bs-parent="#accordion-example" style="">
-                                    <div class="accordion-body pt-0">
-                                    <?php if($historia['id']>0){ ?>
+                        </div>
+                        <div class="tab-pane" id="tabs-2">
+                            <h4>Profile tab</h4>
+                            <div class="accordion-body pt-0">
+                                <?php if($historia['id']>0){ ?>
                                     <div class="mb-3">
-                                            <?php
-                                            //xxxxx mudar caixa de input pra só texto e link pra mudar valor no momento da historia, tipo na tela timeline?
-                                            $historiasDoNivel = mysqli_query($GLOBALS['dblink'], "SELECT *
-                                                FROM historias
-                                                WHERE id_superior = ".$historia['id_superior']." 
-                                                ORDER BY id;") or die(mysqli_error($GLOBALS['dblink']));
-                                            while ($hn = mysqli_fetch_assoc($historiasDoNivel)) {
-                                                if ($hn['id'] == $hid) echo '<div class="mb-2">
-                                                        <label class="form-label"><a>'.$hn['titulo'].'</a></label>
-                                                    </div>';
-                                                else echo '<div class="mb-2">
-                                                        <label class="form-label"><a href="?page=editstory&rid='.$hn['id_realidade'].'&hid='.$hn['id'].'">'.$hn['titulo'].'</a></label>
-                                                    </div>';
-                                            }
-                                            ?>
-                                    </div>
-                                    <?php } ?>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading-3">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-3" aria-expanded="true">
-                                    <?=_t('Entidades')?>
-                                </button>
-                                </h2>
-                                <div id="collapse-3" class="accordion-collapse collapse" data-bs-parent="#accordion-example" style="">
-                                    <div class="accordion-body pt-0">
-                                       
-                                    <?php if(true || $historia['id_momento']>0){ // vai salvar no momento 0 - padrão ?>
-                                    <div class="mb-3">
-                                        <!--a class="btn btn-sm">Adicionar</a> <a class="btn btn-sm">Criar</a-->
-                                        <div id="entidades-relacionadas">
-                                            <?php
-                                            //xxxxx mudar caixa de input pra só texto e link pra mudar valor no momento da historia, tipo na tela timeline?
-                                            $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel as nome, e.id_tipo
-                                                FROM historias_entidades he
-                                                JOIN entidades e ON e.id = he.id_entidade
-                                                WHERE he.id_historia = ".$historia['id']." 
-                                                GROUP BY e.id, e.nome_legivel, e.id_tipo
-                                                ORDER BY e.nome_legivel;") or die(mysqli_error($GLOBALS['dblink']));
-                                            while ($e = mysqli_fetch_assoc($entidades)) {
-                                                echo '<div class="mb-3">
-                                                    <strong>' . htmlspecialchars($e['nome']) . ' </strong> <!-- add/criar stat ? -->
-                                                    <div class="ms-2">';
-                                                // Stats para o tipo da entidade
-                                                $stats = mysqli_query($GLOBALS['dblink'], "SELECT ets.id, s.titulo, ets.id_stat
-                                                    FROM entidades_tipos_stats ets
-                                                    LEFT JOIN stats s ON s.id = ets.id_stat
-                                                    WHERE ets.id_entidade_tipo = {$e['id_tipo']}
-                                                    ORDER BY s.titulo;") or die(mysqli_error($GLOBALS['dblink']));
-                                                while ($s = mysqli_fetch_assoc($stats)) {
-                                                    echo '<div class="mb-2">
-                                                        <label class="form-label">' . htmlspecialchars($s['titulo']) . ' <!-- link abre grafico lateral desse stat --></label>
-                                                        <input type="number" class="form-control stat-valor" 
-                                                            data-entidade="' . $e['id'] . '" 
-                                                            data-stat="' . $s['id_stat'] . '" 
-                                                            placeholder="' . _t('Valor') . '">
-                                                        <small class="text-muted stat-aviso"></small>
-                                                    </div>';
-                                                }
-                                                if (mysqli_num_rows($stats) == 0) {
-                                                    echo '<p class="text-muted">' . _t('Nenhum stat para este tipo.') . '</p>';
-                                                }
-                                                echo '</div>
+                                        <?php
+                                        $historiasDoNivel = mysqli_query($GLOBALS['dblink'], "SELECT *
+                                            FROM historias
+                                            WHERE id_superior = ".$historia['id_superior']." 
+                                            ORDER BY id;") or die(mysqli_error($GLOBALS['dblink']));
+                                        while ($hn = mysqli_fetch_assoc($historiasDoNivel)) {
+                                            if ($hn['id'] == $hid) echo '<div class="mb-2">
+                                                    <label class="form-label"><a>'.$hn['titulo'].'</a></label>
                                                 </div>';
-                                            }
-                                            if (mysqli_num_rows($entidades) == 0) {
-                                                echo '<p class="text-muted">' . _t('Nenhuma entidade relacionada.') . ' <a>Criar</a></p>';
-                                            }
-                                            ?>
-                                        </div>
+                                            else echo '<div class="mb-2">
+                                                    <label class="form-label"><a href="?page=editstory&rid='.$hn['id_realidade'].'&hid='.$hn['id'].'">'.$hn['titulo'].'</a></label>
+                                                </div>';
+                                        }
+                                        ?>
                                     </div>
-                                    <?php } ?>
-                                    
-                                    </div>
+                                <?php } ?>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="tabs-3">
+                            <div class="mb-3">
+                                <!--a class="btn btn-sm">Adicionar</a> <a class="btn btn-sm">Criar</a-->
+                                <div id="entidades-relacionadas">
+                                    <?php
+                                    //xxxxx mudar caixa de input pra só texto e link pra mudar valor no momento da historia, tipo na tela timeline?
+                                    $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel as nome, e.id_tipo
+                                        FROM historias_entidades he
+                                        JOIN entidades e ON e.id = he.id_entidade
+                                        WHERE he.id_historia = ".$historia['id']." 
+                                        GROUP BY e.id, e.nome_legivel, e.id_tipo
+                                        ORDER BY e.nome_legivel;") or die(mysqli_error($GLOBALS['dblink']));
+                                    while ($e = mysqli_fetch_assoc($entidades)) {
+                                        echo '<div class="mb-3">
+                                            <strong>' . htmlspecialchars($e['nome']) . ' </strong> <!-- add/criar stat ? -->
+                                            <div class="ms-2">';
+                                        $stats = mysqli_query($GLOBALS['dblink'], "SELECT s.id, s.titulo, se.valor, m.nome as momento, m.time_value, m.id as id_momento
+                                            FROM stats_entidades se
+                                            LEFT JOIN stats s ON se.id_stat = s.id
+                                            LEFT JOIN momentos m ON m.id = se.id_momento
+                                            WHERE se.id_entidade = {$e['id']}
+                                            ".($historia['time_value'] ? "AND m.time_value <= {$historia['time_value']}" : "")."
+                                            GROUP BY s.id 
+                                            ORDER BY s.titulo;") or die(mysqli_error($GLOBALS['dblink']));
+                                        while ($s = mysqli_fetch_assoc($stats)) {
+                                            $valString = $s['titulo'].': <a href="#" onclick="">'.$s['valor'].'</a>';
+                                            if ($historia['id_momento']!=$s['id_momento']) $valString .= ' (desde '.$s['momento'].')';
+                                            echo '<div class="mb-2">
+                                                <label class="form-label">' . $valString . ' <!-- link abre grafico lateral desse stat --></label>
+                                                <!-- usar texto simples com ref ao anterior ou próximo, tipo "Val XX (desde Momento X)" e se clicar abre input pra ver gráfico ou editar/add -->
+                                                <!-- input type="number" class="form-control stat-valor" 
+                                                    data-entidade="' . $e['id'] . '" 
+                                                    data-stat="' . $s['id'] . '" 
+                                                    value="' . $s['valor'] . '" 
+                                                    placeholder="' . _t('Valor') . '" / -->
+                                                <small class="text-muted stat-aviso"></small>
+                                            </div>';
+                                        }
+                                        if (mysqli_num_rows($stats) == 0) {
+                                            echo '<p class="text-muted">' . _t('Nenhum stat para este tipo.') . '</p>';
+                                        }
+                                        echo '</div>
+                                        </div>';
+                                    }
+                                    if (mysqli_num_rows($entidades) == 0) {
+                                        echo '<p class="text-muted">' . _t('Nenhuma entidade relacionada.') . ' <a>Criar</a></p>';
+                                    }
+                                    ?>
                                 </div>
                             </div>
 
                         </div>
-                        
                     </div>
+                        
+                  </div>
                 </div>
             </div>
         </div>
