@@ -146,18 +146,20 @@ if ($hid > 0) {
                         </div>
                         <div class="tab-pane" id="tabs-3">
                             <div class="mb-3">
+                                <input type="text" class="form-control mb-3" id="searchEntidades" placeholder="<?=_t('Filtrar')?>" onkeyup="filterEntidades()">
                                 <!--a class="btn btn-sm">Adicionar</a> <a class="btn btn-sm">Criar</a-->
-                                <div id="entidades-relacionadas">
+                                <div id="entidadesContainer">
                                     <?php
                                     //xxxxx mudar caixa de input pra só texto e link pra mudar valor no momento da historia, tipo na tela timeline?
-                                    $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel as nome, e.id_tipo
+                                    $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel as nome, e.id_tipo, et.nome as tipo
                                         FROM historias_entidades he
-                                        JOIN entidades e ON e.id = he.id_entidade
+                                        LEFT JOIN entidades e ON e.id = he.id_entidade
+                                        LEFT JOIN entidades_tipos et ON e.id_tipo = et.id
                                         WHERE he.id_historia = ".$historia['id']." 
-                                        GROUP BY e.id, e.nome_legivel, e.id_tipo
-                                        ORDER BY e.nome_legivel;") or die(mysqli_error($GLOBALS['dblink']));
+                                        GROUP BY e.id, e.nome_legivel 
+                                        ORDER BY et.nome, e.nome_legivel;") or die(mysqli_error($GLOBALS['dblink']));
                                     while ($e = mysqli_fetch_assoc($entidades)) {
-                                        echo '<div class="mb-3">
+                                        echo '<div class="mb-3 entidade-item" data-nome="' . htmlspecialchars(strtolower($e['nome'])) . '">
                                             <strong>' . htmlspecialchars($e['nome']) . ' </strong> <!-- add/criar stat ? -->
                                             <div class="ms-2">';
                                         $stats = mysqli_query($GLOBALS['dblink'], "SELECT s.id, s.titulo, se.valor, m.nome as momento, m.time_value, m.id as id_momento
@@ -181,9 +183,6 @@ if ($hid > 0) {
                                                     placeholder="' . _t('Valor') . '" / -->
                                                 <small class="text-muted stat-aviso"></small>
                                             </div>';
-                                        }
-                                        if (mysqli_num_rows($stats) == 0) {
-                                            echo '<p class="text-muted">' . _t('Nenhum stat para este tipo.') . '</p>';
                                         }
                                         echo '</div>
                                         </div>';
