@@ -306,7 +306,7 @@ function carregarRelacoes() {
 
 function addRelacao(rid = 0, id_entidade2 = 0, tipo_relacao = '', descricao = '', inicio = 0, fim = 0) {
     $('#rid').val(rid);
-    $('#id_entidade2').val(id_entidade2);
+    updateTablerSelect('id_entidade2', id_entidade2);
     $('#tipo_relacao').val(tipo_relacao);
     updateTablerSelect('id_momento_inicio', inicio);
     updateTablerSelect('id_momento_fim', fim);

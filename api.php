@@ -13132,11 +13132,11 @@ if ($_GET['action'] == 'ajaxLoadRelacoes') {
   $html = '';
   while ($r = mysqli_fetch_assoc($result)) {
       $html .= '<div class="list-group-item"><div class="row">
-          <div class="col" onclick="addRelacao('.$r['id'].','.$r['id_entidade2'].',\''.htmlspecialchars($r['tipo_relacao']).'\',\''.htmlspecialchars($r['descricao']).'\',\''.$r['id_momento_inicio'].'\',\''.$r['id_momento_fim'].'\')">
+          <div class="col" onclick="addRelacao(\''.$r['id'].'\',\''.$r['id_entidade2'].'\',\''.htmlspecialchars($r['tipo_relacao']).'\',\''.htmlspecialchars($r['descricao']).'\',\''.$r['id_momento_inicio'].'\',\''.$r['id_momento_fim'].'\')">
               <a href="#">'.htmlspecialchars($r['nome_entidade2']).'</a>
               <a class="text-body text-secondary"><br><small>'.htmlspecialchars($r['tipo_relacao']).'</small></a>
           </div>
-          <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarRelacao('.$r['id'].')">X</a></div>
+          <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarRelacao(\''.$r['id'].'\')">X</a></div>
       </div></div>';
   }
   echo $html ?: '<div class="list-group-item">'._t('Nenhuma relação cadastrada.').'</div>';
