@@ -1993,3 +1993,21 @@ function loadRefsCalendario(rid, el, selected = 0){
     })
 
 }
+
+function filterEntidades() {
+    const searchText = document.getElementById('searchEntidades').value.toLowerCase();
+    
+    const tipoGrupos = document.querySelectorAll('.tipo-grupo');
+    const entidadeItems = document.querySelectorAll('.entidade-item');
+
+    entidadeItems.forEach(item => {
+        const nome = item.getAttribute('data-nome');
+        // Mostra ou esconde o item com base no texto de pesquisa
+        item.style.display = nome.includes(searchText) ? 'block' : 'none';
+    });
+
+    tipoGrupos.forEach(grupo => {
+        const entidadesVisiveis = grupo.querySelectorAll('.entidade-item:not([style*="none"])');
+        grupo.style.display = entidadesVisiveis.length > 0 ? 'block' : 'none';
+    });
+}

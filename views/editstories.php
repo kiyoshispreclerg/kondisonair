@@ -328,29 +328,6 @@ formatarTablerSelect('id_tipo');
 formatarTablerMomentsSelect('id_momento');
 formatarTablerMomentsSelect('m-id_superior',null);
 
-
-function filterEntidades() {
-    // Obtém o valor da caixa de pesquisa e converte para minúsculas
-    const searchText = document.getElementById('searchEntidades').value.toLowerCase();
-    
-    // Seleciona todos os grupos de tipo e itens de entidade
-    const tipoGrupos = document.querySelectorAll('.tipo-grupo');
-    const entidadeItems = document.querySelectorAll('.entidade-item');
-
-    // Filtra entidades
-    entidadeItems.forEach(item => {
-        const nome = item.getAttribute('data-nome');
-        // Mostra ou esconde o item com base no texto de pesquisa
-        item.style.display = nome.includes(searchText) ? 'block' : 'none';
-    });
-
-    // Verifica se cada grupo de tipo tem entidades visíveis e mostra/esconde o grupo
-    tipoGrupos.forEach(grupo => {
-        const entidadesVisiveis = grupo.querySelectorAll('.entidade-item:not([style*="none"])');
-        grupo.style.display = entidadesVisiveis.length > 0 ? 'block' : 'none';
-    });
-}
-
 function carregarCalendario(sid, changed) {
     let html = `<div class="d-flex mb-3 align-items-center">
             <div class="input-group me-2">
