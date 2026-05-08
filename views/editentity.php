@@ -299,8 +299,20 @@ function loadEntity(eid) {
 }
 
 function carregarRelacoes() {
-    $.post("api.php?action=ajaxLoadRelacoes&eid="+$('#idEntidade').val(), function(data) {
-        $('#relacoes').html(data);
+    $.getJSON("api.php?action=ajaxLoadRelacoes&eid="+$('#idEntidade').val(), function(data) {
+        let html = '';
+        if (data.length == 0) html = '<div class="list-group-item"><?=_t('Nenhuma relação cadastrada.')?></div>';
+        $.each(data, function(i, e) {
+            $("#id_tags option[value='" + e + "']").prop("selected", true);
+            html = html + `<div class="list-group-item"><div class="row">
+                    <div class="col" onclick="addRelacao(\'`+e.id+`\',\'`+e.id_entidade2+`\',\'`+e.tipo_relacao+`\',\'`+e.descricao+`\',\'`+e.id_momento_inicio+`\',\'`+e.id_momento_fim+`\')">
+                        <a href="#">`+e.nome_entidade2+`</a>
+                        <a class="text-body text-secondary"><br><small>`+e.tipo_relacao+`</small></a>
+                    </div>
+                    <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarRelacao(\'`+e.id+`\')">X</a></div>
+                </div></div>`;
+        });
+        $('#relacoes').html(html);
     });
 }
 

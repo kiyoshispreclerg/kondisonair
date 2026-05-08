@@ -13129,17 +13129,19 @@ if ($_GET['action'] == 'ajaxLoadRelacoes') {
       FROM entidades_relacoes r 
       JOIN entidades e2 ON e2.id = r.id_entidade2 
       WHERE r.id_entidade1 = $eid;") or die(mysqli_error($GLOBALS['dblink']));
-  $html = '';
+  $relacoes = [];
   while ($r = mysqli_fetch_assoc($result)) {
-      $html .= '<div class="list-group-item"><div class="row">
-          <div class="col" onclick="addRelacao(\''.$r['id'].'\',\''.$r['id_entidade2'].'\',\''.htmlspecialchars($r['tipo_relacao']).'\',\''.htmlspecialchars($r['descricao']).'\',\''.$r['id_momento_inicio'].'\',\''.$r['id_momento_fim'].'\')">
-              <a href="#">'.htmlspecialchars($r['nome_entidade2']).'</a>
-              <a class="text-body text-secondary"><br><small>'.htmlspecialchars($r['tipo_relacao']).'</small></a>
-          </div>
-          <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarRelacao(\''.$r['id'].'\')">X</a></div>
-      </div></div>';
+      $relacoes[] = [
+          'id' => $r['id'],
+          'id_entidade2' => $r['id_entidade2'],
+          'tipo_relacao' => htmlspecialchars($r['tipo_relacao']),
+          'nome_entidade2' => htmlspecialchars($r['nome_entidade2']),
+          'descricao' => htmlspecialchars($r['descricao']),
+          'id_momento_inicio' => $r['id_momento_inicio'],
+          'id_momento_fim' => $r['id_momento_fim']
+      ];
   }
-  echo $html ?: '<div class="list-group-item">'._t('Nenhuma relação cadastrada.').'</div>';
+  echo json_encode($relacoes);
   die();
 }
 
