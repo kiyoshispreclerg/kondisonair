@@ -130,7 +130,7 @@ if ($_GET['et']=='character' || $e['rule']=='character') {
                             </div>
                             <div class="row" id="nomesIdiomas">
                             </div>
-                            <a class="btn btn-sm btn-primary" onClick='$("#modalAdSigIid").modal("show")'><?=_t('Outros nomes')?></a>
+                            <a class="btn btn-sm btn-primary" onClick='loadInfluencias();$("#modalAdSigIid").modal("show")'><?=_t('Outros nomes')?></a>
                         </div>
                         <div class="mb-3">
                             <label class="form-label"><?=_t('Descrição curta')?>*</label>
@@ -300,7 +300,7 @@ function loadEntity(eid) {
 
 function carregarRelacoes() {
     $.getJSON("api.php?action=ajaxLoadRelacoes&eid="+$('#idEntidade').val(), function(data) {
-        let html = '';
+        let html = '', opts = '<option value="0">Selecione...</option>';
         if (data.length == 0) html = '<div class="list-group-item"><?=_t('Nenhuma relação cadastrada.')?></div>';
         $.each(data, function(i, e) {
             $("#id_tags option[value='" + e + "']").prop("selected", true);
@@ -311,8 +311,10 @@ function carregarRelacoes() {
                     </div>
                     <div class="col-auto"><a class="btn btn-sm btn-danger" onclick="apagarRelacao(\'`+e.id+`\')">X</a></div>
                 </div></div>`;
+            opts = opts + `<option value="`+e.id_entidade2+`">`+e.nome_entidade2+`</option>`;
         });
         $('#relacoes').html(html);
+        $('#id_relacao_inf').html(opts);
     });
 }
 
@@ -381,18 +383,19 @@ function carregarStats() { carregarGrafStats(); return;
     });
 }
 
-function addStat(sid = 0, id_stat = 0, id_momento = 0, valor = '') {
-    $('#sid').val(sid);
+function addStat(seid = 0, id_stat = 0, id_momento = 0, valor = '', infl = '[]') {
+    $('#seid').val(seid);
     $('#id_stat').val(id_stat);
     //updateTablerSelect('id_stat', id_stat);
     //$('#id_momento').val(id_momento);
     updateTablerSelect('id_momento', id_momento);
     $('#valor_stat').val(valor);
+    loadInfluencias(JSON.parse(infl));
     $('#modal-add-stat').modal('show');
 }
 
 function execAddStat() {
-    var sid = $('#sid').val();
+    var sid = $('#seid').val();
     var id_stat = $('#id_stat').val();
     var id_momento = $('#id_momento').val();
     var valor = $('#valor_stat').val();
@@ -400,10 +403,16 @@ function execAddStat() {
         alert('<?=_t('Selecione uma estatística, um momento e insira um valor!')?>');
         return false;
     }
+    var infl = new Array();
+    $(".divInfluencia").each(function() {
+        let id_inf = $(this).attr('id').replace("divInf","");
+        infl.push( { infl : id_inf, desc : $("#sdi"+id_inf).html()} ); 
+    });
     $.post("api.php?action=ajaxAddStat&eid="+$('#idEntidade').val()+"&sid="+sid, {
         id_stat: id_stat,
         id_momento: id_momento,
-        valor: valor
+        valor: valor,
+        infl
     }, function(data) {
         if (data > 0) {
             carregarStats();
@@ -500,7 +509,7 @@ function apagarStat(sid) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="sid" />
+                <input type="hidden" id="seid" />
                 <div class="mb-3">
                     <label class="form-label"><?=_t('Estatística')?></label>
                     <select class="form-select" id="id_stat">
@@ -528,6 +537,11 @@ function apagarStat(sid) {
                 <div class="mb-3">
                     <label class="form-label"><?=_t('Valor')?></label>
                     <input type="text" class="form-control" id="valor_stat" placeholder="<?=_t('Ex.: 1000000 para população')?>" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><?=_t('Influências')?></label>
+                    <div id="divInfluencias"></div>
+                    <button type="button" class="btn btn-primary" id="btnAddInfluencias" onclick="addInfluencia()"><?=_t('Adicionar')?></button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -681,9 +695,32 @@ function entradaSigIdioma(){
     $("#modalAdSigIid").modal("hide");
 
 }
+
+function loadInfluencias(infls = []){
+    $(".divInfluencia").remove();
+    $.each( infls, function( key, val ) {
+        $("#divInfluencias").append(`<div class="mb-2 row divInfluencia" id="divInf`+val.id+`"><div class="col-auto" onclick="addInfluencia('`+val.id+`','`+val.descricao+`')"><span>`+val.nome+`</span> <span id="sdi`+val.id+`" class="text-secondary">`+val.descricao+`</span></div><div class="col-auto btn btn-sm btn-danger" onclick="$(this).parent().remove()">X</div></div>`);
+    });
+}
+function addInfluencia(rel = 0, desc = ''){
+    $("#cur_relacao_inf").val(rel);
+    $("#id_relacao_inf").val(rel);
+    $("#descricao_relacao_inf").val(desc);
+    $("#modalAdInfluencia").modal("show");
+}
+function execAddInfluencia(){
+    let id_relacao_inf = $("#id_relacao_inf").val();
+    if (id_relacao_inf == 0) return;
+    let descricao_relacao_inf = $("#descricao_relacao_inf").val();
+    let nome_relacao_inf = $("#id_relacao_inf option:selected").text();
+    if ($("#divInf"+id_relacao_inf).length > 0 ){
+        $("#divInf"+id_relacao_inf).replaceWith(`<div class="mb-2 row divInfluencia" id="divInf`+id_relacao_inf+`"><div class="col-auto" onclick="addInfluencia('`+id_relacao_inf+`','`+descricao_relacao_inf+`')"><span>`+nome_relacao_inf+`</span> <span id="sdi`+id_relacao_inf+`" class="text-secondary">`+descricao_relacao_inf+`</span></div><div class="col-auto btn btn-sm btn-danger" onclick="$(this).parent().remove()">X</div></div>`);
+    }else{
+        $("#divInfluencias").append(`<div class="mb-2 row divInfluencia" id="divInf`+id_relacao_inf+`"><div class="col-auto" onclick="addInfluencia('`+id_relacao_inf+`','`+descricao_relacao_inf+`')"><span>`+nome_relacao_inf+`</span> <span id="sdi`+id_relacao_inf+`" class="text-secondary">`+descricao_relacao_inf+`</span></div><div class="col-auto btn btn-sm btn-danger" onclick="$(this).parent().remove()">X</div></div>`);
+    }
+    $("#modalAdInfluencia").modal("hide");
+}
 </script>
-
-
 
 <div class="modal modal-blur" id="modalAdSigIid" tabindex="-1" role="dialog" aria-hidden="true">
 	<div class="modal-dialog modal-sm modal-dialog-centered" role="document" >
@@ -706,6 +743,33 @@ function entradaSigIdioma(){
 
 			<div class="modal-footer">
 				<button type="button" class="btn btn-primary" onClick="entradaSigIdioma();"><?=_t('Adicionar')?></button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal modal-blur" id="modalAdInfluencia" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-xs modal-dialog-centered" role="document" >
+		<div class="modal-content"  >
+			<div class="modal-header">
+                <h5 class="modal-title" id="modaltitle"><?=_t('Influência')?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body panel-body">
+                <div class="mb-3">
+                    <select class="form-select" id="id_relacao_inf"></select>
+                </div>
+                <!--div class="mb-3">
+                    <label class="form-label"><?=_t('Título')?></label>
+                    <input class="form-control" id="titulo_relacao_inf" />
+                </div-->
+                <div class="mb-3">
+                    <label class="form-label"><?=_t('Descrição')?></label>
+                    <textarea class="form-control" rows=5 id="descricao_relacao_inf"></textarea>
+                </div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" onClick="execAddInfluencia();"><?=_t('Salvar')?></button>
 			</div>
 		</div>
 	</div>

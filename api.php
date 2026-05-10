@@ -9490,6 +9490,21 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
         echo $sid;
     }
+
+    mysqli_query($GLOBALS['dblink'], "DELETE FROM entidades_influencias WHERE id_ent_stat = $sid") or die(mysqli_error($GLOBALS['dblink']));
+    foreach($_POST['infl'] as $inf){
+        $xid = generateId();
+        $id_infl = (int)$inf['infl'];
+        $desc = $inf['desc'];
+        $sql = "INSERT INTO entidades_influencias SET id = $xid,
+            id_entidade = $eid,
+            id_ent_stat = $sid,
+            id_infl = $id_infl,
+            nome = '',
+            descricao = '$desc';";
+        mysqli_query($GLOBALS['dblink'], $sql) or die(mysqli_error($GLOBALS['dblink']));
+    }
+
     die();
   }
 
@@ -13392,7 +13407,8 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
                 'momentos' => [], // Para armazenar IDs de momentos
 
                 'nome_stat' => htmlspecialchars($row['nome_stat']),
-                'valores' => []
+                'valores' => [],
+                'infl' => []
             ];
         }
         $stats[$stat_id]['data'][] = [
@@ -13403,11 +13419,28 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
         ];
         $stats[$stat_id]['ids'][] = $row['id'];
         $stats[$stat_id]['momentos'][] = $row['id_momento'];
+
+        $infls = [];
+        $inflsRes = mysqli_query($GLOBALS['dblink'], "
+            SELECT s.*, e.nome_legivel
+            FROM entidades_influencias s
+            LEFT JOIN entidades e ON s.id_infl = e.id
+            WHERE s.id_ent_stat = ".$row['se_id']."
+        ") or die(mysqli_error($GLOBALS['dblink']));
+        while ($ir = mysqli_fetch_assoc($inflsRes)) {
+            $infls[] = [
+                'id' => $ir['id_infl'],
+                'nome' => $ir['nome_legivel'],
+                'descricao' => $ir['descricao']
+            ];
+        }
         $stats[$stat_id]['valores'][] = [
             'id' => $row['id'],
             'id_momento' => $row['id_momento'],
             'valor' => htmlspecialchars($row['valor']),
-            'nome_momento' => htmlspecialchars($row['nome_momento'])
+            'nome_momento' => htmlspecialchars($row['nome_momento']),
+            'se_id' => $row['se_id'],
+            'infl' => $infls
         ];
     }
 
@@ -13422,10 +13455,11 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
             }, $stat['data']),
             'ids' => $stat['ids'],
             'momentos' => $stat['momentos']
-        ]; 
+        ];
+
         $valores_html = [];
         foreach ($stat['valores'] as $valor) {
-            $valores_html[] = '<a href="#" title="' . $valor['nome_momento'] . '" onclick="addStat(\'' . $id_stat . '\',\'' . $id_stat . '\',\'' . $valor['id_momento'] . '\',\'' . $valor['valor'] . '\')">' 
+            $valores_html[] = '<a href="#" title="' . $valor['nome_momento'] . '" onclick="addStat(\'' . $valor['se_id'] . '\',\'' . $id_stat . '\',\'' . $valor['id_momento'] . '\',\'' . $valor['valor'] . '\',\''.htmlspecialchars(json_encode($valor['infl'])).'\')">' 
                             . $valor['valor'] . ' </a>';
         }
         $valores_str = implode(' - ', $valores_html);
@@ -13435,9 +13469,6 @@ if ($_GET['action'] == 'ajaxGetJsonStats') {
                 <label>' . $stat['nome_stat'] . '</label>
                 <div class="text-body text-secondary"><small>' . _t('Valores') . ': ' . ($valores_str ?: _t('Nenhum valor registrado')) . ' - <a href="#" onclick="addStat(0,\'' . $id_stat . '\',0,\'\')">Adicionar</a></small></div>
             </div>
-            <!--div class="col-auto">
-                <a class="btn btn-sm btn-danger" onclick="apagarStatsPorEntidade(\'' . $eid . '\',\'' . $id_stat . '\')">X</a>
-            </div-->
         </div></div>';
     }
 

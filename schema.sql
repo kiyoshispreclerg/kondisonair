@@ -788,6 +788,16 @@ CREATE TABLE `frases` (
   `data_modificacao` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `entidades_influencias` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_ent_stat` bigint(20) UNSIGNED NOT NULL,
+  `id_entidade` bigint(20) UNSIGNED NOT NULL,
+  `id_infl` bigint(20) UNSIGNED NOT NULL,
+  `nome` varchar(50) NOT NULL,
+  `descricao` text NULL,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 ALTER TABLE `frases`
   ADD PRIMARY KEY (`id`);
 
@@ -1047,6 +1057,9 @@ ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`);
 
 ALTER TABLE `wordbanks`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `entidades_influencias`
   ADD PRIMARY KEY (`id`);
 
 ALTER TABLE collabs ADD CONSTRAINT unique_usuario_idioma UNIQUE (id_usuario, id_idioma);
