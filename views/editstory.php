@@ -160,9 +160,9 @@ if ($hid > 0) {
                                         ORDER BY et.nome, e.nome_legivel;") or die(mysqli_error($GLOBALS['dblink']));
                                     while ($e = mysqli_fetch_assoc($entidades)) {
                                         echo '<div class="mb-3 entidade-item" data-nome="' . htmlspecialchars(strtolower($e['nome'])) . '">
-                                            <strong>' . htmlspecialchars($e['nome']) . ' </strong> <!-- add/criar stat ? -->
+                                            <h3>' . htmlspecialchars($e['nome']) . ' </h3> <!-- add/criar stat ? -->
                                             <div class="ms-2">';
-                                        $stats = mysqli_query($GLOBALS['dblink'], "SELECT s.id, s.titulo, se.valor, m.nome as momento, m.time_value, m.id as id_momento
+                                        $stats = mysqli_query($GLOBALS['dblink'], "SELECT s.id, s.titulo, se.valor, m.nome as momento, m.time_value, m.id as id_momento, se.id as se_id
                                             FROM stats_entidades se
                                             LEFT JOIN stats s ON se.id_stat = s.id
                                             LEFT JOIN momentos m ON m.id = se.id_momento
@@ -172,16 +172,24 @@ if ($hid > 0) {
                                             ORDER BY s.titulo;") or die(mysqli_error($GLOBALS['dblink']));
                                         while ($s = mysqli_fetch_assoc($stats)) {
                                             $valString = $s['titulo'].': <a href="#" onclick="">'.$s['valor'].'</a>';
-                                            if ($historia['id_momento']!=$s['id_momento']) $valString .= ' (desde '.$s['momento'].')';
-                                            echo '<div class="mb-2">
-                                                <label class="form-label">' . $valString . ' <!-- link abre grafico lateral desse stat --></label>
-                                                <!-- usar texto simples com ref ao anterior ou próximo, tipo "Val XX (desde Momento X)" e se clicar abre input pra ver gráfico ou editar/add -->
-                                                <!-- input type="number" class="form-control stat-valor" 
-                                                    data-entidade="' . $e['id'] . '" 
-                                                    data-stat="' . $s['id'] . '" 
-                                                    value="' . $s['valor'] . '" 
-                                                    placeholder="' . _t('Valor') . '" / -->
-                                                <small class="text-muted stat-aviso"></small>
+                                            $inflsRes = mysqli_query($GLOBALS['dblink'], "
+                                                SELECT s.*, e.nome_legivel
+                                                FROM entidades_influencias s
+                                                LEFT JOIN entidades e ON s.id_infl = e.id
+                                                WHERE s.id_ent_stat = ".$s['se_id']."
+                                            ") or die(mysqli_error($GLOBALS['dblink']));
+                                            $inflString = mysqli_num_rows($inflsRes) > 0 ? 'Influências<br>' : '';
+                                            while ($ir = mysqli_fetch_assoc($inflsRes)) {
+                                                $inflString .= $ir['nome_legivel'].' ('.$ir['descricao'].')<br>';
+                                                $infls[] = [
+                                                    'id' => $ir['id_infl'],
+                                                    'nome' => $ir['nome_legivel'],
+                                                    'descricao' => $ir['descricao']
+                                                ];
+                                            }
+                                            if ($historia['id_momento']!=$s['id_momento']) $valString .= '<br>Desde '.$s['momento'].'<br>';
+                                            echo '<div class="mb-2"><span>' . $valString . '</span>
+                                                <span class="text-secondary">' . $inflString . '</span>
                                             </div>';
                                         }
                                         echo '</div>
