@@ -122,7 +122,6 @@ if ($hid > 0) {
                             </div>
                         </div>
                         <div class="tab-pane" id="tabs-2">
-                            <h4>Profile tab</h4>
                             <div class="accordion-body pt-0">
                                 <?php if($historia['id']>0){ ?>
                                     <div class="mb-3">
@@ -133,10 +132,12 @@ if ($hid > 0) {
                                             ORDER BY id;") or die(mysqli_error($GLOBALS['dblink']));
                                         while ($hn = mysqli_fetch_assoc($historiasDoNivel)) {
                                             if ($hn['id'] == $hid) echo '<div class="mb-2">
-                                                    <label class="form-label"><a>'.$hn['titulo'].'</a></label>
+                                                    <h3><a>'.$hn['titulo'].'</a></h3>
+                                                    <div class="blockquote">'.$hn['descricao'].'</div>
                                                 </div>';
                                             else echo '<div class="mb-2">
-                                                    <label class="form-label"><a href="?page=editstory&rid='.$hn['id_realidade'].'&hid='.$hn['id'].'">'.$hn['titulo'].'</a></label>
+                                                    <h3><a href="?page=editstory&rid='.$hn['id_realidade'].'&hid='.$hn['id'].'">'.$hn['titulo'].'</a></h3>
+                                                    <div class="blockquote">'.$hn['descricao'].'</div>
                                                 </div>';
                                         }
                                         ?>
@@ -151,7 +152,7 @@ if ($hid > 0) {
                                 <div id="entidadesContainer">
                                     <?php
                                     //xxxxx mudar caixa de input pra só texto e link pra mudar valor no momento da historia, tipo na tela timeline?
-                                    $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel as nome, e.id_tipo, et.nome as tipo
+                                    $entidades = mysqli_query($GLOBALS['dblink'], "SELECT e.id, e.nome_legivel as nome, e.id_tipo, et.nome as tipo, e.descricao_curta
                                         FROM historias_entidades he
                                         LEFT JOIN entidades e ON e.id = he.id_entidade
                                         LEFT JOIN entidades_tipos et ON e.id_tipo = et.id
@@ -161,7 +162,7 @@ if ($hid > 0) {
                                     while ($e = mysqli_fetch_assoc($entidades)) {
                                         echo '<div class="mb-3 entidade-item" data-nome="' . htmlspecialchars(strtolower($e['nome'])) . '">
                                             <h3>' . htmlspecialchars($e['nome']) . ' </h3> <!-- add/criar stat ? -->
-                                            <div class="ms-2">';
+                                            <div class="blockquote"><span class="text-secondary">'.$e['descricao_curta'].'</span>';
                                         $stats = mysqli_query($GLOBALS['dblink'], "SELECT s.id, s.titulo, se.valor, m.nome as momento, m.time_value, m.id as id_momento, se.id as se_id
                                             FROM stats_entidades se
                                             LEFT JOIN stats s ON se.id_stat = s.id
@@ -171,7 +172,7 @@ if ($hid > 0) {
                                             GROUP BY s.id 
                                             ORDER BY s.titulo;") or die(mysqli_error($GLOBALS['dblink']));
                                         while ($s = mysqli_fetch_assoc($stats)) {
-                                            $valString = $s['titulo'].': <a href="#" onclick="">'.$s['valor'].'</a>';
+                                            $valString = '<div class="mt-2">'.$s['titulo'].': <a href="#" onclick="">'.$s['valor'].'</a>';
                                             $inflsRes = mysqli_query($GLOBALS['dblink'], "
                                                 SELECT s.*, e.nome_legivel
                                                 FROM entidades_influencias s
@@ -188,9 +189,9 @@ if ($hid > 0) {
                                                 ];
                                             }
                                             if ($historia['id_momento']!=$s['id_momento']) $valString .= '<br>Desde '.$s['momento'].'<br>';
-                                            echo '<div class="mb-2"><span>' . $valString . '</span>
+                                            echo '<div><span>' . $valString . '</span>
                                                 <span class="text-secondary">' . $inflString . '</span>
-                                            </div>';
+                                            </div></div>';
                                         }
                                         echo '</div>
                                         </div>';
