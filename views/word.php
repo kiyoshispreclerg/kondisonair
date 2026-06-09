@@ -9,7 +9,7 @@ $result = mysqli_query($GLOBALS['dblink'],"SELECT p.*, i.nome_legivel, i.id_usua
             (SELECT tamanho FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as tamanho ,
             (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as eid ,
             (SELECT nome FROM classes WHERE id = p.id_classe LIMIT 1) as nomeClasse ,
-            (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativo 
+            (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) AND principal = 1 LIMIT 1) as nativo
             FROM palavras p
             LEFT JOIN idiomas i ON i.id = p.id_idioma
                WHERE p.id = '".$pid."';") or die(mysqli_error($GLOBALS['dblink']));
@@ -73,6 +73,17 @@ if ( $palavra['pronuncia']=='') {
                             display: block; margin-bottom:3%" 
 
                             id="textoMarcado"><?php echo $mainWord; ?></div>
+                        <?php
+                        // formas alternativas (principal=0) no mesmo sistema de escrita padrão
+                        $alts = mysqli_query($GLOBALS['dblink'],"SELECT palavra FROM palavrasNativas WHERE id_palavra=".$pid." AND id_escrita=".$palavra['eid']." AND principal=0 ORDER BY id ASC;");
+                        if ($alts && mysqli_num_rows($alts) > 0) {
+                            echo '<div class="text-muted small mt-2 mb-1">'._t('Formas alternativas').': ';
+                            while($a = mysqli_fetch_assoc($alts)) {
+                                echo getSpanPalavraNativa($a['palavra'],$palavra['eid'],$palavra['fonte'],$palavra['tamanho']).' ';
+                            }
+                            echo '</div>';
+                        }
+                        ?>
                         <?php }else{
                             $pronuncia = $palavra['pronuncia'];
                         } ?>

@@ -63,7 +63,7 @@
                           (SELECT username FROM usuarios where id = i.id_usuario AND id <> ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1) as criador,
 
                           (SELECT nome from grupos_idiomas where id = i.id_familia limit 1) as grupo,
-                          (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1) limit 1) as nativo
+                          (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND principal = 1 AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1) limit 1) as nativo
                           FROM idiomas i WHERE i.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR i.id IN(
                             SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')
                           ORDER BY i.data_modificacao DESC;") or die(mysqli_error($GLOBALS['dblink']));

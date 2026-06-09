@@ -1010,7 +1010,7 @@ function getInfoPalavraFromID($pid){
 
   $qry = "SELECT p.* d.descricao as referente, r.id as refid, c.id as clid,
         d.detalhes as refDesc, g.gloss as cgloss, c.nome as cnome,
-      (SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$pid." AND id_escrita = 
+      (SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$pid." AND principal = 1 AND id_escrita = 
           (SELECT id FROM escritas WHERE padrao = 1 AND id_idioma = p.id_idioma LIMIT 1) 
           LIMIT 1) as nativa  
       FROM palavras p
@@ -1026,7 +1026,7 @@ function getInfoPalavraFromID($pid){
   if (mysqli_num_rows($a)<1){
     $qry = "SELECT p.*,d.descricao as referente, r.id as refid, c.id as clid,
             d.detalhes as refDesc, g.gloss as cgloss, c.nome as cnome,
-          (SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$pid." AND id_escrita = 
+          (SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$pid." AND principal = 1 AND id_escrita = 
                 (SELECT id FROM escritas WHERE padrao = 1 AND id_idioma = p.id_idioma LIMIT 1) 
                 LIMIT 1) as nativa  
             FROM palavras p
@@ -1222,7 +1222,7 @@ function getPalavrasMesmaPronuncia($pid,$limit=0,$editable = true){
       $escrita = $r['epadrao'];
       $fonte = $r['fonte'];
       $tamanho = $r['tamanho'];
-      $esql = ",(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND id_palavra = p2.id LIMIT 1) as nativa";
+      $esql = ",(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND principal = 1 AND id_palavra = p2.id LIMIT 1) as nativa";
   }
 
   $homons = mysqli_query($GLOBALS['dblink'],"SELECT *, p2.id AS palavra_id ".$esql." FROM palavras p
@@ -1419,7 +1419,7 @@ function getPalavrasRelacionadas($pid,$limit=0,$editable = true){
       $escrita = $r['epadrao'];
       $fonte = $r['fonte'];
       $tamanho = $r['tamanho'];
-      $esql = ",(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND id_palavra = p.id LIMIT 1) as nativa";
+      $esql = ",(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND principal = 1 AND id_palavra = p.id LIMIT 1) as nativa";
   }
   $genDic = $r['genDic'];
 
@@ -1430,7 +1430,7 @@ function getPalavrasRelacionadas($pid,$limit=0,$editable = true){
   //xxxx verificar tbm id_derivadora
   if ($derivadora>0) {
     $orig = mysqli_query($GLOBALS['dblink'],"SELECT p.*, pn.palavra as nativa FROM palavras p
-      LEFT JOIN palavrasNativas pn ON ( pn.id_palavra = p.id AND pn.id_escrita = ".$escrita." )
+      LEFT JOIN palavrasNativas pn ON ( pn.id_palavra = p.id AND principal = 1 AND pn.id_escrita = ".$escrita." )
         WHERE p.id = ".$derivadora." LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));   
         //(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND id_palavra = p.id LIMIT 1) as nativa  
     $homon = mysqli_fetch_assoc($orig);
@@ -1526,7 +1526,7 @@ function getPalavrasRelacionadas($pid,$limit=0,$editable = true){
 
   if ($base>0) {
     $orig = mysqli_query($GLOBALS['dblink'],"SELECT p.*, pn.palavra as nativa FROM palavras p
-      LEFT JOIN palavrasNativas pn ON ( pn.id_palavra = p.id AND pn.id_escrita = ".$escrita." )
+      LEFT JOIN palavrasNativas pn ON ( pn.id_palavra = p.id AND principal = 1 AND pn.id_escrita = ".$escrita." )
         WHERE p.id = ".$base." LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));   
         //(SELECT palavra FROM palavrasNativas WHERE id_escrita = ".$escrita." AND id_palavra = p.id LIMIT 1) as nativa  
     $homon = mysqli_fetch_assoc($orig);
@@ -1682,7 +1682,7 @@ function soltarContracao($res,$entrada,$geto){
 
           $b = mysqli_query($GLOBALS['dblink'],"SELECT po.*, 
           (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem 
-              AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = ".$geto." AND e.padrao = 1) 
+              AND pn.principal = 1 AND pn.id_escrita = (SELECT e.id FROM escritas e WHERE e.id_idioma = ".$geto." AND e.padrao = 1) 
           LIMIT 1) as nativo FROM palavras_origens po
             WHERE po.id_palavra = ".$ax['id']." ORDER BY po.ordem;") or die(mysqli_error($GLOBALS['dblink']));
           while($bx = mysqli_fetch_assoc($b)){
@@ -2636,7 +2636,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
             }else{ 
 
                 $sql = "SELECT p.*, 
-                  (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa
+                  (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa
                   FROM palavras p 
                   LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
                   LEFT JOIN itens_palavras ip2 ON ip2.id_palavra = p.id  
@@ -2709,7 +2709,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
                 // sql funcionando mas join muito grande
                 $sql = "SELECT p.*, 
-                  (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa
+                  (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa
                   FROM palavras p 
                     LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
                     LEFT JOIN itens_palavras ip2 ON ip2.id_palavra = p.id  
@@ -2768,7 +2768,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
 
                 $sql = "SELECT p.*, pn.palavra as nativa FROM palavras p 
                   LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
-                  LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = ".$escrita."
+                  LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".$escrita."
                   WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
                   $paradigma
                   AND p.id_idioma = ".$idioma.";";
@@ -2814,7 +2814,7 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
               LEFT JOIN itensConcordancias ic ON ip.id_item = ic.id
           WHERE id_palavra = p.id) as concs,
       (SELECT COUNT(id) FROM itens_palavras WHERE id_palavra = p.id) as ips FROM palavras p 
-        LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.id_escrita = $escrita 
+        LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = $escrita 
         WHERE p.id_idioma = $idioma
         $pfilter ;";
   $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
@@ -3448,7 +3448,7 @@ function getFullStudyText($id) {
 
 function verificarTextosComEssaPalavra($idIdioma, $idPalavra, $textosRemover, $textosAtualizar, $textosIgnorar, $pronunciaNova, $romanizacaoNova, $nativaNovaEidPadrao = '') {
   $sql = "SELECT *, 
-      (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativa,
+      (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND principal = 1 AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativa,
       (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as escritaPadrao  
       FROM palavras p WHERE p.id_idioma = $idIdioma AND id = $idPalavra ;"; // pegar tbm escrita nativa, ou romanizacao
   $pal = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
@@ -3493,7 +3493,7 @@ function verificarTextosComEssaPalavra($idIdioma, $idPalavra, $textosRemover, $t
 
 function verificarFrasesComEssaPalavra($idIdioma, $idPalavra, $textosRemover, $textosAtualizar, $textosIgnorar, $pronunciaNova, $romanizacaoNova, $nativaNovaEidPadrao = '') {
   $sql = "SELECT *, 
-      (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativa,
+      (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND principal = 1 AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativa,
       (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as escritaPadrao  
       FROM palavras p WHERE p.id_idioma = $idIdioma AND id = $idPalavra ;"; // pegar tbm escrita nativa, ou romanizacao
   $pal = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
@@ -3813,7 +3813,7 @@ function getLastChange($tipo,$id = 0) { // lastupdated
 function getOrigensPalavra($pid){
   $sql = "SELECT po.*, p.romanizacao, p.pronuncia, p.id as pid, p.significado,
         (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as escrita,
-        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
+        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.principal = 1 AND pn.id_escrita = (
           SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
         ) LIMIT 1) as nativo,
         (SELECT m.nome FROM momentos m WHERE m.id = i.id_momento LIMIT 1) as momento,
@@ -4389,7 +4389,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
   if ($_GET['action']=='ajaxGravarPalavra') {
     $res0 = mysqli_query($GLOBALS['dblink'],"SELECT p.pronuncia, p.romanizacao, 
-        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1) LIMIT 1) as nativo, 
+        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1) LIMIT 1) as nativo, 
         i.publico FROM palavras p LEFT JOIN idiomas i ON i.id = p.id_idioma WHERE p.id = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
     $r0 = mysqli_fetch_assoc($res0);
     $romanizacao = str_replace("'",'"',$_POST['romanizacao']);
@@ -4517,33 +4517,6 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           tipo_dest = 'word',
           tag = '".$tag."';") or die(mysqli_error($GLOBALS['dblink']));
     }
-
-    // incluir salvamento de nativas junto com restante?
-    die();
-
-    mysqli_data_seek($escritas,0);
-    if (isset($_POST['nativo'])) for ($i=0; $i < count($_POST['nativo']); $i++) {
-        $esc = mysqli_fetch_assoc($escritas);
-        if ($_POST['nativo'][$i]==''){
-          $sqlQuerys = "DELETE FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";";
-        }else{            
-          $pals = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavrasNativas WHERE id_palavra = ".$idPalavra." AND id_escrita = ".$esc['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-          if (mysqli_num_rows($pals)==0){
-              $sqlQuerys = "INSERT INTO palavrasNativas SET 
-                  id_palavra = ".$idPalavra.", id = ".generateId().",
-                  id_escrita = ".$esc['id'].",
-                  palavra = \"".$_POST['nativo'][$i]."\";";
-          }else{
-              $sqlQuerys = "UPDATE palavrasNativas SET  id = ".generateId().",
-                  palavra = \"".$_POST['nativo'][$i]."\" 
-                  WHERE id_palavra = ".$idPalavra." AND
-                  id_escrita = ".$esc['id'].";";
-          }
-        }
-        mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-    };
-
-    //echo $pid;
     die();
   }
 
@@ -5076,21 +5049,25 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   }
 
   if ($_GET['action'] == 'salvarPalavraNativa') {
-    //get pid (id_palavra)  e (id_escrita)
-    // post p (palavra)
-    $result = mysqli_query($GLOBALS['dblink'],"SELECT * FROM palavrasNativas 
-        WHERE id_escrita = ".$_GET['e']." AND id_palavra = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
+    // POST: palavras = JSON array of {eid, p}
+    // First entry gets principal=1, rest get principal=0; empty entries are not saved
+    $pid = intval($_GET['pid']);
+    $palavras = json_decode($_POST['palavras'], true);
+    if (!is_array($palavras)) die('err_data');
 
-    if (mysqli_num_rows($result)>0){
-      //update
-      mysqli_query($GLOBALS['dblink'],"UPDATE palavrasNativas SET palavra = '".$_POST['p']."'
-        WHERE id_escrita = ".$_GET['e']." AND id_palavra = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
-    }else{
-      //insert
-      mysqli_query($GLOBALS['dblink'],"INSERT INTO palavrasNativas SET 
-          palavra = '".$_POST['p']."', id = ".generateId().",
-          id_escrita = ".$_GET['e'].",
-          id_palavra = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
+    mysqli_query($GLOBALS['dblink'],"DELETE FROM palavrasNativas WHERE id_palavra = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
+
+    $principal = 1;
+    foreach ($palavras as $item) {
+      $eid = intval($item['eid']);
+      $p = mysqli_real_escape_string($GLOBALS['dblink'], trim($item['p']));
+      if ($p === '') continue;
+      mysqli_query($GLOBALS['dblink'],"INSERT INTO palavrasNativas SET
+          palavra = '".$p."', id = ".generateId().",
+          id_escrita = ".$eid.",
+          principal = ".$principal.",
+          id_palavra = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
+      $principal = 0;
     }
     die('ok');
   };
@@ -6303,7 +6280,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     //ver se é forma dicionario
     $res = mysqli_query($GLOBALS['dblink'],"SELECT p.*, 
-          (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = (
+          (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = (
                 SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
                 ) LIMIT 1 )  as nativa FROM palavras p
           WHERE p.id = ".$_GET['pid'].";") or die(mysqli_error($GLOBALS['dblink']));
@@ -6534,7 +6511,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     }else { $escrita = 0; $fonte = 'notosans';$id_fonte = 0; $tamanho = '';}
 
     if ($escrita > 0) {
-        $filtroEscrita = 'LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = '.$escrita;
+        $filtroEscrita = 'LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.principal = 1 AND epn.id_escrita = '.$escrita;
         $sqlNativo = ", '©', epn.palavra";
         //$escrita = 1;
     }
@@ -6550,7 +6527,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
         LEFT JOIN classes c ON p.id_classe = c.id 
         LEFT JOIN glosses g ON c.id_gloss = g.id 
-        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
+        LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita.")
         WHERE p.id_idioma = ".$_GET['id']."  ;"; // AND p.id_forma_dicionario = 0
 
     }else if($filtro == 2){ //homófonos
@@ -6601,12 +6578,12 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         if($escrita>0)
               $query = "SELECT p.*, n.palavra,
                 (SELECT COUNT(*) 
-                  FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = ".$escrita."
+                  FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.principal = 1 AND epn.id_escrita = ".$escrita."
                   WHERE BINARY epn.palavra = n.palavra) as num_extras_palavras,
                 (SELECT GROUP_CONCAT(ep.pronuncia, '©', ep.significado, '©', romanizacao, '©', ep.id".$sqlNativo." SEPARATOR '|') 
                   FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id AND epn.id_escrita = ".$escrita."
                   WHERE BINARY epn.palavra = n.palavra) as extras_palavras FROM palavras p 
-                LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
+                LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id  AND n.id_escrita = ".$escrita.")
                 WHERE p.id_idioma = ".$_GET['id']." 
                 GROUP BY n.palavra  ORDER BY num_extras_palavras DESC;"; // AND p.id_forma_dicionario = 0
         else
@@ -6653,7 +6630,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         if($escrita > 0)
             $query = "SELECT p.*, n.palavra
               FROM palavras p 
-              LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")
+              LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita.")
               WHERE p.id_idioma = ".$_GET['id']." 
               GROUP BY p.pronuncia ;";
         else
@@ -6778,7 +6755,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     // SQL para buscar opções específicas por IDs
     $sql = "SELECT p.id, p.significado, p.romanizacao, i.sigla, (
                 SELECT palavra FROM palavrasNativas pn
-                WHERE p.id = pn.id_palavra
+                WHERE p.id = pn.id_palavra AND pn.principal = 1 
                 AND pn.id_escrita = e.id LIMIT 1
             ) as nativo, e.id_fonte, e.tamanho, e.id as eid 
             FROM palavras p 
@@ -6820,7 +6797,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     // SQL com filtro dinâmico
     $sql = "SELECT p.id, p.id as pid, p.significado, p.romanizacao, i.sigla, (
                 SELECT palavra FROM palavrasNativas pn
-                WHERE p.id = pn.id_palavra
+                WHERE p.id = pn.id_palavra AND pn.principal = 1 
                 AND pn.id_escrita = e.id LIMIT 1
             ) as nativo, e.id_fonte, e.tamanho, e.id as eid 
             FROM palavras p 
@@ -6869,7 +6846,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $id = (int)$_GET['id'];
       $sql = "SELECT po.*, p.romanizacao, p.pronuncia,
                     (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id AND e.padrao = 1 LIMIT 1) as escrita,
-                    (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.id_escrita = (
+                    (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = po.id_origem AND pn.principal = 1 AND pn.id_escrita = (
                         SELECT e.id FROM escritas e WHERE e.id_idioma = p.id AND e.padrao = 1 LIMIT 1
                     ) LIMIT 1) as nativo 
               FROM palavras_origens po 
@@ -6909,7 +6886,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         $escrita = $res['escrita'];
         $fonte = $res['fonte'];
         if ($escrita>0) $nativesql = ", ( SELECT palavra FROM palavrasNativas n 
-        WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita."
+        WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita."
         LIMIT 1 ) as palavra ";
       }
       $sql = "SELECT p.* ".$nativesql."
@@ -6952,7 +6929,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       echo '<option value="0" data-eid="" data-nativa="">-</option>';
 
       $pals = mysqli_query($GLOBALS['dblink'],"SELECT p.id, p.romanizacao, p.significado,
-          (SELECT pn.palavra from palavrasNativas pn where pn.id_palavra = p.id and id_escrita = ".$escrita." limit 1) as nativo
+          (SELECT pn.palavra from palavrasNativas pn where pn.id_palavra = p.id AND pn.principal = 1 and id_escrita = ".$escrita." limit 1) as nativo
           FROM palavras p WHERE p.id_idioma = ".$id_idioma.";") or die(mysqli_error($GLOBALS['dblink']));
 
       $cna = '';
@@ -7005,7 +6982,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
       c.nome AS classe, g.gloss AS cgl,  (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels,
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
+      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
         (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
           FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
         (SELECT GROUP_CONCAT(pronuncia, ' ', significado, ' ', romanizacao, ' ', palavra SEPARATOR ' , ') 
@@ -7019,7 +6996,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
       c.nome AS classe, g.gloss AS cgl,  (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels,
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
+      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
         (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
           FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
         (SELECT GROUP_CONCAT(pronuncia, ' ', significado, ' ', romanizacao, ' ', palavra SEPARATOR ' , ') 
@@ -7034,7 +7011,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
       c.nome AS classe, g.gloss AS cgl, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
+      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
         (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
           FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
         (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
@@ -7048,7 +7025,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
       c.nome AS classe, g.gloss AS cgl, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
+      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
         (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
           FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
         (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
@@ -7062,7 +7039,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
       c.nome AS classe, g.gloss AS cgl, 
-        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
+        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
         (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
           FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
         (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
@@ -7076,7 +7053,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
       c.nome AS classe, g.gloss AS cgl, (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
+      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
         (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
           FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
         (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
@@ -11147,7 +11124,7 @@ if ($_GET['action'] == 'simpleListWords') { // LIST WORDS in public page languag
       $tamanho = $r['tamanho'];
       
       $ordem = 'palavra '; $firstch = 'palavra';
-      $nativoPal = " (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." limit 1) AS palavra,";
+      $nativoPal = " (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." limit 1) AS palavra,";
   }
   else if ($romanizacao > 0) {
       $ordem = 'p.romanizacao '; $firstch = 'romanizacao';
@@ -11198,7 +11175,7 @@ if ($_GET['action'] == 'simpleListWords') { // LIST WORDS in public page languag
       
       $ordem = 'palavra '; $firstch = 'palavra';
       //$joinNativo = "LEFT JOIN palavrasNativas n ON ( n.id_palavra = p.id AND n.id_escrita = ".$escrita.")";
-      $nativoPal = " (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita." limit 1) AS palavra,";
+      $nativoPal = " (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." limit 1) AS palavra,";
   }
   else if ($romanizacao > 0) {
       $ordem = 'p.romanizacao '; $firstch = 'romanizacao';
@@ -11517,7 +11494,7 @@ if ($_GET['action'] == 'ajaxGetRaizes') {
     $romanizacao = $res['romanizacao'];
     $escrita = $res['escrita'];
     if ($escrita>0) $nativesql = ", ( SELECT palavra FROM palavrasNativas n 
-      WHERE n.id_palavra = p.id AND n.id_escrita = ".$escrita."
+      WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita."
     LIMIT 1 ) as palavra ";
   }
   $sql = "SELECT p.* ".$nativesql."
@@ -11545,7 +11522,7 @@ if ($_GET['action'] == 'ajaxGetRaizes') {
 if ($_GET['action'] == 'ajaxGetOrigens') {
   $sql = "SELECT p.*, i.sigla, 
           ( SELECT palavra from palavrasNativas pn
-              WHERE p.id = pn.id_palavra
+              WHERE p.id = pn.id_palavra AND pn.principal = 1 
               AND pn.id_escrita = e.id LIMIT 1
           ) as nativo,
           e.id as eid, e.tamanho, e.id_fonte 
@@ -11707,7 +11684,7 @@ if ($_GET['action'] == 'getDetalhesPalavra') {
 
     $result = mysqli_query($GLOBALS['dblink'],"SELECT p.id_escrita as id, p.palavra, e.id_fonte as fonte, e.tamanho FROM palavrasNativas p
       LEFT JOIN escritas e ON e.id = p.id_escrita
-      WHERE p.id_palavra = ".$_GET['pid'].";");
+      WHERE p.id_palavra = ".$_GET['pid']." ORDER BY p.principal DESC, p.id ASC;");
     $nat = array();
     while($r = mysqli_fetch_assoc($result)) {
       $nat[] = $r;
@@ -12146,7 +12123,7 @@ if ( $_GET['action'] =='loadFormExamples'){
           (SELECT e.id_fonte FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as fonte,
           (SELECT e.tamanho FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as tamanho,
           (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as eid,
-          (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = (
+          (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = (
                 SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
                 ) LIMIT 1) as nativa 
         FROM palavras p 
@@ -12157,7 +12134,7 @@ if ( $_GET['action'] =='loadFormExamples'){
       $qp1 = " AND (SELECT ip1.id FROM itens_palavras ip1 WHERE ip1.id_palavra = p.id AND ip1.id_concordancia = ".$_GET['c1']." AND ip1.id_item = ".$_GET['i1']." AND ip1.usar = 1 ) IS NOT NULL ";
       $query = "SELECT p.*,
             (SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1) as eid,
-            (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = (
+            (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = (
                   SELECT e.id FROM escritas e WHERE e.id_idioma = p.id_idioma AND e.padrao = 1 LIMIT 1
                   ) LIMIT 1) as nativa 
           FROM palavras p 
@@ -12185,17 +12162,17 @@ if ($_GET['action'] == 'getStudPal') {
   if ( is_numeric($_GET['pid']) && $_GET['pid'] > 0){
 
       $sql = "SELECT p.*, e.id_fonte, e.tamanho,
-        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.id_escrita = e.id
+        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = e.id
               LIMIT 1) as nativa, 
 
         (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic,
         (SELECT pd.romanizacao FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as romandic,
-        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id_forma_dicionario AND pn.id_escrita = e.id
+        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id_forma_dicionario AND pn.principal = 1 AND pn.id_escrita = e.id
               LIMIT 1) as nativadic, 
               
         (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_derivadora LIMIT 1) as der,
         (SELECT pd.romanizacao FROM palavras pd WHERE pd.id = p.id_derivadora LIMIT 1) as romander,
-        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id_derivadora AND pn.id_escrita = e.id
+        (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id_derivadora AND pn.principal = 1 AND pn.id_escrita = e.id
               LIMIT 1) as nativader, 
 
         (SELECT k.nome FROM classes k WHERE k.id = p.id_classe LIMIT 1) as classe,

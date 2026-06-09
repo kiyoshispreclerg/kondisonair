@@ -114,7 +114,7 @@
                                   (SELECT id_fonte FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as fonte,
                                   (SELECT tamanho FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as tamanho ,
                                   (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as eid ,
-                                  (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativo
+                                  (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND principal = 1 AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativo
                                 FROM artyg_dest d 
                                   LEFT JOIN studason_tests t ON t.id = d.id_dest
                                   LEFT JOIN frases f ON f.id = d.id_dest

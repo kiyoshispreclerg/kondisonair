@@ -26,7 +26,7 @@
                     <?php 
                       $las = mysqli_query($GLOBALS['dblink'],
                         "SELECT i.*, 
-                        (SELECT palavra FROM palavrasNativas WHERE id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) LIMIT 1) as nativo,
+                        (SELECT palavra FROM palavrasNativas WHERE id_palavra = i.id_nome_nativo AND principal = 1 AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) LIMIT 1) as nativo,
                         (SELECT id FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as eid,
                         (SELECT id_fonte FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as fonte,
                         (SELECT tamanho FROM escritas WHERE id_idioma = i.id AND padrao = 1 LIMIT 1) as tamanho 
@@ -56,7 +56,7 @@
                             "SELECT *,
                             (SELECT id_fonte FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as fonte,
                             (SELECT tamanho FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) as tamanho ,
-                            (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativo 
+                            (SELECT palavra FROM palavrasNativas WHERE id_palavra = p.id AND principal = 1 AND id_escrita = (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1 LIMIT 1) LIMIT 1) as nativo 
                             FROM palavras p WHERE id_idioma = ".$la['id']." AND publico = 1 ORDER BY RAND() LIMIT 1;"
                           ) or die(mysqli_error($GLOBALS['dblink']));
                           while($la = mysqli_fetch_assoc($las)){
@@ -149,7 +149,7 @@
                           (SELECT e.id FROM escritas e 
                             WHERE e.id_idioma = i.id and e.padrao = 1
                             ) as eid,
-                          (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND id_escrita = (SELECT id FROM escritas e 
+                          (SELECT palavra from palavrasNativas where id_palavra = i.id_nome_nativo AND principal = 1 AND id_escrita = (SELECT id FROM escritas e 
                                   WHERE e.id_idioma = i.id and e.padrao = 1) limit 1) as nativo
                           FROM idiomas i WHERE i.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR i.id IN(
                             SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')
@@ -211,7 +211,7 @@
                           (SELECT e.id FROM escritas e 
                             WHERE e.id_idioma = i.id and e.padrao = 1
                             ) as eid,
-                          (SELECT n.palavra from palavrasNativas n where n.id_palavra = i.id_nome_nativo AND n.id_escrita = (SELECT id FROM escritas e 
+                          (SELECT n.palavra from palavrasNativas n where n.id_palavra = i.id_nome_nativo AND n.principal = 1 AND n.id_escrita = (SELECT id FROM escritas e 
                                   WHERE e.id_idioma = i.id and e.padrao = 1) limit 1) as nativo
                           FROM idiomas i WHERE i.id < 10000 
                           ORDER BY i.data_modificacao DESC;") or die(mysqli_error($GLOBALS['dblink']));

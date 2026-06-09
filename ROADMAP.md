@@ -5,7 +5,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 ## Para o futuro próximo
 - Adicionar fones alternativos a um fonema (alofonia)
 - Adicionar áudio em palavras (pronúncia)
-- Adicionar mais de uma escrita nativa por palavra
 - Importar lista de palavras base (de csv)
 - Suporte a sistemas de escrita mistos
 - Notificar interações sociais com seus idiomas

@@ -15,7 +15,7 @@ $result = mysqli_query($GLOBALS['dblink'],"SELECT i.*,
             (SELECT es.id FROM escritas es where es.id_idioma = i.id AND es.padrao = 1 LIMIT 1) as eid,
             (SELECT es.id_fonte FROM escritas es where es.id_idioma = i.id AND es.padrao = 1 LIMIT 1) as fonte,
             (SELECT es.tamanho FROM escritas es where es.id_idioma = i.id AND es.padrao = 1 LIMIT 1) as tamanho,
-            (SELECT palavra FROM palavrasNativas where id_palavra = i.id_nome_nativo AND id_escrita = (SELECT es.id FROM escritas es where es.id_idioma = i.id AND es.padrao = 1 LIMIT 1) LIMIT 1) as nome_nativo,
+            (SELECT palavra FROM palavrasNativas where id_palavra = i.id_nome_nativo AND principal = 1 AND id_escrita = (SELECT es.id FROM escritas es where es.id_idioma = i.id AND es.padrao = 1 LIMIT 1) LIMIT 1) as nome_nativo,
             (SELECT COUNT(*) FROM glifos where id_escrita IN(SELECT id FROM escritas where id_idioma = i.id)) as numCharsTotal,
             (SELECT COUNT(*) FROM inventarios where id_idioma = i.id) as numTotalSounds
             FROM idiomas i

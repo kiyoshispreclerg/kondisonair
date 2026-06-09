@@ -460,6 +460,7 @@ CREATE TABLE `palavrasNativas` (
   `id_palavra` bigint(20) UNSIGNED NOT NULL,
   `id_escrita` bigint(20) UNSIGNED NOT NULL,
   `palavra` varchar(150) NOT NULL,
+  `principal` tinyint(4) NOT NULL DEFAULT 0,
   `data_modificacao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

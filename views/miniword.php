@@ -7,7 +7,7 @@
    
 	$palavra = array(); 
 	$result = mysqli_query($GLOBALS['dblink'],"SELECT p.*, 
-   			(SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE padrao = 1 AND id_idioma = p.id_idioma) LIMIT 1) as nativo,
+   			(SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND id_escrita = (SELECT id FROM escritas WHERE padrao = 1 AND id_idioma = p.id_idioma) AND pn.principal = 1 LIMIT 1) as nativo,
             (SELECT id FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1) as eid,
             (SELECT id_fonte FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1) as fonte,
             (SELECT tamanho FROM escritas WHERE id_idioma = p.id_idioma AND padrao = 1) as tamanho,

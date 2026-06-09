@@ -20,7 +20,7 @@
     $contents = '';
     $fonte = 0;
 
-    $escritas = mysqli_query($GLOBALS['dblink'],"SELECT e.*, (SELECT palavra FROM palavrasNativas WHERE id_palavra = e.id_nativo AND id_escrita = e.id LIMIT 1) as nativo,
+    $escritas = mysqli_query($GLOBALS['dblink'],"SELECT e.*, (SELECT palavra FROM palavrasNativas WHERE id_palavra = e.id_nativo AND principal = 1 AND id_escrita = e.id LIMIT 1) as nativo,
                     (SELECT COUNT(id) FROM palavrasNativas WHERE id_escrita = e.id) as np,
                     e.padrao as epadrao, f.arquivo as fonte FROM escritas e 
                     LEFT JOIN fontes f ON f.id = e.id_fonte

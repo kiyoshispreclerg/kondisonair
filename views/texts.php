@@ -337,7 +337,7 @@
                                             FROM palavras p
                                             LEFT JOIN classes c ON p.id_classe = c.id $pnp 
                                             WHERE $bin $pno = '$p' AND p.id_idioma = $id_idioma 
-                                            ORDER BY p.id_forma_dicionario DESC;"; 
+                                            ORDER BY pn.principal DESC, p.id_forma_dicionario DESC;"; 
                                     }else{
                                         $sql = "SELECT p.*, c.id as clid, $pnq c.nome as cnome,
                                                 (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
@@ -345,7 +345,7 @@
                                             LEFT JOIN classes c ON p.id_classe = c.id $pnp 
                                             WHERE $bin $pno = '$p' AND p.id_idioma = ".(
                                                 $id_idioma > 0 ? $id_idioma : $r['id_idioma']
-                                            )." ORDER BY p.id_forma_dicionario DESC;"; 
+                                            )." ORDER BY pn.principal DESC, p.id_forma_dicionario DESC;"; 
                                     }
                                     $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
                                     $palTotal++;

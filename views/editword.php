@@ -35,19 +35,18 @@
 	$fonts = '';
 
 	
-	$scriptSalvarNativo = '';
+	$scriptSalvarNativo = 'salvarNativos();';
 	$inputsNativos = '';
 	$scriptAutoSubstituicao = '';
-	
+
 	$inseridorDrawchar = ''; // novidade, pra drawchar
 
 	$escritaPadrao = 1; $fonte = 0; $autoloader = '';
 
-	$langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e 
+	$langs = mysqli_query($GLOBALS['dblink'],"SELECT e.*, f.arquivo as fonte FROM escritas e
 		LEFT JOIN fontes f ON f.id = e.id_fonte
 		WHERE id_idioma = ".$id_idioma." ORDER BY e.padrao DESC;") or die(mysqli_error($GLOBALS['dblink']));
 	while ($e = mysqli_fetch_assoc($langs)){
-		$scriptSalvarNativo .= 'salvarNativo(\''.$e['id'].'\');';
 		$autoon = '';
 		$changed = getLastChange('autosubstituicoes',$e['id']);
 		$glifosChanged = getLastChange('glifos',$e['id']);
@@ -58,17 +57,17 @@
 			$fonte = $e['id_fonte'];
 			$tamanho = $e['tamanho'];
 		}
-	
+
 		if($e['id_fonte']== 3){
 
 			if($e['substituicao']==1){
 				$autoon = ' ('._t('Automático').')';
 			}
-			
+
 			$inputsNativos .= '<div class="mb-3">
-					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasDrawchar" role="button" aria-controls="offcanvasEnd" onclick="loadCharDiv(\''.$e['id'].'\',\'drawcharlist'.$e['id'].'\',false,\''.$e['id_fonte'].'\')">'._t('Inserir caractere').'</a></label>
-					<input type="hidden" class="escrita_nativa" id="escrita_nativa_'.$e['id'].'" />
-					<div class="form-control editable-drawchar" id="drawchar_editable_'.$e['id'].'" contenteditable="true" data-eid="'.$e['id'].'" data-fonte="'.$e['id_fonte'].'" data-tamanho="'.$e['tamanho'].'"></div>
+					<label class="form-label">'.$e['nome'].$autoon.'</label>
+					<div id="nativas_container_'.$e['id'].'" data-eid="'.$e['id'].'" data-fonte="3" data-tamanho="'.$e['tamanho'].'" data-checar="0"></div>
+					<button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="adicionarFormaNativa(\''.$e['id'].'\')">+ '._t('Adicionar forma').'</button>
 				</div>';
 
 			$inseridorDrawchar .= '<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDrawchar" aria-labelledby="offcanvasEndLabel">
@@ -93,16 +92,14 @@
 
 				$autoon = ' ('._t('Automático').')';
 			}
-			
+
 			$inputsNativos .= '<div class="mb-3">
-					<label class="form-label">'.$e['nome'].$autoon.' <a class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" href="#offcanvasNativeBtns" role="button" aria-controls="offcanvasEnd"  onclick="loadCharDiv(\''.$e['id'].'\')">'._t('Inserir caractere').'</a></label>
-					<input type="text" class="form-control escrita_nativa custom-font-'.$e['id'].'" id="escrita_nativa_'.$e['id'].'" ';
-					
-			if($e['checar_glifos']==1) $inputsNativos .= ' onkeyup="checarNativo(this,\''.$e['id'].'\')"';
-			else $inputsNativos .= ' onkeyup="editarPalavra()"';
-			$inputsNativos .= ' placeholder=""></div>';
+					<label class="form-label">'.$e['nome'].$autoon.'</label>
+					<div id="nativas_container_'.$e['id'].'" data-eid="'.$e['id'].'" data-fonte="'.$e['id_fonte'].'" data-tamanho="'.$e['tamanho'].'" data-checar="'.($e['checar_glifos']==1?1:0).'"></div>
+					<button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="adicionarFormaNativa(\''.$e['id'].'\')">+ '._t('Adicionar forma').'</button>
+				</div>';
 		};
-	} 
+	}
 ?>
 
 <input type="hidden" id="codigo" value="<?=$id_idioma?>" />
@@ -565,12 +562,19 @@
 		});
 	}; 
 
-	function salvarNativo(e){ 
-		if ($('#idPalavra').val() == '0') return;
-		$.post('api.php?action=salvarPalavraNativa&pid='+$('#idPalavra').val()+'&e='+e , 
-		{ p: $('#escrita_nativa_'+e).val() },function (data){
-			if ($.trim(data) != 'ok') alert(data);
+	function salvarNativos() {
+		var pid = $('#idPalavra').val();
+		if (pid == '0') return;
+		var palavras = [];
+		$('.nativa-row').each(function() {
+			palavras.push({ eid: $(this).data('eid'), p: $(this).find('.escrita_nativa').val() });
 		});
+		$.post('api.php?action=salvarPalavraNativa&pid=' + pid,
+			{ palavras: JSON.stringify(palavras) },
+			function(data) {
+				if ($.trim(data) != 'ok') alert(data);
+			}
+		);
 	}
 
 	function abrirPalavra(pid){
@@ -680,11 +684,14 @@
 						
 						carregarOrigens(data[0].origensTexto);
 
-						$('.escrita_nativa').val(''); 
-						data[0].escrita_nativa.forEach(function(e){ //xxxxx deve vir tbm draw TRUE se id_fonte < 0
-							exibirNativa(e['id'],e['palavra'],e['fonte'],e['tamanho']);//$('#escrita_nativa_'+e['id']).val(e['palavra']);
-							if (e['id'] == <?=$escritaPadrao?>) $("#mainPal").val(e['palavra']);
-						})
+						$('[id^="nativas_container_"]').html('');
+						isLoadingWord = true;
+						var mainPalSet = false;
+						data[0].escrita_nativa.forEach(function(e){
+							exibirNativa(e['id'],e['palavra'],e['fonte'],e['tamanho']);
+							if (!mainPalSet && e['id'] == <?=$escritaPadrao?>) { $('#mainPal').val(e['palavra']); mainPalSet = true; }
+						});
+						isLoadingWord = false;
 						$('#id_classe').val(data[0].id_classe); 
 						//document.querySelector('#id_classe').tomselect.setValue(data[0].id_classe);//
 						
@@ -983,6 +990,228 @@
 let soundsChanged = <?=getLastChange('sounds',$id_idioma)?>;
 if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>") ) loadPronuncias('<?=$id_idioma?>', soundsChanged, true);
 <?php echo $autoloader; ?>
+
+// ---------- multi-form native words ----------
+var nativaRowCounter = 0;
+var currentActiveRow = null;
+var isLoadingWord = false;
+
+function adicionarFormaNativa(eid, fonte, tamanho, checar, valor) {
+	var $container = $('#nativas_container_' + eid);
+	if (fonte === undefined || fonte === null) fonte = $container.data('fonte');
+	if (tamanho === undefined || tamanho === null) tamanho = $container.data('tamanho');
+	if (checar === undefined || checar === null) checar = $container.data('checar');
+	fonte = parseInt(fonte) || 0;
+	var rowId = eid + '_' + (nativaRowCounter++);
+	var $row = $('<div>').addClass('nativa-row d-flex gap-2 mb-2 align-items-start').attr('data-eid', eid).attr('data-rowid', rowId);
+
+	if (fonte === 3) {
+		var $inner = $('<div>').addClass('flex-grow-1');
+		var $insBtn = $('<a>').addClass('btn btn-sm btn-primary mb-1')
+			.attr('data-bs-toggle', 'offcanvas').attr('href', '#offcanvasDrawchar')
+			.attr('role', 'button').text('<?=_t('Inserir caractere')?>');
+		$insBtn.on('click', (function(eid, rowId){ return function() {
+			currentActiveRow = $row;
+			loadCharDiv(eid, 'drawcharlist' + eid, false, 3);
+		}; })(eid, rowId));
+		$inner.append($insBtn);
+		$inner.append($('<input type="hidden">').addClass('escrita_nativa').attr('id', 'escrita_nativa_' + rowId).attr('data-eid', eid).val(valor || ''));
+		var $dc = $('<div>').addClass('form-control editable-drawchar').attr('id', 'drawchar_editable_' + rowId)
+			.attr('contenteditable', 'true').attr('data-eid', eid).attr('data-rowid', rowId)
+			.attr('data-fonte', 3).attr('data-tamanho', tamanho || '');
+		$inner.append($dc);
+		$row.append($inner);
+		if (valor) _renderDrawcharDiv($dc, eid, valor, tamanho, 3);
+	} else {
+		var onkeyupFn = checar ? function(){ checarNativo(this, String(eid)); } : function(){ editarPalavra(); };
+		var $inp = $('<input type="text">').addClass('form-control escrita_nativa custom-font-' + eid)
+			.attr('data-eid', eid).val(valor || '').on('keyup', onkeyupFn);
+		$row.append($inp);
+		var $insBtn2 = $('<a>').addClass('btn btn-sm btn-primary ms-1')
+			.attr('data-bs-toggle', 'offcanvas').attr('href', '#offcanvasNativeBtns')
+			.attr('role', 'button').text('<?=_t('Inserir caractere')?>');
+		$insBtn2.on('click', (function(eid){ return function() {
+			currentActiveRow = $row;
+			loadCharDiv(String(eid));
+		}; })(eid));
+		$row.append($insBtn2);
+	}
+
+	$row.append($('<button type="button">').addClass('btn btn-sm btn-outline-danger ms-1').text('×').on('click', function() {
+		$row.remove();
+		editarPalavra();
+	}));
+	$container.append($row);
+}
+
+function _renderDrawcharDiv($div, eid, value, tamanho, fonte) {
+	$div.html('');
+	if (fonte == 3 && value) {
+		value.split(',').forEach(function(id) {
+			if (id) $div.append($('<span>').addClass('drawchar drawchar-' + tamanho + ' rounded')
+				.css('background-image', 'url(./writing/' + eid + '/' + id + '.png?2025)').attr('data-id', id));
+		});
+	} else {
+		$div.text(value || '');
+	}
+}
+
+// Override exibirNativa: during load → add row; active row set → update it; otherwise → update first row or add
+function exibirNativa(eid, palavra, fonte, tamanho) {
+	var $container = $('#nativas_container_' + eid);
+	if (!fonte && fonte !== 0) fonte = $container.data('fonte');
+	if (!tamanho) tamanho = $container.data('tamanho');
+	fonte = parseInt(fonte) || 0;
+	var checar = $container.data('checar');
+
+	if (currentActiveRow && currentActiveRow.data('eid') == eid) {
+		var rowId = currentActiveRow.data('rowid');
+		$('#escrita_nativa_' + rowId).val(palavra);
+		if (fonte === 3) _renderDrawcharDiv($('#drawchar_editable_' + rowId), eid, palavra, tamanho, 3);
+	} else if (isLoadingWord) {
+		adicionarFormaNativa(eid, fonte, tamanho, checar, palavra);
+	} else {
+		var $firstRow = $container.find('.nativa-row').first();
+		if ($firstRow.length > 0) {
+			$firstRow.find('.escrita_nativa').val(palavra);
+			if (fonte === 3) {
+				var rId = $firstRow.data('rowid');
+				_renderDrawcharDiv($('#drawchar_editable_' + rId), eid, palavra, tamanho, 3);
+			}
+		} else {
+			adicionarFormaNativa(eid, fonte, tamanho, checar, palavra);
+		}
+	}
+}
+
+// Override addNatDraw to use currentActiveRow
+function addNatDraw(draw, fonte, tamanho) {
+	if (!currentActiveRow) return;
+	var eid = currentActiveRow.data('eid');
+	var rowId = currentActiveRow.data('rowid');
+	var $hidden = $('#escrita_nativa_' + rowId);
+	var $dc = $('#drawchar_editable_' + rowId);
+	var curTamanho = tamanho || $dc.data('tamanho');
+	var ids = $hidden.val() ? $hidden.val().split(',') : [];
+	if (draw) ids.push(draw);
+	var newVal = ids.filter(function(x){ return x; }).join(',');
+	$hidden.val(newVal);
+	_renderDrawcharDiv($dc, eid, newVal, curTamanho, 3);
+}
+
+// Override okInsertNativo to target currentActiveRow
+function okInsertNativo() {
+	if (!currentActiveRow) return;
+	currentActiveRow.find('.escrita_nativa').val($('#tempNat').val());
+	editarPalavra();
+}
+
+// Override loadCharDiv to use currentActiveRow for tempNat init
+function loadCharDiv(eid, destDiv, forceReload, fonte) {
+	destDiv = destDiv || 'divInserirChars';
+	forceReload = (forceReload !== false && forceReload !== 0);
+	fonte = parseInt(fonte) || 0;
+	$('#lateralEid').val(eid);
+	if (currentActiveRow && currentActiveRow.data('eid') == eid) {
+		$('#tempNat').val(currentActiveRow.find('.escrita_nativa').val());
+	} else {
+		$('#tempNat').val('');
+	}
+	$.get('api.php?action=getLastChange&data=writing&eid=' + eid, function(data) {
+		if (forceReload || data > localStorage.getItem('k_chars' + eid + '_updated')) {
+			$.get('api.php?action=ajaxGetDivLateralWriting2&eid=' + eid, function(lex) {
+				$('#' + destDiv).html(lex);
+				localStorage.setItem('k_chars' + eid, lex);
+				localStorage.setItem('k_chars' + eid + '_updated', data);
+				if (fonte === 3) addNatDraw('');
+				else { $('#tempNat').removeClass().addClass('form-control custom-font-' + eid); }
+			});
+		} else {
+			$('#' + destDiv).html(localStorage.getItem('k_chars' + eid));
+			if (fonte === 3) addNatDraw('');
+			else { $('#tempNat').removeClass().addClass('form-control custom-font-' + eid); }
+		}
+	});
+}
+
+// Rebind .editable-drawchar events to use rowId-based hidden input
+$(document).off('input', '.editable-drawchar').on('input', '.editable-drawchar', function(e) {
+	var $div = $(this);
+	currentActiveRow = $div.closest('.nativa-row');
+	var rowId = $div.data('rowid');
+	var eid = $div.data('eid');
+	var fonte = parseInt($div.data('fonte')) || 0;
+	var tamanho = $div.data('tamanho');
+	var $hidden = $('#escrita_nativa_' + rowId);
+	var text = '';
+	$div.contents().each(function() { if (this.nodeType === 3) text += this.nodeValue; });
+	if (text && fonte === 3) {
+		$.post('api.php?action=getAutoSubstituicao&eid=' + eid, { p: text }, function(data2) {
+			if (data2 == '-1') {
+				_renderDrawcharDiv($div, eid, $hidden.val(), tamanho, 3);
+				hideSubstitutionOptions();
+			} else {
+				var results;
+				try { results = JSON.parse(data2); } catch(ex) { results = [{ id: data2, desc: '' }]; }
+				if (Array.isArray(results) && results.length === 1 && results[0].desc === text) {
+					var ids = $hidden.val() ? $hidden.val().split(',') : [];
+					ids.push(results[0].id);
+					var nv = ids.filter(function(x){return x;}).join(',');
+					$hidden.val(nv);
+					_renderDrawcharDiv($div, eid, nv, tamanho, 3);
+					editarPalavra();
+					hideSubstitutionOptions();
+				} else if (Array.isArray(results) && results.length > 0) {
+					showSubstitutionOptions(eid, results, $div, 3, tamanho, $hidden, text);
+				} else {
+					hideSubstitutionOptions();
+				}
+			}
+		});
+	} else {
+		hideSubstitutionOptions();
+	}
+});
+
+$(document).off('keydown', '.editable-drawchar').on('keydown', '.editable-drawchar', function(e) {
+	var $div = $(this);
+	var rowId = $div.data('rowid');
+	var eid = $div.data('eid');
+	var fonte = parseInt($div.data('fonte')) || 0;
+	var tamanho = $div.data('tamanho');
+	var $hidden = $('#escrita_nativa_' + rowId);
+	currentActiveRow = $(this).closest('.nativa-row');
+
+	if (e.key === 'Backspace') {
+		var ids = $hidden.val() ? $hidden.val().split(',') : [];
+		if (ids.length > 0) {
+			e.preventDefault();
+			ids.pop();
+			var nv = ids.filter(function(x){return x;}).join(',');
+			$hidden.val(nv);
+			_renderDrawcharDiv($div, eid, nv, tamanho, 3);
+			editarPalavra();
+			hideSubstitutionOptions();
+		}
+	} else if (e.key === 'Enter' || e.key === ' ') {
+		e.preventDefault();
+		var $opts = $('#substitution-options');
+		if ($opts.is(':visible') && $opts.data('results')) {
+			selectSubstitutionOption(eid, $opts.data('results')[0].id, $div, 3, tamanho, $hidden);
+		}
+	} else if (e.key === 'Escape') {
+		e.preventDefault();
+		hideSubstitutionOptions();
+	} else if (/^[1-9]$/.test(e.key)) {
+		e.preventDefault();
+		var $opts2 = $('#substitution-options');
+		if ($opts2.is(':visible') && $opts2.data('results')) {
+			var idx = parseInt(e.key) - 1;
+			if (idx < $opts2.data('results').length)
+				selectSubstitutionOption(eid, $opts2.data('results')[idx].id, $div, 3, tamanho, $hidden);
+		}
+	}
+});
 </script>
 <style>#fleksonsPalavr div:not(:first-child) h3 {
   margin-top: 30px;
@@ -1061,7 +1290,7 @@ if ( soundsChanged > localStorage.getItem("k_pronuncias_updated_<?=$id_idioma?>"
 					(SELECT COUNT(*) FROM sosail_joes WHERE tipo_destino = 'sigcom' AND id_destino = p.id AND valor = 1) as likes,
 					(SELECT COUNT(*) FROM sosail_joes WHERE tipo_destino = 'sigcom' AND id_destino = p.id AND valor = -1) as dislikes
 				FROM pal_sig_comunidade p WHERE id_idioma = ".$id_idioma." AND palavra = (
-						SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$_GET['pid']." AND id_escrita = ".$escritaPadrao." 
+						SELECT palavra FROM palavrasNativas WHERE id_palavra = ".$_GET['pid']." AND id_escrita = ".$escritaPadrao." AND principal = 1
 
 				)
 				ORDER BY likes - dislikes DESC;";
