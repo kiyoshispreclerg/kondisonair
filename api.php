@@ -909,27 +909,25 @@ function cykParse($w,$idioma,$entrada) { // URGENT otimizar sql queries
   $R = array();
 
   
-  $query = "SELECT b.*, g.gloss FROM blocos b 
-          LEFT JOIN glosses g ON b.id_gloss = g.id 
+  $query = "SELECT b.*, g.gloss FROM blocos b
+          LEFT JOIN glosses g ON b.id_gloss = g.id
           WHERE b.id_idioma = ".$idioma." order by b.ordem;";
   $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
+  $blocos_cache = [];
   while($r = mysqli_fetch_assoc($result)){
     $R[$r['gloss']] = [];
+    $blocos_cache[] = $r;
   };
-  
-  
-  $cs = mysqli_query($GLOBALS['dblink'],"SELECT c.*, g.gloss FROM classes c 
+
+
+  $cs = mysqli_query($GLOBALS['dblink'],"SELECT c.*, g.gloss FROM classes c
 		LEFT JOIN glosses g ON g.id = c.id_gloss WHERE c.id_idioma = ".$idioma." GROUP BY g.gloss;") or die(mysqli_error($GLOBALS['dblink']));
   while ($c = mysqli_fetch_assoc($cs)){
     $R[$c['gloss']] = [];
   }
 
-  
-  $query = "SELECT b.*, g.gloss FROM blocos b 
-          LEFT JOIN glosses g ON b.id_gloss = g.id 
-          WHERE b.id_idioma = ".$idioma." order by b.ordem;";
-  $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
-  while($r = mysqli_fetch_assoc($result)){
+
+  foreach($blocos_cache as $r){
 
     if($r['tipo_nucleo'] == 'classe') {
       $query = "SELECT c.id, c.descricao as title, g.gloss, c.nome
