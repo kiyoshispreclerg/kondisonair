@@ -649,31 +649,20 @@ function getWordGenConfig($iid) { // grok test   //xxxxx faltando substrituiçõ
       $classSymbol = $class['simbolo'];
       $classes[$classSymbol] = [];
 
-      // Busca sons padrão associados à classe
+      // Busca sons padrão e personalizados da classe em uma única query
       $query = "SELECT s.ipa, i.peso, t.tecla FROM inventarios i
                 LEFT JOIN sons s ON (i.id_som = s.id AND i.id_tipoSom > 0)
                 LEFT JOIN sons_classes sc ON (sc.tipo = 1 AND i.id = sc.id_som)
-              LEFT JOIN teclas t ON (t.id_inventario = i.id)
-                WHERE sc.id_classeSom = ? AND i.id_idioma = ?";
-      $stmt2 = mysqli_prepare($dblink, $query);
-      mysqli_stmt_bind_param($stmt2, 'ii', $classId, $iid);
-      mysqli_stmt_execute($stmt2);
-      $result2 = mysqli_stmt_get_result($stmt2);
-      while ($row2 = mysqli_fetch_assoc($result2)) {
-          if ($row2['ipa']) {
-              $classes[$classSymbol][] = ['sound' => $row2['ipa'], 'weight' => $row2['peso'], 'key' => $row2['tecla']];
-          }
-      }
-      mysqli_stmt_close($stmt2);
-
-      // Busca sons personalizados associados à classe
-      $query = "SELECT p.ipa, i.peso, t.tecla FROM inventarios i
+                LEFT JOIN teclas t ON (t.id_inventario = i.id)
+                WHERE sc.id_classeSom = ? AND i.id_idioma = ?
+                UNION ALL
+                SELECT p.ipa, i.peso, t.tecla FROM inventarios i
                 LEFT JOIN sonsPersonalizados p ON (p.id = i.id_som AND i.id_tipoSom = 0)
                 LEFT JOIN sons_classes sc ON (sc.tipo = 2 AND i.id = sc.id_som)
-              LEFT JOIN teclas t ON (t.id_inventario = i.id)
+                LEFT JOIN teclas t ON (t.id_inventario = i.id)
                 WHERE sc.id_classeSom = ? AND i.id_idioma = ?";
       $stmt2 = mysqli_prepare($dblink, $query);
-      mysqli_stmt_bind_param($stmt2, 'ii', $classId, $iid);
+      mysqli_stmt_bind_param($stmt2, 'iiii', $classId, $iid, $classId, $iid);
       mysqli_stmt_execute($stmt2);
       $result2 = mysqli_stmt_get_result($stmt2);
       while ($row2 = mysqli_fetch_assoc($result2)) {
