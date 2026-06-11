@@ -23,9 +23,11 @@ if (!isset($_SESSION)) session_start();
 //header('Content-Type: text/html; charset=ISO-8859-1');
 
 if (!isset($_SESSION['KondisonairUzatorIDX'])||$_SESSION['KondisonairUzatorIDX']<0) $_SESSION['KondisonairUzatorIDX'] = 0;
+if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
 if (isset($_COOKIE["KondisonairUzatorToken"])&&$_COOKIE["KondisonairUzatorToken"]) {
-  $logged = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE token = '".$_COOKIE["KondisonairUzatorToken"]."';") or die(mysqli_error($GLOBALS['dblink']));
+  $cookieToken = mysqli_real_escape_string($GLOBALS['dblink'], $_COOKIE["KondisonairUzatorToken"]);
+  $logged = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE token = '".$cookieToken."';") or die(mysqli_error($GLOBALS['dblink']));
   $logged = mysqli_fetch_assoc($logged);
 
   $_SESSION['KondisonairUzatorIDX'] = $logged['id']; //$_COOKIE["KondisonairUzatorIDX"];
@@ -40,7 +42,6 @@ if (!isset($_SESSION['KondisonairUzatorIDX'])) session_destroy();
 $page = '';
 if (!isset($_GET['action'])) $_GET['action'] = '';
 if (isset($_GET['page'])) $page = $_GET['page'];
-if (!isset($_GET['gason'])) $_GET['gason'] = '';
 
 $timerzinho = '2'; // segundos entre buscas complexas
 $feedLimit = 10; // posts exibidos na lista de atividades recentes
@@ -51,27 +52,54 @@ while($ro = mysqli_fetch_assoc($resop)) {
 };
 $defLang = $opcoes['def_lang'];
   
-if($_GET['action']=='logout'){    
-    setcookie("KondisonairUzatorToken", "", time() - 3600);
+if($_GET['action']=='logout'){
+    $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+    setcookie("KondisonairUzatorToken", "", [
+      'expires'  => time() - 3600,
+      'path'     => '/',
+      'secure'   => $secure,
+      'httponly' => true,
+      'samesite' => 'Lax',
+    ]);
 	  session_destroy();
     header('Location: index.php?page=login');//header('login/?token='.$token);
 	//exit;
 };
+
+function validateCsrf() {
+    $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['_csrf'] ?? '');
+    return !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+if ($_GET['action'] == 'getCsrfToken') {
+    header('Content-Type: application/json');
+    echo json_encode(['csrf_token' => $_SESSION['csrf_token'] ?? '']);
+    die();
+}
 
 function userLoginAPI($usuario, $senha){
 	  if (empty($senha) || empty($usuario) || strlen($usuario) > 80 || strlen($senha) > 255) {
         return false;
     }
 
-    $s = mysqli_query($GLOBALS['dblink'],"SELECT nome_completo, id, id_idioma_nativo, username, acesso FROM usuarios WHERE username = '".$usuario."' OR email = '".$usuario."';");
+    $stmt = mysqli_prepare($GLOBALS['dblink'], "SELECT nome_completo, id, id_idioma_nativo, username, acesso FROM usuarios WHERE username = ? OR email = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $usuario, $usuario);
+    mysqli_stmt_execute($stmt);
+    $s = mysqli_stmt_get_result($stmt);
     if( mysqli_num_rows($s) == 0 ){
+      mysqli_stmt_close($stmt);
       return false;
     }
     $b = mysqli_fetch_row($s);
+    mysqli_stmt_close($stmt);
 
-    $r = mysqli_query($GLOBALS['dblink'],"SELECT senha, confirmacao FROM usuarios WHERE username = '".$b[3]."';");
+    $stmt2 = mysqli_prepare($GLOBALS['dblink'], "SELECT senha, confirmacao FROM usuarios WHERE username = ?");
+    mysqli_stmt_bind_param($stmt2, "s", $b[3]);
+    mysqli_stmt_execute($stmt2);
+    $r = mysqli_stmt_get_result($stmt2);
     $a = mysqli_fetch_row($r);
-    
+    mysqli_stmt_close($stmt2);
+
     if( password_verify($senha, $a[0]) /*&& $a[1] == '1'*/ ) {
       if (!isset($_SESSION)) session_start();
       session_regenerate_id(true);
@@ -80,20 +108,32 @@ function userLoginAPI($usuario, $senha){
       $_SESSION['KondisonairUzatorIDX'] 			 = trim($b[1]);
       $_SESSION['KondisonairUzatorDiom'] 			 = trim($b[2]);
       $_SESSION['KondisonairUzatorNivle']         = trim($b[4]);
+      $_SESSION['csrf_token']                     = bin2hex(random_bytes(32));
       $auth = [ 'auth' =>'true' ] ;
 
       $loginToken = bin2hex(random_bytes(64));
-      mysqli_query($GLOBALS['dblink'],"UPDATE usuarios SET token = '".$loginToken."' WHERE id = '".$b[1]."';");
+      $login_uid = (int)$b[1];
+      $stmt3 = mysqli_prepare($GLOBALS['dblink'], "UPDATE usuarios SET token = ? WHERE id = ?");
+      mysqli_stmt_bind_param($stmt3, "si", $loginToken, $login_uid);
+      mysqli_stmt_execute($stmt3);
+      mysqli_stmt_close($stmt3);
 
       echo json_encode($auth);
 
-      setcookie("KondisonairUzatorToken",$loginToken,time()+60*60*24*30/*,"/","kondisonair"*/);
-        
+      $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+      setcookie("KondisonairUzatorToken", $loginToken, [
+        'expires'  => time()+60*60*24*30,
+        'path'     => '/',
+        'secure'   => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+      ]);
+
       return true;
     }else{
       return false;
     };
-		
+
 };
 
 if($_GET['action']=='login'){
@@ -191,10 +231,14 @@ if($_GET['action']=='signup'){
 
   // Redirect to success (or send confirmation email)
   $usuario = $email;
-  $r = mysqli_query($GLOBALS['dblink'],"SELECT username, id FROM usuarios WHERE email = '".$usuario."';");
+  $stmt_sel = mysqli_prepare($GLOBALS['dblink'], "SELECT username, id FROM usuarios WHERE email = ?");
+  mysqli_stmt_bind_param($stmt_sel, "s", $usuario);
+  mysqli_stmt_execute($stmt_sel);
+  $r = mysqli_stmt_get_result($stmt_sel);
   $b = mysqli_fetch_row($r);
+  mysqli_stmt_close($stmt_sel);
 
-  $url = $_SERVER['SERVER_NAME']; 
+  $url = $_SERVER['SERVER_NAME'];
   $from = "kondisonair@kiyoshispreclerg.pip";
 
   $to = $usuario;
@@ -210,22 +254,43 @@ if($_GET['action']=='signup'){
   $_SESSION['KondisonairUzatorIDX'] 			 = trim($b[1]);
   $_SESSION['KondisonairUzatorDiom'] 			 = trim($b[2]);
   $_SESSION['KondisonairUzatorNivle']         = 1;
+  $_SESSION['csrf_token']                     = bin2hex(random_bytes(32));
 
   $loginToken = bin2hex(random_bytes(64));
-  mysqli_query($GLOBALS['dblink'],"UPDATE usuarios SET token = '".$loginToken."' WHERE id = '".$b[1]."';");
-  
-  setcookie("KondisonairUzatorToken",$loginToken,time()+60*60*24*30/*,"/","kondisonair"*/);
+  $signup_uid = (int)$b[1];
+  $stmt_tok = mysqli_prepare($GLOBALS['dblink'], "UPDATE usuarios SET token = ? WHERE id = ?");
+  mysqli_stmt_bind_param($stmt_tok, "si", $loginToken, $signup_uid);
+  mysqli_stmt_execute($stmt_tok);
+  mysqli_stmt_close($stmt_tok);
+
+  $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+  setcookie("KondisonairUzatorToken", $loginToken, [
+    'expires'  => time()+60*60*24*30,
+    'path'     => '/',
+    'secure'   => $secure,
+    'httponly' => true,
+    'samesite' => 'Lax',
+  ]);
 
   header('Location: index.php?page=confirmation');
   die();
 }
 
 if($_GET['action']=='validateMail'){
-  
-	$r = mysqli_query($GLOBALS['dblink'],"SELECT username, email FROM usuarios WHERE email = '".$_GET['email']."' AND confirmacao = '".$_GET['validar']."';");
-	if(mysqli_num_rows($r) > 0){
-		mysqli_query($GLOBALS['dblink'],"UPDATE usuarios SET confirmacao = '1' WHERE email = '".$_GET['email']."';");
-	};
+  $vm_email   = $_GET['email']  ?? '';
+  $vm_validar = $_GET['validar'] ?? '';
+
+  $stmt_vm = mysqli_prepare($GLOBALS['dblink'], "SELECT username, email FROM usuarios WHERE email = ? AND confirmacao = ?");
+  mysqli_stmt_bind_param($stmt_vm, "ss", $vm_email, $vm_validar);
+  mysqli_stmt_execute($stmt_vm);
+  $r = mysqli_stmt_get_result($stmt_vm);
+  if(mysqli_num_rows($r) > 0){
+    $stmt_vm2 = mysqli_prepare($GLOBALS['dblink'], "UPDATE usuarios SET confirmacao = '1' WHERE email = ?");
+    mysqli_stmt_bind_param($stmt_vm2, "s", $vm_email);
+    mysqli_stmt_execute($stmt_vm2);
+    mysqli_stmt_close($stmt_vm2);
+  }
+  mysqli_stmt_close($stmt_vm);
 };
 
 if($_GET['action']=='setLanguage'){
@@ -3875,23 +3940,25 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
 
   if ($_GET['action']=='ajaxGravarOption') { // otimizar sql
 
-    $value = $_GET['value'];
-    $param = $_GET['param'];
+    $value = mysqli_real_escape_string($GLOBALS['dblink'], $_GET['value']);
+    $param = mysqli_real_escape_string($GLOBALS['dblink'], $_GET['param']);
 
-    $sqlQuerys = "UPDATE opcoes_sistema SET 
+    $sqlQuerys = "UPDATE opcoes_sistema SET
       valor = '".$value."' WHERE opcao = '".$param."';";
     mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die('err: '.mysqli_error($GLOBALS['dblink']));
-		
+
     die('ok');
   };
 
   if ($_GET['action']=='ajaxGravarOpsons') { // otimizar sql
 
-    foreach ($_POST as $key => $value) { 
-      $sqlQuerys = "UPDATE opcoes_sistema SET 
-        valor = '".$value."' WHERE opcao = '".$key."';";
-      //echo $sqlQuerys;
-      mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die('err: '.mysqli_error($GLOBALS['dblink']));
+    $db = $GLOBALS['dblink'];
+    foreach ($_POST as $key => $value) {
+      $k = mysqli_real_escape_string($db, $key);
+      $v = mysqli_real_escape_string($db, $value);
+      $sqlQuerys = "UPDATE opcoes_sistema SET
+        valor = '".$v."' WHERE opcao = '".$k."';";
+      mysqli_query($db,$sqlQuerys) or die('err: '.mysqli_error($db));
 		}
 
     die('ok');
@@ -4001,8 +4068,8 @@ if($_SESSION['KondisonairUzatorNivle']==100){ // admin por nível, não pelo id 
       exit();
   }
 
-  if ($_GET['action'] == 'getDetalhesUsuario') { 
-      $result = mysqli_query($GLOBALS['dblink'], "SELECT * FROM usuarios WHERE id = ".(int)$_GET['uid'].";") or die(mysqli_error($GLOBALS['dblink']));
+  if ($_GET['action'] == 'getDetalhesUsuario') {
+      $result = mysqli_query($GLOBALS['dblink'], "SELECT id, username, nome_completo, email, acesso, descricao, publico, id_idioma_nativo, data_cadastro, confirmacao FROM usuarios WHERE id = ".(int)$_GET['uid'].";") or die(mysqli_error($GLOBALS['dblink']));
       $data = [];
       while ($r = mysqli_fetch_assoc($result)) {
           $data[] = $r;
@@ -4084,19 +4151,27 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
   if ($_GET['action']=='ajaxGravarPerfyl') {
 
+    $db = $GLOBALS['dblink'];
+    $p_usuario = mysqli_real_escape_string($db, $_POST['usuario']);
+    $p_nome    = mysqli_real_escape_string($db, $_POST['nome']);
+    $p_email   = mysqli_real_escape_string($db, $_POST['email']);
+    $p_publico = (int)$_POST['publico'];
+    $p_iid     = (int)$_POST['iid'];
+    $p_desc    = str_replace("'", '"', $_POST['descricao']);
+
     // if email diferente, confirmação = 0
-    $r = mysqli_query($GLOBALS['dblink'],"SELECT * FROM usuarios WHERE username = '".$_POST['usuario']."' AND id <> ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($GLOBALS['dblink']));
+    $r = mysqli_query($db,"SELECT id FROM usuarios WHERE username = '$p_usuario' AND id <> ".$_SESSION['KondisonairUzatorIDX'].";") or die(mysqli_error($db));
     if (mysqli_num_rows($r)>0) die('user');
 
-    $sqlQuerys = "UPDATE usuarios SET 
-      nome_completo = '".$_POST['nome']."',
-      username = '".$_POST['usuario']."',
-      email = '".$_POST['email']."',
-      publico = '".$_POST['publico']."',
-      id_idioma_nativo = '".$_POST['iid']."',
-      descricao = '".str_replace("'",'"',$_POST['descricao'])."'
+    $sqlQuerys = "UPDATE usuarios SET
+      nome_completo = '$p_nome',
+      username = '$p_usuario',
+      email = '$p_email',
+      publico = $p_publico,
+      id_idioma_nativo = $p_iid,
+      descricao = '$p_desc'
       WHERE id = ".$_SESSION['KondisonairUzatorIDX']." LIMIT 1;";
-    mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
+    mysqli_query($db,$sqlQuerys) or die(mysqli_error($db));
     die('ok');
   }
   
@@ -12355,10 +12430,6 @@ if ($_GET['action'] == 'getKWG') {  // Kondisonair Word Generator
     die();
 };
 
-if($_GET['gason']!=''&& $_SESSION['KondisonairUzatorIDX']>0){ 
-  require("modules/".$_GET['gason'].".php");
-  die();
-};
 
 if ($_GET['action'] == 'listStats') {
   $rule = strlen($_GET['et']) > 0 ? $_GET['et'] : 'other';
