@@ -813,20 +813,25 @@ function listarSonsAdicionaveis($iid, $id) {
       WHERE s.id_idioma = $iid
   ";
   $query = "
-        SELECT i.id, i.id_som, s.nome, s.ipa, t.tecla, 1 AS tipo
+        SELECT i.id, i.id_som, s.nome, s.ipa, t.tecla, 1 AS tipo,
+               IF(sc.id IS NOT NULL, 1, 0) AS na_classe
         FROM inventarios i
         LEFT JOIN sons s ON (i.id_som = s.id)
         LEFT JOIN teclas t ON (t.id_inventario = i.id)
+        LEFT JOIN sons_classes sc ON (sc.id_classeSom = $id AND sc.id_som = i.id AND sc.tipo = 1)
         WHERE i.id_idioma = $iid AND i.id_tipoSom > 0
         UNION
-        SELECT s.id, NULL AS id_som, s.nome, s.ipa, NULL AS tecla, 2 AS tipo
+        SELECT s.id, NULL AS id_som, s.nome, s.ipa, NULL AS tecla, 2 AS tipo,
+               IF(sc.id IS NOT NULL, 1, 0) AS na_classe
         FROM sonsPersonalizados s
+        LEFT JOIN sons_classes sc ON (sc.id_classeSom = $id AND sc.id_som = s.id AND sc.tipo = 2)
         WHERE s.id_idioma = $iid
     ";
 
   $result = mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
 
   while ($r = mysqli_fetch_assoc($result)) {
+      if ($r['na_classe']) {
           $echo .= "<a class='form-selectgroup-item btn btn-primary' title='" . htmlspecialchars($r['nome']) . "' onClick='toggleSom(\"" . $r['id'] . "\"," . $r['tipo'] . ",\"$id\")'>" . ( $r['tecla']!='' ? htmlspecialchars($r['tecla'])." /".htmlspecialchars($r['ipa'])."/" : htmlspecialchars($r['ipa']) ) . "</a>";
       } else {
           $echo .= "<a class='form-selectgroup-item btn' title='" . htmlspecialchars($r['nome']) . "' onClick='toggleSom(\"" . $r['id'] . "\"," . $r['tipo'] . ",\"$id\")'>" . ( $r['tecla']!='' ? htmlspecialchars($r['tecla'])." /".htmlspecialchars($r['ipa'])."/" : htmlspecialchars($r['ipa']) ) . "</a>";
