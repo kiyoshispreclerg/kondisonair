@@ -141,8 +141,8 @@ function aplicarGerar(){
 
     $.post("?action=getKWG&iid=<?=$id_idioma?>&count="+$("#num_palavras").val(), {
       <?php if (!$_GET['iid']>0){ ?>
-        classes: document.getElementById('text_classes').value,
-        silabas: document.getElementById('text_silabas').value
+        classes: document.getElementById('text_classes')?.value ?? "",
+        silabas: document.getElementById('text_silabas')?.value ?? ""
         <?php } ?>
     }, function (data){
         words = data;
@@ -155,8 +155,9 @@ function aplicarGerar(){
 formatarTablerSelect('idsig',null);
 
 function paraAlterador(){
-    let classes = document.getElementById('text_classes').value;
+    let classes = document.getElementById('text_classes')?.value ?? "";
     let rewrites = '';
-    window.location.replace("index.php?page=changer&words=" + btoa(words) + "&classes=" + btoa(classes) + "&rewrites=" + btoa(rewrites) );
+    const utf8b64 = s => btoa(unescape(encodeURIComponent(s)));
+    window.location.replace("index.php?page=changer&words=" + utf8b64(words) + "&classes=" + utf8b64(classes) + "&rewrites=" + utf8b64(rewrites) );
 }
 </script>

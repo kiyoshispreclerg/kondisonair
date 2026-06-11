@@ -26,8 +26,8 @@ if ($id_idioma > 0 && ($idioma['id_usuario'] != $_SESSION['KondisonairUzatorIDX'
 
 // // alterar changer pra receber dados de classes, palavras etc via GET (inclusive serve pra apis depois)
 $getRegras = $_GET['rules'] ? base64_decode($_GET['rules']) : '';
-$getPalavras = $_GET['words'] ? base64_decode($_GET['words']) : '';
-$getClasses = $_GET['classes'] ? base64_decode($_GET['classes']) : getSCHeader('ksc',$id_idioma,'cats');
+$getPalavras = $_GET['words'] ? urldecode(base64_decode($_GET['words'])) : '';
+$getClasses = $_GET['classes'] ? urldecode(base64_decode($_GET['classes'])) : getSCHeader('ksc',$id_idioma,'cats');
 $getSubstituicoes = $_GET['rewrites'] ?? '';
 
 
