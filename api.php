@@ -1447,14 +1447,13 @@ function getPalavrasRelacionadas($pid,$limit=0,$editable = true){
 
   if ($limit > 0) $sqlLimit = " LIMIT ".$limit." ";
   $return = '';
-  $res0 = mysqli_query($GLOBALS['dblink'],"SELECT *, 
-      (SELECT e.id FROM escritas e
-        WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as epadrao,
-        (SELECT e.id_fonte FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as fonte,
-        (SELECT e.tamanho FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as tamanho,
-      (SELECT id_genero FROM classesGeneros WHERE id_palavra = ".$pid." LIMIT 1) as genDic
-      FROM palavras p 
-        WHERE p.id = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
+  $res0 = mysqli_query($GLOBALS['dblink'],"SELECT p.*, e.id as epadrao, e.id_fonte as fonte, e.tamanho, cg.id_genero as genDic
+      FROM palavras p
+      LEFT JOIN escritas e ON e.id_idioma = p.id_idioma
+      LEFT JOIN classesGeneros cg ON cg.id_palavra = ".$pid."
+      WHERE p.id = ".$pid."
+      ORDER BY e.padrao DESC
+      LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
   $r = mysqli_fetch_assoc($res0);
   $id_idioma = $r['id_idioma'];
   $base = $r['id_forma_dicionario'];
