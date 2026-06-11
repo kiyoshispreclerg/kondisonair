@@ -3049,18 +3049,56 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
     $opsx .= '>'.$r['nome'].'</option>';
   }
 
+  // Pre-fetch: padrao de todos os itens em ambas concordâncias (1 query substitui N×M queries)
+  $padraoItems = [];
+  $concIds = array_unique(array_filter([(int)$linhas, (int)$colunas]));
+  if (count($concIds) > 0) {
+      $pres = mysqli_query($GLOBALS['dblink'], "SELECT id, padrao, id_concordancia FROM itensConcordancias WHERE id_concordancia IN (".implode(',',$concIds).")") or die(mysqli_error($GLOBALS['dblink']));
+      while ($pr = mysqli_fetch_assoc($pres)) {
+          $padraoItems[$pr['id_concordancia']][$pr['id']] = (int)$pr['padrao'];
+      }
+  }
+  // Pre-fetch: todas as flexoes para essas concordâncias (1 query substitui N×M fetchFlexao calls)
+  $flexoesMap = [];
+  if ((int)$linhas > 0 && (int)$colunas > 0) {
+      $flexRes = mysqli_query($GLOBALS['dblink'], "SELECT f.id, f.regra_pronuncia, if1.id_item AS item1, if2.id_item AS item2
+          FROM flexoes f
+          LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id AND if1.id_concordancia = ".(int)$linhas." AND if1.id_genero = ".(int)$gen."
+          LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id AND if2.id_concordancia = ".(int)$colunas." AND if2.id_genero = ".(int)$gen."
+          WHERE if1.id IS NOT NULL AND if2.id IS NOT NULL") or die(mysqli_error($GLOBALS['dblink']));
+      while ($fl = mysqli_fetch_assoc($flexRes)) {
+          $flexoesMap[$fl['item1']][$fl['item2']] = $fl;
+      }
+  }
+  $flexoesMap1D = [];
+  if ((int)$linhas > 0) {
+      $flexRes1D = mysqli_query($GLOBALS['dblink'], "SELECT f.id, f.regra_pronuncia, if1.id_item AS item1
+          FROM flexoes f
+          LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id AND if1.id_concordancia = ".(int)$linhas." AND if1.id_genero = ".(int)$gen."
+          WHERE if1.id IS NOT NULL") or die(mysqli_error($GLOBALS['dblink']));
+      while ($fl = mysqli_fetch_assoc($flexRes1D)) {
+          $flexoesMap1D[$fl['item1']] = $fl;
+      }
+  }
+  // Cache dos itens de coluna para não re-querir por row
+  $yitensData = [];
+
   echo '<div class="col-sm-12"><table class="table table-m-b-none">';
   if ($isTabela){
       echo '<tr><td></td>';
-      $yitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias 
+      $yitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias
         WHERE id_concordancia = ".$colunas." ORDER BY ordem;") or die('1918'.mysqli_error($GLOBALS['dblink']));
       while($y = mysqli_fetch_assoc($yitens)){
         echo '<td onclick="autoPreencher('.$linhas.')" class="text-secondary">'.$y['nome'].'</td>';
       }
       echo '</tr>';
   }
-  
-  $xitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias 
+
+  // Guardar dados de colunas como array para reutilizar por row sem re-query
+  mysqli_data_seek($yitens, 0);
+  while ($yd = mysqli_fetch_assoc($yitens)) { $yitensData[] = $yd; }
+
+  $xitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias
     WHERE id_concordancia = ".$linhas." ORDER BY ordem;") or die('1926'.mysqli_error($GLOBALS['dblink']));
   while($x = mysqli_fetch_assoc($xitens)){
     echo '<tr><td onclick="autoPreencher('.$colunas.')" class="text-secondary">'.$x['nome'].'</td>';
@@ -3069,10 +3107,7 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
 
       //xxxxx mysqli_data_seek($result, 0);
 
-        $yitens2 = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias 
-          WHERE id_concordancia = ".$colunas." ORDER BY ordem;") or die('1933'.mysqli_error($GLOBALS['dblink']));
-
-        while($y2 = mysqli_fetch_assoc($yitens2)){ // render cada coluna da row atual
+        foreach($yitensData as $y2){ // render cada coluna da row atual (usa dados cached)
 
           //if tem mais 1 dimensao, abrir mais LI dentro das celulas, ou mini tabelinha
           // se tem $extra, add no sql mais um join ?
@@ -3082,55 +3117,28 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
             //Regex
 
             //if (esta for forma desmarcada em ambos x e y) skip, carregaRegra(-1)
-            $sql = "SELECT * FROM itensConcordancias i1
-                    JOIN itensConcordancias i2
-                    WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
-                    AND i2.id_concordancia = ".$colunas." AND i2.id = ".$y2['id']."
-                    AND i1.padrao = 1 AND i2.padrao = 1;";
-            //echo $sql;
-            $defs = mysqli_query($GLOBALS['dblink'],$sql) or die('1991'.mysqli_error($GLOBALS['dblink']));
+            $p1padrao = $padraoItems[$linhas][$x['id']] ?? 0;
+            $p2padrao = $padraoItems[$colunas][$y2['id']] ?? 0;
 
-            if (mysqli_num_rows($defs)>0 && $d == 0){
+            if ($p1padrao == 1 && $p2padrao == 1 && $d == 0){
               
               echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].' text-info"  
                 onclick="carregaRegra(-1'.',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">('._t('padrão').')</td>';
 
             }else{
 
-              $sql = "SELECT * FROM itensConcordancias i1
-                  JOIN itensConcordancias i2
-                  WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
-                  AND i2.id_concordancia = ".$colunas." AND i2.id = ".$y2['id']."
-                  AND (i1.padrao = 2 OR i2.padrao = 2);";
-              $deps = mysqli_query($GLOBALS['dblink'],$sql) or die('2005'.mysqli_error($GLOBALS['dblink']));
-
-              if (mysqli_num_rows($deps)>0){
-                echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"  
+              if ($p1padrao == 2 || $p2padrao == 2){
+                echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"
                   onclick="alert("teste")">';
                 echo '<a class="btn btn-primary" href="?page=editforms&iid='.$iid.'&k='.$k.'&d='.$x['id'].'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
               }else{
-                $semflexao = true;
-
-                while($semflexao){
-                          
-                    $sql = "SELECT f.* FROM flexoes f 
-                        LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id  
-                        LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id  
-
-                        WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].") 
-                        AND (if2.id_concordancia = ".$colunas." AND if2.id_item = ".$y2['id'].") 
-                        AND if1.id_genero = ".$gen." AND if2.id_genero = ".$gen." 
-                        ;";
-
-                    $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2025'.mysqli_error($GLOBALS['dblink']));
-                    if (mysqli_num_rows($ps)==0) {
-                      $semflexao = true;
-                      inserirFlexao($gen, $linhas, $x['id'], $colunas, $y2['id']);
-                    }else{
-                      $semflexao = false;
-                    }
+                if (isset($flexoesMap[$x['id']][$y2['id']])) {
+                    $p = $flexoesMap[$x['id']][$y2['id']];
+                } else {
+                    $newId = inserirFlexao($gen, $linhas, $x['id'], $colunas, $y2['id']);
+                    $p = ['id' => $newId, 'regra_pronuncia' => ''];
+                    $flexoesMap[$x['id']][$y2['id']] = $p;
                 }
-                $p = mysqli_fetch_assoc($ps);
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-'.$y2['id'].'-'.$gen.'"  
                   onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',\''.$y2['id'].'\',\''.$x['nome'].' '.$y2['nome'].'\',\''.$gen.'\')">';
@@ -3200,50 +3208,29 @@ function carregarTabelaFlexoes($dx,$k,$iid,$lin,$col,$gen = 0, $extra = null) { 
         }
     }else{ // só 1 col / dimensão
 
-            $sql = "SELECT * FROM itensConcordancias i1
-                    WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
-                    AND i1.padrao = 1;";
-            $defs = mysqli_query($GLOBALS['dblink'],$sql) or die('2117'.mysqli_error($GLOBALS['dblink']));
+            $p1padrao = $padraoItems[$linhas][$x['id']] ?? 0;
 
-            if (mysqli_num_rows($defs)>0 && $d == 0){
+            if ($p1padrao == 1 && $d == 0){
               
               echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0 text-info"  
                 onclick="carregaRegra(-1,\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$gen.'\')">('._t('padrão').')</td>';
 
             }else{
 
-              $sql = "SELECT * FROM itensConcordancias i1
-                    WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
-                    AND i1.padrao = 2;";
-
-              $deps = mysqli_query($GLOBALS['dblink'],$sql) or die('2136'.mysqli_error($GLOBALS['dblink']));
-
-              if (mysqli_num_rows($deps)>0){
-                  echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"  
+              if ($p1padrao == 2){
+                  echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"
                     onclick="alert("teste")">';
                   echo '<a class="btn btn-primary" href="?page=editforms&iid='.$iid.'&k='.$k.'&d='.$x['id'].'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
 
               }else{
 
-                $semflexao = true;
-                while($semflexao){
-                          
-                    $sql = "SELECT f.* FROM flexoes f 
-                        LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id   
-
-                        WHERE (if1.id_concordancia = ".$linhas." AND if1.id_item = ".$x['id'].")
-                        AND if1.id_genero = ".$gen." 
-                        ;";
-
-                    $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2156'.mysqli_error($GLOBALS['dblink']));
-                    if (mysqli_num_rows($ps)==0) {
-                      $semflexao = true;
-                      inserirFlexao($gen, $linhas, $x['id']);
-                    }else{
-                      $semflexao = false;
-                    }
+                if (isset($flexoesMap1D[$x['id']])) {
+                    $p = $flexoesMap1D[$x['id']];
+                } else {
+                    $newId = inserirFlexao($gen, $linhas, $x['id']);
+                    $p = ['id' => $newId, 'regra_pronuncia' => ''];
+                    $flexoesMap1D[$x['id']] = $p;
                 }
-                $p = mysqli_fetch_assoc($ps);
 
                 echo '<td class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$gen.'"  
                   onclick="carregaRegra(\''.(0+$p['id']).'\',\''.$linhas.'\',\''.$colunas.'\',\''.$x['id'].'\',0,\''.$x['nome'].'\',\''.$gen.'\')">';
