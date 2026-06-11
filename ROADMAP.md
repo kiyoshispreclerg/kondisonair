@@ -12,7 +12,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Adicionar metadados em caracteres dos sistemas de escrita
 - Gerar dicionário em PDF
 - Customizar cor de destaque do idioma, para personalizar a página pública
-- Otimizações gerais nas consultas de banco de dados
 - Alterar nomes das partes do idioma (sons, classes, léxico, textos, etc)
 - Ao criar um novo idioma, dar uma base mínima para começar a trabalhar
 - Separar código dinâmico do estático para permitir uso offline via Service Worker

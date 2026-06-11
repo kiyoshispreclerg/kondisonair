@@ -22,29 +22,12 @@
   - Histórias: Escreva textos vinculados a entidades e momentos.
 
 ## Tecnologias Usadas
-- **PHP**: Gera as páginas e processa a lógica do servidor.
-- **MySQL**: Armazena idiomas, sons, conjugações, palavras e textos.
-- **JavaScript**: Adiciona interatividade (ex.: gerador, alterador).
-- **Tabler**: Template para uma interface limpa e responsiva (MIT, [Tabler](https://tabler.io)).
-- **Bibliotecas JS**: Incluídas diretamente (ex.: jQuery v3.1.1, [jQuery](https://jquery.com)).
+- PHP, MySQL, JavaScript, [Tabler](https://tabler.io), [jQuery](https://jquery.com) etc.
 
 **Nota**: Este é um projeto simples, sem Composer ou npm. Dependências estão incluídas nos arquivos. 
-**Nota 2**: Partes do código foram feitas com ajuda de IA.
-
-## Pré-requisitos
-- PHP
-- MySQL
-- Servidor web (ex.: Apache)
-- Navegador moderno (ex.: Chrome, Firefox)
+**Nota 2**: Várias partes do código foram feitas com ajuda de IA.
 
 ## Licença
 Este projeto é licenciado sob a [GNU GPLv3](LICENSE).
 
-## Contato
-- **Autor**: [Kiyoshi Spreclerg](https://kiyoshi.42web.io/kiyoshi-pip/)
-- **Issues**: [Crie um issue](https://github.com/kiyoshispreclerg/kondisonair/issues)
-- **Email**: kiyoshispreclerg@gmail.com
-
----
-
-**Kondisonair** é apenas um projeto de hobby em desenvolvimento! Fique à vontade para testar!
+**Kondisonair** é apenas um projeto de hobby, mas fique à vontade para testar!
