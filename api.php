@@ -10924,14 +10924,14 @@ if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
       FROM idiomas
       WHERE publico = 1 AND nome_legivel LIKE ?
       UNION ALL
-      SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title, 
-            CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle, 
+      SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title,
+            CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle,
             CONCAT('?page=word&pid=', p.id) AS url, p.data_modificacao as data_modificado
       FROM palavras p
-      LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id
       LEFT JOIN idiomas i ON p.id_idioma = i.id
-      WHERE i.publico = 1 
-        AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ? OR pn.palavra LIKE ?)
+      WHERE i.publico = 1
+        AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ?
+             OR EXISTS (SELECT 1 FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.palavra LIKE ?))
   ";
 
   // Prepara os parâmetros iniciais
@@ -10944,14 +10944,14 @@ if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
       if (in_array($filter, $idiomas)) {
           // Caso o filtro seja um idioma, buscar apenas palavras desse idioma
           $sql = "
-              SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title, 
-                    CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle, 
+              SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title,
+                    CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle,
                     CONCAT('?page=word&pid=', p.id) AS url, p.data_modificacao AS data_modificado
               FROM palavras p
-              LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id
               LEFT JOIN idiomas i ON p.id_idioma = i.id
               WHERE i.publico = 1 AND i.nome_legivel = ?
-                AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ? OR pn.palavra LIKE ?)
+                AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ?
+                     OR EXISTS (SELECT 1 FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.palavra LIKE ?))
           ";
           $params = [$filter, $like_term, $like_term, $like_term, $like_term];
           $param_types = 'sssss';
@@ -11001,14 +11001,14 @@ if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
           case _t('palavra'):
               // Filtra apenas palavras
               $sql = "
-                  SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title, 
-                        CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle, 
+                  SELECT 'palavra' AS tipo, COALESCE(p.romanizacao, p.pronuncia) AS title,
+                        CONCAT(i.nome_legivel, ': ', p.significado) AS subtitle,
                         CONCAT('?page=word&pid=', p.id) AS url, p.data_modificacao as data_modificado
                   FROM palavras p
-                  LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id
                   LEFT JOIN idiomas i ON p.id_idioma = i.id
-                  WHERE i.publico = 1 
-                    AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ? OR pn.palavra LIKE ?)
+                  WHERE i.publico = 1
+                    AND (p.romanizacao LIKE ? OR p.pronuncia LIKE ? OR p.significado LIKE ?
+                         OR EXISTS (SELECT 1 FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.palavra LIKE ?))
               ";
               $params = array_fill(0, 4, $like_term);
               $param_types = 'ssss';
@@ -11016,8 +11016,8 @@ if ($_GET['action']=='ajaxBuscaGeral') { //xxxxx
       }
   }
 
-  // Adiciona ordenação por data_modificado
-  $sql .= " ORDER BY data_modificado DESC";
+  // Adiciona ordenação por data_modificado e limite de resultados
+  $sql .= " ORDER BY data_modificado DESC LIMIT 30";
 
   // Prepara e executa a consulta
   $stmt = mysqli_prepare($GLOBALS['dblink'], $sql);
