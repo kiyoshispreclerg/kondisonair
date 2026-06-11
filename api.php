@@ -7061,90 +7061,100 @@ if($_SESSION['KondisonairUzatorIDX']>0){
 
     // id, pronuncia, romanizacao, classe, signiicado, id_forma_dicionario
 
+    $_iid = (int)$_GET['id'];
+
+    // Tabelas derivadas: cada uma roda 1× independente do nº de palavras retornadas
+    $dt_nativa = "LEFT JOIN palavrasNativas pn
+        ON pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".$escrita;
+
+    $dt_tags = "LEFT JOIN (
+        SELECT id_dest, GROUP_CONCAT(tag SEPARATOR ' ') AS tags
+        FROM tags WHERE tipo_dest = 'word' GROUP BY id_dest
+      ) tg ON tg.id_dest = p.id";
+
+    $dt_rels = "LEFT JOIN (
+        SELECT id_forma_dicionario, COUNT(*) AS rels
+        FROM palavras WHERE id_forma_dicionario > 0 AND id_idioma = ".$_iid."
+        GROUP BY id_forma_dicionario
+      ) rc ON rc.id_forma_dicionario = p.id";
+
+    // extras_palavras com separador espaço (dici/tudo)
+    $dt_extras_sp = "LEFT JOIN (
+        SELECT ep.id_forma_dicionario,
+          GROUP_CONCAT(ep.pronuncia, ' ', ep.significado, ' ', ep.romanizacao, ' ', epn.palavra SEPARATOR ' , ') AS extras_palavras
+        FROM palavras ep
+        LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
+        WHERE ep.id_forma_dicionario > 0 AND ep.id_idioma = ".$_iid."
+        GROUP BY ep.id_forma_dicionario
+      ) ex ON ex.id_forma_dicionario = p.id";
+
+    // extras_palavras com separador vírgula (cont/morf/expr/id_classe)
+    $dt_extras_cm = "LEFT JOIN (
+        SELECT ep.id_forma_dicionario,
+          GROUP_CONCAT(ep.pronuncia, ',', ep.significado, ',', ep.romanizacao, ',', epn.palavra SEPARATOR ' , ') AS extras_palavras
+        FROM palavras ep
+        LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
+        WHERE ep.id_forma_dicionario > 0 AND ep.id_idioma = ".$_iid."
+        GROUP BY ep.id_forma_dicionario
+      ) ex ON ex.id_forma_dicionario = p.id";
+
+    $base_joins = "FROM palavras p
+      LEFT JOIN classes c ON p.id_classe = c.id
+      LEFT JOIN glosses g ON c.id_gloss = g.id
+      ".$dt_nativa."
+      ".$dt_tags;
+
     if ($filtro == 'dici'){
 
       $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
-      c.nome AS classe, g.gloss AS cgl,  (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels,
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ' ', significado, ' ', romanizacao, ' ', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = 0 ".$ordem.";";
+        c.nome AS classe, g.gloss AS cgl, COALESCE(rc.rels, 0) AS rels, pn.palavra, tg.tags, ex.extras_palavras
+        ".$base_joins."
+        ".$dt_rels."
+        ".$dt_extras_sp."
+        WHERE p.id_idioma = ".$_iid." AND p.id_forma_dicionario = 0 ".$ordem.";";
 
     }else if ($filtro == 'tudo'){
 
-      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
-      c.nome AS classe, g.gloss AS cgl,  (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels,
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ' ', significado, ' ', romanizacao, ' ', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." ".$ordem.";";
-
+      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
+        c.nome AS classe, g.gloss AS cgl, COALESCE(rc.rels, 0) AS rels, pn.palavra, tg.tags, ex.extras_palavras
+        ".$base_joins."
+        ".$dt_rels."
+        ".$dt_extras_sp."
+        WHERE p.id_idioma = ".$_iid." ".$ordem.";";
 
     }else if ($filtro == 'cont'){
 
-      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
-      c.nome AS classe, g.gloss AS cgl, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = 2 ".$ordem.";";
+      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
+        c.nome AS classe, g.gloss AS cgl, pn.palavra, tg.tags, ex.extras_palavras
+        ".$base_joins."
+        ".$dt_extras_cm."
+        WHERE p.id_idioma = ".$_iid." AND p.id_classe = 2 ".$ordem.";";
 
     }else if ($filtro == 'morf'){
 
-      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
-      c.nome AS classe, g.gloss AS cgl, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = 1 ".$ordem.";";
+      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
+        c.nome AS classe, g.gloss AS cgl, pn.palavra, tg.tags, ex.extras_palavras
+        ".$base_joins."
+        ".$dt_extras_cm."
+        WHERE p.id_idioma = ".$_iid." AND p.id_classe = 1 ".$ordem.";";
 
     }else if ($filtro == 'expr'){
 
-      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
-      c.nome AS classe, g.gloss AS cgl, 
-        (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_classe = 3 ".$ordem.";";
+      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
+        c.nome AS classe, g.gloss AS cgl, pn.palavra, tg.tags, ex.extras_palavras
+        ".$base_joins."
+        ".$dt_extras_cm."
+        WHERE p.id_idioma = ".$_iid." AND p.id_classe = 3 ".$ordem.";";
 
     }else if ($filtro > 0){ // id_classe
 
-      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario,  p.id_classe,
-      c.nome AS classe, g.gloss AS cgl, (SELECT COUNT(id) FROM palavras WHERE id_forma_dicionario = p.id) as rels, 
-      (SELECT n.palavra FROM palavrasNativas n WHERE n.id_palavra = p.id AND n.principal = 1 AND n.id_escrita = ".$escrita." LIMIT 1) as palavra,
-        (SELECT GROUP_CONCAT(tag SEPARATOR ' ') 
-          FROM tags WHERE tipo_dest = 'word' AND id_dest = p.id) as tags,
-        (SELECT GROUP_CONCAT(pronuncia, ',', significado, ',', romanizacao, ',', palavra SEPARATOR ' , ') 
-          FROM palavras ep LEFT JOIN palavrasNativas epn ON epn.id_palavra = ep.id
-          WHERE ep.id_forma_dicionario = p.id) as extras_palavras FROM palavras p 
-        LEFT JOIN classes c ON p.id_classe = c.id 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE p.id_idioma = ".$_GET['id']." AND p.id_forma_dicionario = 0 AND p.id_classe = ".$filtro." ".$ordem.";";
+      $_flt = (int)$filtro;
+      $query = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.id_classe,
+        c.nome AS classe, g.gloss AS cgl, COALESCE(rc.rels, 0) AS rels, pn.palavra, tg.tags, ex.extras_palavras
+        ".$base_joins."
+        ".$dt_rels."
+        ".$dt_extras_cm."
+        WHERE p.id_idioma = ".$_iid." AND p.id_forma_dicionario = 0 AND p.id_classe = ".$_flt." ".$ordem.";";
     }else {
       echo 'err dtyp dfyltr'; die();
     }
