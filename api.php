@@ -8000,35 +8000,18 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die('ok');
   };
   
-  if ($_GET['action']=='ajaxGlifoAbaixo') { // otimizar sql queries
-    $prox = 0;
-    if ($_GET['id']>0) $atual = $_GET['id']; else die('novalered');
-    $ors = mysqli_query($GLOBALS['dblink'],"SELECT ordem, id_escrita FROM glifos WHERE id = ".$atual." AND id_principal = 0;") or die(mysqli_error($GLOBALS['dblink']));
-    $or = mysqli_fetch_assoc($ors);
-    if ($or['ordem']==0){
-      $dess = mysqli_query($GLOBALS['dblink'],"SELECT * FROM glifos WHERE id_escrita = ".$or['id_escrita']." AND id_principal = 0;") or die(mysqli_error($GLOBALS['dblink']));
-      $i = 1;
-      while ($des = mysqli_fetch_assoc($dess)){
-        mysqli_query($GLOBALS['dblink'],"UPDATE glifos SET ordem = ".$i." WHERE id = ".$des['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-        $i++;
-      };
-    }else{
-      $orts = mysqli_query($GLOBALS['dblink'],"SELECT * FROM glifos WHERE id_escrita = ".$or['id_escrita']." AND id_principal = 0;") or die(mysqli_error($GLOBALS['dblink']));
-      $total = mysqli_num_rows($orts);
-
-      //echo  $or['ordem'].'<'.($total-1);
-      if($or['ordem']<$total){ // rowcount
-        //echo 'ordenar abaixo';
-
-        $proxs = mysqli_query($GLOBALS['dblink'],"SELECT id,ordem FROM glifos WHERE id_escrita = ".$or['id_escrita']." AND ordem = ".($or['ordem']+1)." AND id_principal = 0;") or die(mysqli_error($GLOBALS['dblink']));
-        $pr = mysqli_fetch_assoc($proxs);
-        
-        mysqli_query($GLOBALS['dblink'],"UPDATE glifos SET ordem = ".($or['ordem']+1)." WHERE id = ".$atual.";") or die(mysqli_error($GLOBALS['dblink']));
-        mysqli_query($GLOBALS['dblink'],"UPDATE glifos SET ordem = ".($or['ordem'])." WHERE id = ".$pr['id'].";") or die(mysqli_error($GLOBALS['dblink']));
-
-      }
-
-    };
+  if ($_GET['action']=='ajaxReordenarGlifos') {
+    if (!isset($_GET['eid']) || !($_GET['eid']>0)) die('novalered');
+    $eid = (int)$_GET['eid'];
+    $ids = isset($_POST['ids']) ? $_POST['ids'] : [];
+    if (!is_array($ids) || count($ids)==0) die('novalered');
+    $ordem = 1;
+    foreach ($ids as $gid) {
+      $gid = (int)$gid;
+      if ($gid <= 0) continue;
+      mysqli_query($GLOBALS['dblink'],"UPDATE glifos SET ordem = ".$ordem." WHERE id = ".$gid." AND id_escrita = ".$eid.";") or die(mysqli_error($GLOBALS['dblink']));
+      $ordem++;
+    }
     die('ok');
   };
 
@@ -10662,7 +10645,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   if ($_GET['action']=='ajaxUzatorrCheck') die('not_user');
   if ($_GET['action']=='ajaxUzatorrMdason') die('not_user');
   if ($_GET['action']=='ajaxGlifoRegra') die('not_user');
-  if ($_GET['action']=='ajaxGlifoAcima') die('not_user');
+  if ($_GET['action']=='ajaxReordenarGlifos') die('not_user');
   if ($_GET['action']=='ajaxSetEscritaPadrao') die('not_user');
   if ($_GET['action']=='ajaxApagarRegra') die('not_user');
   if ($_GET['action']=='ajaxRegraAcima') die('not_user');

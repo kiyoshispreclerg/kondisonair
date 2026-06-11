@@ -395,10 +395,11 @@
           const vetorEscaped = item.vetor ? `\`${item.vetor}\`` : '[]';
 
           const html = `
-              <div class="list-group-item">
+              <div class="list-group-item" data-id="${item.id}">
                   <div class="row align-items-center">
+                      <div class="col-auto glifo-drag-handle" style="cursor:grab;color:#aaa;font-size:1.2em;padding-right:4px" title="Arrastar para reordenar">⠿</div>
                       <div class="col-auto" onclick="${
-                          item.fonte == 3 
+                          item.fonte == 3
                           ? `drawCaractere('${item.id_escrita}', '${item.descricao}', '${item.id}', '${glifoEscaped}', '${variantesEscaped}', ${vetorEscaped})`
                           : `addCaractere('${item.id_escrita}', '${item.descricao}', '${item.id}', '${glifoEscaped}', '${variantesEscaped}')`
                       }">
@@ -407,14 +408,23 @@
                       <div class="col text-end">
                           <div class="text-secondary text-truncate mt-n1">
                               <a class="btn btn-danger btn-sm" onClick="apagarGlifo('${item.id}', '${id}')">X</a>
-                              <a class="btn btn-primary btn-sm" onClick="moverAbaixo('${item.id}', '${id}')">v</a>
-                              <a class="btn btn-primary btn-sm" onClick="moverAcima('${item.id}', '${id}')">^</a>
                           </div>
                       </div>
                   </div>
               </div>`;
-          
+
           $container.append(html);
+      });
+
+      $('#alfabeto' + id).sortable({
+          handle: '.glifo-drag-handle',
+          axis: 'y',
+          stop: function() {
+              const ids = $('#alfabeto' + id).children('[data-id]').map(function() {
+                  return $(this).data('id');
+              }).get();
+              $.post('api.php?action=ajaxReordenarGlifos&eid=' + id, { ids: ids });
+          }
       });
   }
 
@@ -588,25 +598,6 @@
       // add na tbl
   };
 
-  function moverAcima(id,eid){
-      $.get("api.php?action=ajaxGlifoAcima&id="+id+"&eid="+eid, function (data){
-          if(data=='ok'){
-              carregarTabelaAlfabeto(eid);
-          }else{
-              alert(data);
-          }
-      });
-  };
-
-  function moverAbaixo(id,eid){
-      $.get("api.php?action=ajaxGlifoAbaixo&id="+id+"&eid="+eid, function (data){
-          if(data=='ok'){
-              carregarTabelaAlfabeto(eid);
-          }else{
-              alert(data);
-          }
-      });
-  };
 
   function setPadrao(eid){
 
@@ -924,7 +915,8 @@
         <div class="mb-3">
             <label class="form-label"><?=_t('Carregar Nova Fonte')?></label>
             <input type="text" class="form-control" id="fontName" placeholder="Nome da fonte">
-            <input type="file" class="form-control" id="fontFile" accept=".ttf">
+            <input type="file" class="form-control" id="fontFile" accept=".ttf,.otf">
+            <small class="text-secondary"><?=_t('Fontes enviadas ao Kondisonair ficam disponíveis publicamente para todos os usuários.')?></small>
         </div>
         <button type="button" class="btn btn-primary" onclick="carregarFonte()"><?=_t('Carregar')?></button>
       </div>
