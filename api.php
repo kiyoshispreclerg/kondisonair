@@ -2627,18 +2627,81 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
     $opsx .= '>'.$r['nome'].'</option>';
   }
 
+  // Pre-fetch: padrao de todos os itens em ambas concordâncias (1 query substitui N×M deps queries)
+  $padraoItems = [];
+  $concIds = array_unique(array_filter([(int)$linhas, (int)$colunas]));
+  if (count($concIds) > 0) {
+      $pres = mysqli_query($GLOBALS['dblink'], "SELECT id, padrao, id_concordancia FROM itensConcordancias WHERE id_concordancia IN (".implode(',',$concIds).")") or die(mysqli_error($GLOBALS['dblink']));
+      while ($pr = mysqli_fetch_assoc($pres)) {
+          $padraoItems[$pr['id_concordancia']][$pr['id']] = (int)$pr['padrao'];
+      }
+  }
+  // Pre-fetch: todas as palavras do paradigma com seus itens de concordância (1 query substitui N×M ps queries)
+  // Filtros no ON em vez de WHERE eliminam a explosão de rows pelo double LEFT JOIN
+  $palavrasMap = [];
+  if ((int)$linhas > 0 && (int)$colunas > 0 && $idioma > 0) {
+      $sql_pf = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.irregular,
+          pn.palavra AS nativa, ip1.id_item AS item_lin, ip2.id_item AS item_col
+          FROM palavras p
+          LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".(int)$escrita."
+          LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id AND ip1.id_concordancia = ".(int)$linhas." AND ip1.usar = 1
+          LEFT JOIN itens_palavras ip2 ON ip2.id_palavra = p.id AND ip2.id_concordancia = ".(int)$colunas." AND ip2.usar = 1
+          WHERE p.id_idioma = ".(int)$idioma." ".$paradigma."
+            AND ip1.id IS NOT NULL AND ip2.id IS NOT NULL";
+      $psAll = mysqli_query($GLOBALS['dblink'], $sql_pf) or die(mysqli_error($GLOBALS['dblink']));
+      while ($pw = mysqli_fetch_assoc($psAll)) {
+          $palavrasMap[$pw['item_lin']][$pw['item_col']] = $pw;
+      }
+  }
+  // Pre-fetch: palavras 1D
+  $palavrasMap1D = [];
+  if ((int)$linhas > 0 && $idioma > 0) {
+      $sql_pf1d = "SELECT p.id, p.pronuncia, p.romanizacao, p.significado, p.id_forma_dicionario, p.irregular,
+          pn.palavra AS nativa, ip1.id_item AS item_lin
+          FROM palavras p
+          LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".(int)$escrita."
+          LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id AND ip1.id_concordancia = ".(int)$linhas." AND ip1.usar = 1
+          WHERE p.id_idioma = ".(int)$idioma." ".$paradigma." AND ip1.id IS NOT NULL";
+      $psAll1D = mysqli_query($GLOBALS['dblink'], $sql_pf1d) or die(mysqli_error($GLOBALS['dblink']));
+      while ($pw = mysqli_fetch_assoc($psAll1D)) {
+          $palavrasMap1D[$pw['item_lin']] = $pw;
+      }
+  }
+  // Pre-fetch: flexoes para autogen
+  $flexoesMap = [];
+  if ($parad == 0 && (int)$linhas > 0 && (int)$colunas > 0) {
+      $flexRes = mysqli_query($GLOBALS['dblink'], "SELECT f.id, if1.id_item AS item1, if2.id_item AS item2
+          FROM flexoes f
+          LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id AND if1.id_concordancia = ".(int)$linhas." AND if1.id_genero = ".(int)$gen."
+          LEFT JOIN itens_flexoes if2 ON if2.id_flexao = f.id AND if2.id_concordancia = ".(int)$colunas." AND if2.id_genero = ".(int)$gen."
+          WHERE if1.id IS NOT NULL AND if2.id IS NOT NULL") or die(mysqli_error($GLOBALS['dblink']));
+      while ($fl = mysqli_fetch_assoc($flexRes)) {
+          $flexoesMap[$fl['item1']][$fl['item2']] = $fl['id'];
+      }
+  }
+  $flexoesMap1D = [];
+  if ($parad == 0 && (int)$linhas > 0) {
+      $flexRes1D = mysqli_query($GLOBALS['dblink'], "SELECT f.id, if1.id_item AS item1
+          FROM flexoes f
+          LEFT JOIN itens_flexoes if1 ON if1.id_flexao = f.id AND if1.id_concordancia = ".(int)$linhas." AND if1.id_genero = ".(int)$gen."
+          WHERE if1.id IS NOT NULL") or die(mysqli_error($GLOBALS['dblink']));
+      while ($fl = mysqli_fetch_assoc($flexRes1D)) {
+          $flexoesMap1D[$fl['item1']] = $fl['id'];
+      }
+  }
+
   echo '<div class="col-sm-12"><table class="table table-m-b-none">';
   if ($isTabela){
       echo '<tr><td></td>';
-      $yitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias 
+      $yitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias
         WHERE id_concordancia = ".$colunas." ORDER BY ordem;") or die('1918'.mysqli_error($GLOBALS['dblink']));
       while($y = mysqli_fetch_assoc($yitens)){
         echo '<td onclick="autoPreencher('.$linhas.')" class="text-secondary">'.$y['nome'].'</td>';
       }
       echo '</tr>';
   }
-  
-  $xitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias 
+
+  $xitens = mysqli_query($GLOBALS['dblink'],"SELECT * FROM itensConcordancias
     WHERE id_concordancia = ".$linhas." ORDER BY ordem;") or die('1926'.mysqli_error($GLOBALS['dblink']));
   while($x = mysqli_fetch_assoc($xitens)){ // cada row
     echo '<tr><td onclick="autoPreencher('.$colunas.')" class="text-secondary">'.$x['nome'].'</td>';
@@ -2657,45 +2720,31 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
           // se tem $extra, add no sql mais um join ?
           
           if ($extra == null){
-            $sql = "SELECT *, i1.id as id1, i2.id as id2, i1.padrao as padrao1, i2.padrao as padrao2 FROM itensConcordancias i1
-                  JOIN itensConcordancias i2
-                  WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
-                  AND i2.id_concordancia = ".$colunas." AND i2.id = ".$y2['id']."
-                  AND (i1.padrao = 2 OR i2.padrao = 2);";
-            
-            $deps = mysqli_query($GLOBALS['dblink'],$sql) or die('1950'.mysqli_error($GLOBALS['dblink']));
-            
-            $regra = 0;      
+            $p1padrao = $padraoItems[$linhas][$x['id']] ?? 0;
+            $p2padrao = $padraoItems[$colunas][$y2['id']] ?? 0;
+            $regra = 0;
 
-            if (mysqli_num_rows($deps)>0){
-                $xx = mysqli_fetch_assoc($deps);
-                if ($xx['padrao1']==2) $valx = $xx['id1'];
-                if ($xx['padrao2']==2)  $valx = $xx['id2'];
-                echo '<td 
-                  class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"  
-                  id="0-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-0"  
+            if ($p1padrao == 2 || $p2padrao == 2){
+                $valx = ($p1padrao == 2) ? $x['id'] : $y2['id'];
+                echo '<td
+                  class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"
+                  id="0-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-0"
                   onclick="alert("teste")">';
                 echo '<a class="btn btn-primary" href="?page=editforms&pid='.$pid.'&d='.$valx.'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
 
-            }else{ 
+            }else{
 
-                $sql = "SELECT p.*, 
-                  (SELECT pn.palavra FROM palavrasNativas pn WHERE pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".$escrita." LIMIT 1) as nativa
-                  FROM palavras p 
-                  LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
-                  LEFT JOIN itens_palavras ip2 ON ip2.id_palavra = p.id  
-                  WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
-                  AND (ip2.id_concordancia = ".$colunas." AND ip2.id_item = ".$y2['id']." AND ip2.usar = 1) 
-                  $paradigma
-                  AND p.id_idioma = ".$idioma.";";
-              //echo $sql;
-                $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('1972'.mysqli_error($GLOBALS['dblink']));
-                $p = mysqli_fetch_assoc($ps); // se tem 2 palavras aqui dentro, há algum erro????
+                $p = $palavrasMap[$x['id']][$y2['id']] ?? [];
 
                 $dicionario = $p['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
                 $autogen = ""; if (! $p['id'] > 0 && $tryauto && $parad == 0) {  $autogencount++; $dicionario = 0; $nclass = 'text-muted';
 
-                    $px = fetchFlexao($gen, $linhas, $x['id'], $colunas, $y2['id']);
+                    if (isset($flexoesMap[$x['id']][$y2['id']])) {
+                        $px = $flexoesMap[$x['id']][$y2['id']];
+                    } else {
+                        $px = inserirFlexao($gen, $linhas, $x['id'], $colunas, $y2['id']);
+                        $flexoesMap[$x['id']][$y2['id']] = $px;
+                    }
                     if ($px>0) $regra = $px;
                     
                     $autogen = $autogencount."%%";
@@ -2795,35 +2844,28 @@ function carregarPalavraFlexoes($pid,$dx,$k,$iid,$lin,$col, $extra = null) { // 
             $concs = 1;
             $regra = 0;
 
-            $sql = "SELECT * FROM itensConcordancias i1
-                    WHERE i1.id_concordancia = ".$linhas." AND i1.id = ".$x['id']." 
-                    AND i1.padrao = 2;";
-            
-            $deps = mysqli_query($GLOBALS['dblink'],$sql) or die('2082'.mysqli_error($GLOBALS['dblink']));
+            $p1padrao = $padraoItems[$linhas][$x['id']] ?? 0;
 
-            if (mysqli_num_rows($deps)>0){
-                echo '<td 
-                  class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0" 
+            if ($p1padrao == 2){
+                echo '<td
+                  class="cell cell-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0"
                   id="0-'.$linhas.'-'.$colunas.'-'.$x['id'].'-0-0"
                   onclick="alert("teste")">';
                 echo '<a class="btn btn-primary" href="?page=editforms&pid='.$pid.'&d='.$x['id'].'&c='.$x['id'].'">'._t('Abrir tabela').'</a></td>';
 
             }else{
 
-                $sql = "SELECT p.*, pn.palavra as nativa FROM palavras p 
-                  LEFT JOIN itens_palavras ip1 ON ip1.id_palavra = p.id  
-                  LEFT JOIN palavrasNativas pn ON pn.id_palavra = p.id AND pn.principal = 1 AND pn.id_escrita = ".$escrita."
-                  WHERE (ip1.id_concordancia = ".$linhas." AND ip1.id_item = ".$x['id']." AND ip1.usar = 1) 
-                  $paradigma
-                  AND p.id_idioma = ".$idioma.";";
-                  //echo $sql;
-                $ps = mysqli_query($GLOBALS['dblink'],$sql) or die('2100'.mysqli_error($GLOBALS['dblink']));
-                $p = mysqli_fetch_assoc($ps);
-                
+                $p = $palavrasMap1D[$x['id']] ?? [];
+
                 $dicionario = $p['id_forma_dicionario']; $nclass = $dicionario>0?'':'text-info';
                 $autogen = ""; if (! $p['id'] > 0 && $tryauto) { $autogencount++; $dicionario = 0; $nclass = 'text-muted';
-                    
-                    $px = fetchFlexao($gen, $linhas, $x['id']);
+
+                    if (isset($flexoesMap1D[$x['id']])) {
+                        $px = $flexoesMap1D[$x['id']];
+                    } else {
+                        $px = inserirFlexao($gen, $linhas, $x['id']);
+                        $flexoesMap1D[$x['id']] = $px;
+                    }
                     if ($px > 0) $regra = $px;
                     $autogen = $autogencount."%%";
                     $autogenlist .= $linhas.'-'.$colunas.'-'.$x['id'].'-0-'.$regra."\n";
