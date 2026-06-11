@@ -1254,12 +1254,12 @@ function getPalavrasMesmaPronuncia($pid,$limit=0,$editable = true){
   $return = '';
   if ($limit > 0) $sqlLimit = " LIMIT ".$limit." ";
 
-  $res0 = mysqli_query($GLOBALS['dblink'],"SELECT *, (SELECT e.id FROM escritas e
-    WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as epadrao,
-      (SELECT e.id_fonte FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as fonte,
-      (SELECT e.tamanho FROM escritas e WHERE e.id_idioma = p.id_idioma ORDER BY e.padrao DESC LIMIT 1) as tamanho
-      FROM palavras p 
-      WHERE p.id = ".$pid.";") or die(mysqli_error($GLOBALS['dblink']));
+  $res0 = mysqli_query($GLOBALS['dblink'],"SELECT p.*, e.id as epadrao, e.id_fonte as fonte, e.tamanho
+      FROM palavras p
+      LEFT JOIN escritas e ON e.id_idioma = p.id_idioma
+      WHERE p.id = ".$pid."
+      ORDER BY e.padrao DESC
+      LIMIT 1;") or die(mysqli_error($GLOBALS['dblink']));
   $r = mysqli_fetch_assoc($res0);
   $id_idioma = $r['id_idioma'];
   $escrita = 0;
