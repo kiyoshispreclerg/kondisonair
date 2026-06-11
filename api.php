@@ -844,15 +844,9 @@ function listarSonsAdicionaveis($iid, $id) {
   $result = mysqli_query($GLOBALS['dblink'], $query) or die(mysqli_error($GLOBALS['dblink']));
 
   while ($r = mysqli_fetch_assoc($result)) {
-      // Verifica se o som está associado na tabela sons_classes
-      $c = mysqli_query($GLOBALS['dblink'], "SELECT * FROM sons_classes 
-          WHERE id_classeSom = $id AND id_som = " . $r['id'] . " AND tipo = " . $r['tipo']) or die(mysqli_error($GLOBALS['dblink']));
-      
-      // Monta o HTML com base na existência do registro em sons_classes
-      if (mysqli_num_rows($c) > 0) {
-          $echo .= "<a class='form-selectgroup-item btn btn-primary' title='" . htmlspecialchars($r['nome']) . "' onClick='toggleSom(" . $r['id'] . "," . $r['tipo'] . ",$id)'>" . ( $r['tecla']!='' ? htmlspecialchars($r['tecla'])." /".htmlspecialchars($r['ipa'])."/" : htmlspecialchars($r['ipa']) ) . "</a>";
+          $echo .= "<a class='form-selectgroup-item btn btn-primary' title='" . htmlspecialchars($r['nome']) . "' onClick='toggleSom(\"" . $r['id'] . "\"," . $r['tipo'] . ",\"$id\")'>" . ( $r['tecla']!='' ? htmlspecialchars($r['tecla'])." /".htmlspecialchars($r['ipa'])."/" : htmlspecialchars($r['ipa']) ) . "</a>";
       } else {
-          $echo .= "<a class='form-selectgroup-item btn' title='" . htmlspecialchars($r['nome']) . "' onClick='toggleSom(" . $r['id'] . "," . $r['tipo'] . ",$id)'>" . ( $r['tecla']!='' ? htmlspecialchars($r['tecla'])." /".htmlspecialchars($r['ipa'])."/" : htmlspecialchars($r['ipa']) ) . "</a>";
+          $echo .= "<a class='form-selectgroup-item btn' title='" . htmlspecialchars($r['nome']) . "' onClick='toggleSom(\"" . $r['id'] . "\"," . $r['tipo'] . ",\"$id\")'>" . ( $r['tecla']!='' ? htmlspecialchars($r['tecla'])." /".htmlspecialchars($r['ipa'])."/" : htmlspecialchars($r['ipa']) ) . "</a>";
       }
   }
 
@@ -11998,7 +11992,7 @@ if ($_GET['action'] == 'listarCategoriasSom') { // otimizar sql queries
               <label class="form-label">'.$r['simbolo'].' ('.$r['nome'].')'.str_replace(',',' ',$glifos).'</label>
               <div id="btnAddSom'.$r['id'].'" class="catSons">' .listarSonsAdicionaveis($_GET['iid'],$r['id']). '</div>
             </div>
-            <div class="col-auto"><a onclick="remCat('.$r['id'].')" class="btn btn-sm btn-danger">x</a></div>
+            <div class="col-auto"><a onclick="remCat(\''.$r['id'].'\')" class="btn btn-sm btn-danger">x</a></div>
           </div></div>';
 
     //echo '<div class="col-auto"><a onclick="remCat('.$r['id'].')" class="btn btn-sm btn-danger">x</a></div></div>';
