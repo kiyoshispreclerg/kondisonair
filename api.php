@@ -82,7 +82,7 @@ function userLoginAPI($usuario, $senha){
         return false;
     }
 
-    $stmt = mysqli_prepare($GLOBALS['dblink'], "SELECT nome_completo, id, id_idioma_nativo, username, acesso FROM usuarios WHERE username = ? OR email = ?");
+    $stmt = mysqli_prepare($GLOBALS['dblink'], "SELECT nome_completo, id, id_idioma_nativo, username, acesso, senha, confirmacao FROM usuarios WHERE username = ? OR email = ?");
     mysqli_stmt_bind_param($stmt, "ss", $usuario, $usuario);
     mysqli_stmt_execute($stmt);
     $s = mysqli_stmt_get_result($stmt);
@@ -92,15 +92,9 @@ function userLoginAPI($usuario, $senha){
     }
     $b = mysqli_fetch_row($s);
     mysqli_stmt_close($stmt);
+    // $b: [0]=nome_completo [1]=id [2]=id_idioma_nativo [3]=username [4]=acesso [5]=senha [6]=confirmacao
 
-    $stmt2 = mysqli_prepare($GLOBALS['dblink'], "SELECT senha, confirmacao FROM usuarios WHERE username = ?");
-    mysqli_stmt_bind_param($stmt2, "s", $b[3]);
-    mysqli_stmt_execute($stmt2);
-    $r = mysqli_stmt_get_result($stmt2);
-    $a = mysqli_fetch_row($r);
-    mysqli_stmt_close($stmt2);
-
-    if( password_verify($senha, $a[0]) /*&& $a[1] == '1'*/ ) {
+    if( password_verify($senha, $b[5]) /*&& $b[6] == '1'*/ ) {
       if (!isset($_SESSION)) session_start();
       session_regenerate_id(true);
       $_SESSION['KondisonairUzatorID']            = trim($usuario);
