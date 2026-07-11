@@ -15,7 +15,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Alterar nomes das partes do idioma (sons, classes, léxico, textos, etc)
 - Ao criar um novo idioma, dar uma base mínima para começar a trabalhar
 - Separar código dinâmico do estático para permitir uso offline via Service Worker
-- Usar termos linguísticos mais corretos
 - Criador de paradigmas baseado em alterações sonoras
 
 ## Em consideração
