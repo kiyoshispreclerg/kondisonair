@@ -36,7 +36,17 @@
     $substituicao = $idioma['substituicao'];
 	if ($_GET['palavra']>0) $filtroPalavra = " AND t.texto LIKE '%".$_GET['palavra']."%' ";
     
-    if (($idioma['id_usuario'] == $_SESSION['KondisonairUzatorIDX'] || $idioma['collab'] > 0 ) && $id_idioma > 0) { // my language, show add/edit
+    $uid = (int)$_SESSION['KondisonairUzatorIDX'];
+    $isOwner = $uid > 0 && $id_idioma > 0 &&
+               ($idioma['id_usuario'] == $uid || $idioma['collab'] > 0);
+
+    $mdason = '';
+    $btnNovoTexto = '';
+    $modalNovoTexto = '';
+    $funcSalvarTexto = '';
+    $query = null;
+
+    if ($isOwner) { // own language — full edit
         $mdason = 'mdason';
         $query = "SELECT t.*,
             (SELECT separadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as separadores,
@@ -45,11 +55,10 @@
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = ".$id_idioma." AND (t.id_usuario = '".$_SESSION['KondisonairUzatorIDX']."' OR t.id_usuario IN(
-                SELECT id_idioma FROM collabs WHERE id_usuario = '".$_SESSION['KondisonairUzatorIDX']."')) $filtroPalavra $filtroLista;";
-                //echo $query;
+            WHERE t.id_idioma = ".$id_idioma." AND (t.id_usuario = $uid OR t.id_usuario IN(
+                SELECT id_idioma FROM collabs WHERE id_usuario = $uid)) $filtroPalavra $filtroLista;";
         $imports = 'usuários';
-        $btnNovoTexto = '<a class="btn btn-primary"onClick="novoTexto()"><i class="fa fa-plus"></i> Novo texto</a>';
+        $btnNovoTexto = '<a class="btn btn-primary" onClick="novoTexto()"><i class="fa fa-plus"></i> '._t('Novo texto').'</a>';
 
         $listaListas = '';
         $listas = mysqli_query($GLOBALS['dblink'], "SELECT * FROM studason_lists WHERE id_idioma = $id_idioma;");
@@ -192,38 +201,29 @@
                 }
             });
         };';
-    }else if ($id_idioma > 0){ 
-        
-        // todos textos públicos da língua, com status particular do usuario logado ou nenhum status
+    } else if ($id_idioma > 0) {
+        // public texts for this language (read-only for everyone else)
         $query = "SELECT t.*,
             (SELECT separadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as separadores,
-                    (SELECT binario FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as binario,
+            (SELECT binario FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as binario,
             (SELECT iniciadores FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores,
             (SELECT id FROM escritas e WHERE e.id_idioma = t.id_idioma ORDER BY e.padrao DESC LIMIT 1) as eid,
             (SELECT COUNT(*) FROM tests_importasons im WHERE im.id_texto = t.id) as imports
             FROM studason_tests t
-            WHERE t.id_idioma = $id_idioma AND t.num_palavras > 0  $filtroPalavra $filtroLista;"; // 
+            WHERE t.id_idioma = $id_idioma AND t.num_palavras > 0 $filtroPalavra $filtroLista;";
 
-
-
-    }else if ($_SESSION['KondisonairUzatorIDX'] > 0){
-
-        // pegar da tbl textos importados em vez de direto textos, de todos idiomas
-
-        // tests_importasons
-
+    } else if ($uid > 0) {
+        // logged in, no language: show imported texts
         $query = "SELECT s.*,
                 (SELECT separadores FROM escritas e WHERE e.id_idioma = s.id_idioma ORDER BY e.padrao DESC LIMIT 1) as separadores,
                 (SELECT binario FROM escritas e WHERE e.id_idioma = s.id_idioma ORDER BY e.padrao DESC LIMIT 1) as binario,
                 (SELECT iniciadores FROM escritas e WHERE e.id_idioma = s.id_idioma ORDER BY e.padrao DESC LIMIT 1) as iniciadores
             FROM tests_importasons i
-                LEFT JOIN studason_tests s ON i.id_texto = s.id
-                WHERE i.id_usuario = ".($_SESSION['KondisonairUzatorIDX']?:0)."  $filtroPalavra $filtroLista";//." AND s.num_palavras > 0;";
+            LEFT JOIN studason_tests s ON i.id_texto = s.id
+            WHERE i.id_usuario = $uid $filtroPalavra $filtroLista";
 
-    }else {
-        echo '<script>window.location = "index.php";</script>';
-        exit;
     };
+    // if $query === null (not logged in, no language): show empty page, no redirect
 
 	$fonts = '';
 
@@ -279,10 +279,12 @@
                         $separadorLinhas = array("\n");
 
 
-                        $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink'])); 
-                        
-                        
-                            
+                        if ($query === null) {
+                            echo '<div class="list-group-item text-secondary">'._t('Faça login para ver os textos.').'</div>';
+                        } else {
+
+                        $result = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
+
                         while($r = mysqli_fetch_assoc($result)){
                             $textoSentencas = $r['texto'];
                             if ($r['binario']>0) $bin = ' BINARY ';
@@ -320,11 +322,13 @@
                                     //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
                                     $pnq = "pn.palavra as nativa, ";
                                     $pno = "pn.palavra ";
+                                    $pnorder = "pn.principal DESC, ";
                                 }else{
                                     $pnp = "";
                                     //$pnd = "LEFT JOIN palavrasNativas pn ON pn.id_palavra = dic.id";
                                     $pnq = "p.romanizacao as nativa, ";
                                     $pno = "p.romanizacao ";
+                                    $pnorder = "";
                                 }
 
                                 foreach ($palavras as $p){
@@ -337,7 +341,7 @@
                                             FROM palavras p
                                             LEFT JOIN classes c ON p.id_classe = c.id $pnp 
                                             WHERE $bin $pno = '$p' AND p.id_idioma = $id_idioma 
-                                            ORDER BY pn.principal DESC, p.id_forma_dicionario DESC;"; 
+                                            ORDER BY {$pnorder}p.id_forma_dicionario DESC;"; 
                                     }else{
                                         $sql = "SELECT p.*, c.id as clid, $pnq c.nome as cnome,
                                                 (SELECT pd.id FROM palavras pd WHERE pd.id = p.id_forma_dicionario LIMIT 1) as dic  
@@ -345,7 +349,7 @@
                                             LEFT JOIN classes c ON p.id_classe = c.id $pnp 
                                             WHERE $bin $pno = '$p' AND p.id_idioma = ".(
                                                 $id_idioma > 0 ? $id_idioma : $r['id_idioma']
-                                            )." ORDER BY pn.principal DESC, p.id_forma_dicionario DESC;"; 
+                                            )." ORDER BY {$pnorder}p.id_forma_dicionario DESC;"; 
                                     }
                                     $a = mysqli_query($GLOBALS['dblink'],$sql) or die(mysqli_error($GLOBALS['dblink']));
                                     $palTotal++;
@@ -432,7 +436,9 @@
                                     </div></div>';
 
                             }
-                        };
+                        }; // end while
+
+                        } // end else ($query !== null)
 
                     ?>
 
@@ -443,33 +449,44 @@
                     </div>
                 </div>
 
-                <?php if ($id_idioma > 0 && $id_lista == 0) { ?>
+                <?php if ($id_idioma > 0 && $id_lista == 0) {
+                    $listasQuery = $isOwner
+                        ? "SELECT *, (SELECT COUNT(*) FROM studason_tests WHERE id_lista = s.id) as numTextos FROM studason_lists s WHERE id_idioma = $id_idioma"
+                        : "SELECT *, (SELECT COUNT(*) FROM studason_tests WHERE id_lista = s.id AND num_palavras > 0) as numTextos FROM studason_lists s WHERE id_idioma = $id_idioma AND EXISTS (SELECT 1 FROM studason_tests st WHERE st.id_lista = s.id AND st.num_palavras > 0)";
+                    $listas = mysqli_query($GLOBALS['dblink'], $listasQuery) or die(mysqli_error($GLOBALS['dblink']));
+                    $numListas = mysqli_num_rows($listas);
+                    if ($numListas > 0 || $isOwner):
+                ?>
                 <div class="card mt-3">
                     <div class="card-header">
                         <h3 class="card-title"><?=_t('Listas de textos')?></h3>
+                        <?php if ($isOwner): ?>
                         <div class="card-actions">
-                        <a class="btn btn-primary" onClick="novaLista()"><i class="fa fa-plus"></i> Nova lista</a>
-						</div>
+                            <a class="btn btn-primary" onClick="novaLista()"><i class="fa fa-plus"></i> <?=_t('Nova lista')?></a>
+                        </div>
+                        <?php endif; ?>
                     </div>
+                    <?php if ($numListas > 0): ?>
                     <div class="card-bodyx">
-                    <?php 
-                    $listas = mysqli_query($GLOBALS['dblink'], "SELECT *, (SELECT COUNT(*) FROM studason_tests WHERE id_lista = s.id) as numTextos FROM studason_lists s WHERE id_idioma = $id_idioma;");
-                    if (mysqli_num_rows($listas)>0) while ($r = mysqli_fetch_assoc($listas)) { 
-                    ?>
                     <div class="list-group list-group-flush overflow-auto" style="max-height: 35rem">
-                        <?php echo '<div class="list-group-item"><div class="row">
-                                <div class="col">
-                                    <a href="?page=texts&list='.$r['id'].'">'.$r['nome'].'</a> 
-                                    <div class="text-secondary text-truncate mt-n1">'.$r['descricao'].' '.($r['numTextos']>0? ' - '.$r['numTextos'].' textos' :'').'</div>
-                                </div>
-                                <div class="col">
-                                    <a href="#" onclick="editLista(\''.$r['id'].'\', \''.$r['nome'].'\', \''.$r['descricao'].'\')" class="btn btn-primary">'._t('Editar').'</a>
-                                </div>
-                            </div></div>'; ?>
+                    <?php while ($r = mysqli_fetch_assoc($listas)): ?>
+                        <div class="list-group-item"><div class="row">
+                            <div class="col">
+                                <a href="?page=texts&list=<?=$r['id']?>"><?=htmlspecialchars($r['nome'])?></a>
+                                <div class="text-secondary text-truncate mt-n1"><?=htmlspecialchars($r['descricao'])?><?=($r['numTextos']>0?' - '.$r['numTextos'].' '._t('textos'):'')?></div>
+                            </div>
+                            <?php if ($isOwner): ?>
+                            <div class="col-auto">
+                                <a href="#" onclick="editLista('<?=$r['id']?>','<?=addslashes($r['nome'])?>','<?=addslashes($r['descricao'])?>'); return false;" class="btn btn-sm btn-primary"><?=_t('Editar')?></a>
+                            </div>
+                            <?php endif; ?>
+                        </div></div>
+                    <?php endwhile; ?>
                     </div>
-                    <?php } ?>
                     </div>
+                    <?php endif; ?>
                 </div>
+                <?php endif; ?>
                 <?php } ?>
             </div>
 
