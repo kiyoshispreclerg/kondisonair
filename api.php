@@ -376,6 +376,7 @@ switch($page){
     case 'paradigmer': $tituloPagina .= ' - '._t('Gerador de paradigma'); break;
     case 'wordcompare': $tituloPagina .= ' - '._t('Comparador de palavras'); break;
     case 'masseditlexicon': $tituloPagina .= ' - '._t('Edição em massa de palavras'); break;
+    case 'editwordbank': $tituloPagina .= ' - '._t('Edição de banco de palavras'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -8425,29 +8426,31 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     die();
   };
 
-  if ($_GET['action'] == 'saveWordbank') { 
+  if ($_GET['action'] == 'saveWordbank') {
+    $titulo = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['titulo']);
+    $descricao = mysqli_real_escape_string($GLOBALS['dblink'], $_POST['descricao'] ?? '');
+    $publico = isset($_POST['publico']) && $_POST['publico'] == '1' ? 1 : 0;
+
     if ($_GET['id']>0){
-      //delete all
-      $bid = $_GET['id'];
+      $bid = (int)$_GET['id'];
+      $owner = mysqli_fetch_assoc(mysqli_query($GLOBALS['dblink'],'SELECT id_usuario FROM wordbanks WHERE id = '.$bid));
+      if (!$owner || $owner['id_usuario'] != $_SESSION['KondisonairUzatorIDX']) die('err: unauthorized');
       mysqli_query($GLOBALS['dblink'],'DELETE FROM listas_referentes WHERE id_lista = '.$bid) or die('err: '.mysqli_error($GLOBALS['dblink']));
-      mysqli_query($GLOBALS['dblink'],'UPDATE wordbanks SET titulo = "'.$_POST['titulo'].'" , data_modificacao = now() WHERE id = '.$bid.';') or die('err: '.mysqli_error($GLOBALS['dblink']));
+      mysqli_query($GLOBALS['dblink'],'UPDATE wordbanks SET titulo = "'.$titulo.'", descricao = "'.$descricao.'", publico = '.$publico.', data_modificacao = now() WHERE id = '.$bid.';') or die('err: '.mysqli_error($GLOBALS['dblink']));
     }else{
-      //insert bank, pegar id 
       $bid = generateId();
-      $s = mysqli_query($GLOBALS['dblink'],'INSERT INTO wordbanks SET id = '.$bid.', titulo = "'.$_POST['titulo'].'", id_usuario = '.$_SESSION['KondisonairUzatorIDX'].', data_criacao = now(), data_modificacao = now();') or die('err: '.mysqli_error($GLOBALS['dblink']));
+      mysqli_query($GLOBALS['dblink'],'INSERT INTO wordbanks SET id = '.$bid.', titulo = "'.$titulo.'", descricao = "'.$descricao.'", publico = '.$publico.', id_usuario = '.$_SESSION['KondisonairUzatorIDX'].', data_criacao = now(), data_modificacao = now();') or die('err: '.mysqli_error($GLOBALS['dblink']));
     };
 
-    $o = 1;
-    $sql = 'INSERT INTO listas_referentes (id,id_referente, id_lista, ordem) VALUES ';
-    foreach ($_POST['refs'] as $ref){
-      // insert
-      $sql .= '('.generateId().','.$ref.','.$bid.','.$o.'),';
-      $o++;
+    if (!empty($_POST['refs'])) {
+      $o = 1;
+      $sql = 'INSERT INTO listas_referentes (id,id_referente, id_lista, ordem) VALUES ';
+      foreach ($_POST['refs'] as $ref){
+        $sql .= '('.generateId().','.(int)$ref.','.$bid.','.$o.'),';
+        $o++;
+      }
+      mysqli_query($GLOBALS['dblink'],substr($sql,0,-1)) or die('err: '.mysqli_error($GLOBALS['dblink']));
     }
-
-    $s = mysqli_query($GLOBALS['dblink'],substr($sql,0,-1)) or die('err: '.mysqli_error($GLOBALS['dblink']));
-
-    // copiar mix do palavraflexionada com palavra
 
     die('ok');
   };

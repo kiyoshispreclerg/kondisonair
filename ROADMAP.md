@@ -8,7 +8,6 @@ Neste arquivo exponho várias ideias que podem ou não ser implementadas no Kond
 - Importar lista de palavras base (de csv)
 - Suporte a sistemas de escrita mistos
 - Notificar interações sociais com seus idiomas
-- Usuário criar bancos de palavras temáticos e publicá-los (alimentos, natureza, movimentos etc)
 - Adicionar metadados em caracteres dos sistemas de escrita
 - Gerar dicionário em PDF
 - Customizar cor de destaque do idioma, para personalizar a página pública
