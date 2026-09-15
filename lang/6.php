@@ -927,5 +927,7 @@ $langpack = [
 "Nenhuma palavra relacionada" => "Neniu rilata vorto",
 "Níveis de uso" => "Niveloj de uzado",
 "Ex.: Desuso" => "Ekz.: Arkaikaĵo",
+"Construa <em>idiomas</em>.<br>Compartilhe mundos." => "Konstruu <em>lingvojn</em>.<br>Kunhavigu mondojn.",
+"Kondisonair é uma plataforma para criar e documentar línguas construídas — fonologia, léxico, morfologia, sistemas de escrita e textos, tudo num só lugar." => "Kondisonair estas platformo por krei kaj dokumenti konstruitajn lingvojn — fonologio, vortaro, morfologio, skribsistemoj kaj tekstoj, ĉio en unu loko.",
 ];
 ?>

@@ -77,11 +77,10 @@ $inscAberta = ($opcoes['inscr_aberta'] ?? '0') == '1';
     <div class="row align-items-center g-4">
       <div class="col-lg-6">
         <p class="ksc-hero-title">
-          Construa <em>idiomas</em>.<br>Compartilhe mundos.
+          <?=_t('Construa <em>idiomas</em>.<br>Compartilhe mundos.')?>
         </p>
         <p class="ksc-hero-desc">
-          Kondisonair é uma plataforma para criar e documentar línguas construídas —
-          fonologia, léxico, morfologia, sistemas de escrita e textos, tudo num só lugar.
+          <?=_t('Kondisonair é uma plataforma para criar e documentar línguas construídas — fonologia, léxico, morfologia, sistemas de escrita e textos, tudo num só lugar.')?>
         </p>
         <div class="d-flex gap-2 flex-wrap">
           <a href="?page=login" class="btn btn-primary"><?=_t('Entrar')?></a>
