@@ -18,6 +18,7 @@ if ($id_idioma>0){
                 (SELECT COUNT(*) FROM escritas where id_idioma = i.id) as numWritingSysts,
                 (SELECT COUNT(*) FROM artygs where id_idioma = i.id) as numArtigos,
                 (SELECT COUNT(*) FROM frases where id_idioma = i.id) as numFrases,
+                (SELECT COUNT(*) FROM blocos where id_idioma = i.id) as numBlocos,
                 (SELECT id FROM escritas where id_idioma = i.id AND padrao = 1) as eid,
                 (SELECT COUNT(*) FROM glifos where id_escrita IN(SELECT id FROM escritas where id_idioma = i.id)) as numCharsTotal,
                 (SELECT COUNT(*) FROM inventarios where id_idioma = i.id) as numTotalSounds,
@@ -323,6 +324,16 @@ if ($id_idioma>0){
                                 </div>
                             </div>
                         </div> 
+
+                        <div class="list-group-item">
+                            <div class="row align-items-center">
+                                <!--div class="col-auto"><span class="badge bg-red"></span></div-->
+                                <div class="col text-truncate">
+                                    <a href="?page=editsyntax&iid=<?=$id_idioma?>" class="text-reset d-block"><?=_t('Sintaxe')?></a>
+                                    <div class="d-block text-secondary text-truncate mt-n1"><?=$idioma['numBlocos']?> <?=_t('regras')?></div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="list-group-item">
                             <div class="row align-items-center">

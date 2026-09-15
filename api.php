@@ -377,6 +377,7 @@ switch($page){
     case 'wordcompare': $tituloPagina .= ' - '._t('Comparador de palavras'); break;
     case 'masseditlexicon': $tituloPagina .= ' - '._t('Edição em massa de palavras'); break;
     case 'editwordbank': $tituloPagina .= ' - '._t('Edição de banco de palavras'); break;
+    case 'editsyntax': $tituloPagina .= ' - '._t('Sintaxe'); break;
 
     default: $tituloPagina .= ' - '._t('Início'); $page = '';
 }
@@ -4295,8 +4296,10 @@ if($_SESSION['KondisonairUzatorIDX']>0){
         mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
         echo $_GET['id'];
 
-      } else {  
-          $sqlQuerys = "INSERT INTO blocos SET 
+      } else {
+          $kid = generateId();
+          $sqlQuerys = "INSERT INTO blocos SET
+            id = $kid,
             tipo_nucleo = '".$_POST['tn']."',
             id_nucleo = ".$_POST['n'].",
             tipo_dependente = '".$_POST['td']."',
@@ -4309,8 +4312,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
             id_idioma = ".$_GET['iid'].";";
         //echo $sqlQuerys;
           mysqli_query($GLOBALS['dblink'],$sqlQuerys) or die(mysqli_error($GLOBALS['dblink']));
-          echo mysqli_insert_id($GLOBALS['dblink']);
-      }; 
+          echo $kid;
+      };
     }
     else echo 'novalered';
     die();
@@ -7220,7 +7223,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
     echo '<table id="tabelaPalavras" data-ride="datatables" class="table table-m-b-none">
           <thead><tr><th>Regra</th><th></th></tr></thead><tbody>';
     while($r = mysqli_fetch_assoc($result)){
-      echo "<tr id='row_".$r['id']."'><td onClick='abrirRegra(".$r['id'].")'>";
+      echo "<tr id='row_".$r['id']."'><td onClick='abrirRegra(\"".$r['id']."\")'>";
 
       if($r['tipo_nucleo'] == 'classe') {
         $classesOk .= $r['id_nucleo'].',';
@@ -7286,8 +7289,8 @@ if($_SESSION['KondisonairUzatorIDX']>0){
           
       echo $rule.//'<br>'.$ruledesc.
           "</td><td><a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='apagarRegra(".$r['id'].")'>X</a> 
-          <a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='moverAbaixo(".$r['id'].")'><i class='fa fa-arrow-down'></i></a></a> 
-          <a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='moverAcima(".$r['id'].")'><i class='fa fa-arrow-up'></i></a></a></td></tr>";
+          <a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='moverAbaixo(".$r['id'].")'>v</a></a> 
+          <a  class='btn btn-xs btn-info btn-rounded pull-right' onClick='moverAcima(".$r['id'].")'>^</a></a></td></tr>";
     };
     echo '</tbody></table>';
 
@@ -7300,7 +7303,7 @@ if($_SESSION['KondisonairUzatorIDX']>0){
       $classes .= $d['gloss'].' ('.$d['nome'].')<br>';
     };
     if ($classes != '')
-    echo '<div>Atenção: ainda não há regras que incluam as seguintes classes:<br>'.$classes.'Insira-as para que o tradutor funcione.</div>';
+    echo '<div class="card-body">Atenção: ainda não há regras que incluam as seguintes classes:<br>'.$classes.'</div>';
     /*<script>$("#tabelaPalavras").DataTable({
       paging: false,
       "scrollY": "500px",
