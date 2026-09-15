@@ -103,18 +103,10 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
                       <div class="row mb-3">
                           <div class="col-6">
                               <label class="form-label"><?=_t('Núcleo')?></label>
-                              <select id="tipo_n" class="form-select mb-2" onchange="atualizarSelectRegra('n')">
-                                  <option value="classe"><?=_t('Classe de palavras')?></option>
-                                  <option value="bloco"><?=_t('Regra já criada')?></option>
-                              </select>
                               <select id="id_n" class="form-select" onchange="editarRegra()"></select>
                           </div>
                           <div class="col-6">
                               <label class="form-label"><?=_t('Dependente')?></label>
-                              <select id="tipo_d" class="form-select mb-2" onchange="atualizarSelectRegra('d')">
-                                  <option value="classe"><?=_t('Classe de palavras')?></option>
-                                  <option value="bloco"><?=_t('Regra já criada')?></option>
-                              </select>
                               <select id="id_d" class="form-select" onchange="editarRegra()"></select>
                           </div>
                       </div>
@@ -152,7 +144,9 @@ if ($idioma['nome_legivel']=='' || ($idioma['id_usuario'] != $_SESSION['Kondison
 <script>
 function gravarRegra(){
     if ($('#nome').val()=='') return;
-    if ($('#id_n').val() == 0 || $('#id_n').val() == undefined || $('#id_d').val() == 0 || $('#id_d').val() == undefined) {
+    var nuc = ($('#id_n').val()||'').split(':');
+    var dep = ($('#id_d').val()||'').split(':');
+    if (nuc.length<2 || dep.length<2) {
         alert("<?=_t('Selecione o núcleo e o dependente.')?>");
         return;
     }
@@ -161,10 +155,10 @@ function gravarRegra(){
         +"&id="+ $('#idRegra').val()+"&iid=<?=$id_idioma?>",
     { nome:$('#nome').val(),
     gloss:$('#gloss').val(),
-    tn:$('#tipo_n').val(),
-    n:$('#id_n').val(),
-    td:$('#tipo_d').val(),
-    d:$('#id_d').val(),
+    tn:nuc[0],
+    n:nuc[1],
+    td:dep[0],
+    d:dep[1],
     lado:$('input[name=lado]:checked').val(),
     separador:0,
     descricao:$('#descricao').val()
@@ -176,6 +170,15 @@ function gravarRegra(){
         }else{
             alert(data);
         };
+    });
+};
+
+function carregarSelectRegra(elId, selecionado, excluir){
+    var url = "?action=ajaxSelectRegras&iid=<?=$id_idioma?>";
+    if (excluir) url += "&excluir="+excluir;
+    if (selecionado) url += "&selecionado="+encodeURIComponent(selecionado);
+    $('#'+elId).load(url, function(){
+        formatarTablerSelect(elId);
     });
 };
 
@@ -191,17 +194,8 @@ function abrirRegra(rid){
         $('#gloss').val(d.id_gloss);
         updateTablerSelect('gloss',d.id_gloss);
 
-        $('#tipo_n').val(d.tipo_nucleo);
-        updateTablerSelect('tipo_n',d.tipo_nucleo);
-        $('#id_n').load("?action=ajaxSelectRegras&tipo="+d.tipo_nucleo+"&iid=<?=$id_idioma?>&selecionado="+d.id_nucleo, function(){
-            formatarTablerSelect('id_n');
-        });
-
-        $('#tipo_d').val(d.tipo_dependente);
-        updateTablerSelect('tipo_d',d.tipo_dependente);
-        $('#id_d').load("?action=ajaxSelectRegras&tipo="+d.tipo_dependente+"&iid=<?=$id_idioma?>&selecionado="+d.id_dependente, function(){
-            formatarTablerSelect('id_d');
-        });
+        carregarSelectRegra('id_n', d.tipo_nucleo+':'+d.id_nucleo, rid);
+        carregarSelectRegra('id_d', d.tipo_dependente+':'+d.id_dependente, rid);
 
         $('input[name=lado][value="'+d.lado+'"]').prop('checked', true);
 
@@ -213,14 +207,6 @@ function editarRegra(){
     $('#btnSalvar').show();
 };
 
-function atualizarSelectRegra(prefixo){
-    var tipo = $('#tipo_'+prefixo).val();
-    $('#id_'+prefixo).load("?action=ajaxSelectRegras&tipo="+tipo+"&iid=<?=$id_idioma?>", function(){
-        formatarTablerSelect('id_'+prefixo);
-        editarRegra();
-    });
-};
-
 function novaRegra(){
     $('#idRegra').val(0);
     $('#nome').val('');
@@ -229,12 +215,8 @@ function novaRegra(){
     $('#gloss').val(0);
     updateTablerSelect('gloss',0);
 
-    $('#tipo_n').val('classe');
-    updateTablerSelect('tipo_n','classe');
-    $('#tipo_d').val('classe');
-    updateTablerSelect('tipo_d','classe');
-    atualizarSelectRegra('n');
-    atualizarSelectRegra('d');
+    carregarSelectRegra('id_n', null, 0);
+    carregarSelectRegra('id_d', null, 0);
 
     $('input[name=lado][value="1"]').prop('checked', true);
 
@@ -266,6 +248,4 @@ $(document).ready(function(){
     novaRegra();
 });
 formatarTablerSelect('gloss');
-formatarTablerSelect('tipo_n');
-formatarTablerSelect('tipo_d');
 </script>

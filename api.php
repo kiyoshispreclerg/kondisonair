@@ -7314,40 +7314,28 @@ if($_SESSION['KondisonairUzatorIDX']>0){
   
   if ($_GET['action'] == 'ajaxSelectRegras') {
 
-    // GET tipo (classe,palavra,bloco)
-    // GET selecionado
+    // GET iid, GET selecionado ("classe:ID" ou "bloco:ID"), GET excluir (id de bloco a não listar, ao editar a própria regra)
+    // Lista classes de palavras e regras (blocos) já criadas numa única lista pesquisável
 
-    if($_GET['tipo'] == 'classe') {
-      $query = "SELECT c.id, c.descricao as title, g.gloss, c.nome
-        FROM classes c 
-        LEFT JOIN glosses g ON c.id_gloss = g.id 
-        WHERE c.id_idioma = ".$_GET['iid'].";";
-    /*}else if($_GET['tipo'] == 'palavra') {
-
-      $query = "SELECT p.id, p.significado as title, p.romanizacao as nome
-        FROM palavras p WHERE p.id_idioma = ".$_GET['iid'].";";*/
-
-    /*}else if($_GET['tipo'] == 'gloss') { 
-
-      $query = "SELECT id, descricao as nome, gloss FROM glosses ;";*/
-
-    }else if($_GET['tipo'] == 'none') { 
-
-      echo '<option value="0">'._t('Não aplicável').'</option>';
-      die();
-
-    }else if($_GET['tipo'] == 'bloco') { 
-      $query = "SELECT b.id, b.descricao as title, g.gloss, b.nome 
-        FROM blocos b 
-        LEFT JOIN glosses g ON b.id_gloss = g.id 
-        WHERE b.id_idioma = ".$_GET['iid'].";";
-    }
+    $query = "SELECT id, title, gloss, nome, tipo FROM (
+        SELECT c.id, c.descricao as title, g.gloss, c.nome, 'classe' as tipo
+          FROM classes c
+          LEFT JOIN glosses g ON c.id_gloss = g.id
+          WHERE c.id_idioma = ".$_GET['iid']."
+        UNION ALL
+        SELECT b.id, b.descricao as title, g.gloss, b.nome, 'bloco' as tipo
+          FROM blocos b
+          LEFT JOIN glosses g ON b.id_gloss = g.id
+          WHERE b.id_idioma = ".$_GET['iid']."
+          ".($_GET['excluir']>0 ? " AND b.id != ".$_GET['excluir'] : "")."
+      ) t ORDER BY gloss, nome;";
 
     $langs = mysqli_query($GLOBALS['dblink'],$query) or die(mysqli_error($GLOBALS['dblink']));
-    echo '<option value="0">'._t('Selecione').' '.$_GET['tipo'].'...</option>';
+    echo '<option value="">'._t('Selecione').'...</option>';
     while ($lang = mysqli_fetch_assoc($langs)){
-        echo '<option value="'.$lang['id'].'" title="'.$lang['title'].'"';
-        if ($_GET['selecionado'] > 0 && $_GET['selecionado'] == $lang['id']) echo ' selected';
+        $valor = $lang['tipo'].':'.$lang['id'];
+        echo '<option value="'.$valor.'" title="'.$lang['title'].'"';
+        if ($_GET['selecionado'] == $valor) echo ' selected';
         echo '>'.$lang['gloss'].' - '.$lang['nome'].'</option>';
     };
 
