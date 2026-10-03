@@ -1,3 +1,5 @@
+🌐 **Português** | [English](README.en.md) | [Esperanto](README.eo.md) | [日本語](README.ja.md)
+
 # Kondisonair
 
 **Kondisonair** é uma plataforma que criei para organizar e compartilhar minhas línguas artificiais, mas estou publicando pois penso que pode ser útil para outros criadores de conlangs. Configure sons, formatos de sílabas, classes de palavras, sistemas de escrita, léxico, tabelas de conjugações e flexões, e textos nas conlangs. Inclui ferramentas como um gerador de palavras e um alterador sonoro para simular a evolução dos idiomas.
@@ -25,7 +27,8 @@
 - PHP, MySQL, JavaScript, [Tabler](https://tabler.io), [jQuery](https://jquery.com) etc.
 
 **Nota**: Este é um projeto simples, sem Composer ou npm. Dependências estão incluídas nos arquivos. 
-**Nota 2**: Várias partes do código foram feitas com ajuda de IA.
+
+**Nota 2**: Muitas partes do código foram feitas com ajuda de IA.
 
 ## Licença
 Este projeto é licenciado sob a [GNU GPLv3](LICENSE).
