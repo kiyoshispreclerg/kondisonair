@@ -1,36 +1,36 @@
-🌐 **Português** | [English](README.en.md) | [Esperanto](README.eo.md) | [日本語](README.ja.md)
+🌐 **English** | [Português](README.pt.md) | [Esperanto](README.eo.md) | [日本語](README.ja.md)
 
 # Kondisonair
 
-**Kondisonair** é uma plataforma que criei para organizar e compartilhar minhas línguas artificiais, mas estou publicando pois penso que pode ser útil para outros criadores de conlangs. Configure sons, formatos de sílabas, classes de palavras, sistemas de escrita, léxico, tabelas de conjugações e flexões, e textos nas conlangs. Inclui ferramentas como um gerador de palavras e um alterador sonoro para simular a evolução dos idiomas.
+**Kondisonair** is a platform I created to organize and share my constructed languages, but I am publishing it because I think it may be useful to other conlang creators. Configure sounds, syllable formats, word classes, writing systems, lexicon, conjugation and inflection tables, and texts in your conlangs. It includes tools such as a word generator and a sound changer to simulate language evolution.
 
-## Funcionalidades
-- **Organização de Conlangs**: Crie e edite idiomas com detalhes como:
-  - Sons: Defina tabelas de fonemas.
-  - Formatos de Sílabas: Estruture sílabas.
-  - Classes de Palavras: Organize substantivos, verbos, etc.
-  - Tabelas de Conjugações e Flexões: Monte paradigmas e autoconjugações para verbos, substantivos, etc.
-  - Sistemas de Escrita: Crie alfabetos ou scripts personalizados.
-  - Léxico: Adicione vocabulário com significados detalhados.
-- **Compartilhamento**: Publique seus idiomas para a comunidade diretamente na plataforma.
-- **Gerador de Palavras**: Gere palavras automaticamente com base em padrões de sílabas.
-- **Alterador Sonoro**: Simule mudanças sonoras.
-- **Textos em Conlangs**: Carregue textos e pratique com exercícios de leitura interativos.
-- **Organização de Mundos**: Crie e edite os mundos onde seus idiomas são falados:
-  - Sistemas de Tempo: Crie calendários personalizados.
-  - Entidades: Insira personagens e locais no seu mundo.
-  - Parâmetros: Vincule parâmetros às entidades para acompanhar o progresso.
-  - Linha do Tempo: Insira momentos importantes da história.
-  - Histórias: Escreva textos vinculados a entidades e momentos.
+## Features
+- **Conlang Organization**: Create and edit languages with details such as:
+  - Sounds: Define phoneme tables.
+  - Syllable Formats: Structure syllables.
+  - Word Classes: Organize nouns, verbs, etc.
+  - Conjugation and Inflection Tables: Build paradigms and auto-conjugations for verbs, nouns, etc.
+  - Writing Systems: Create custom alphabets or scripts.
+  - Lexicon: Add vocabulary with detailed meanings.
+- **Sharing**: Publish your languages to the community directly on the platform.
+- **Word Generator**: Automatically generate words based on syllable patterns.
+- **Sound Changer**: Simulate sound changes.
+- **Texts in Conlangs**: Upload texts and practice with interactive reading exercises.
+- **World Building**: Create and edit the worlds where your languages are spoken:
+  - Time Systems: Create custom calendars.
+  - Entities: Add characters and places to your world.
+  - Parameters: Link parameters to entities to track progress.
+  - Timeline: Add important moments in history.
+  - Stories: Write texts linked to entities and moments.
 
-## Tecnologias Usadas
-- PHP, MySQL, JavaScript, [Tabler](https://tabler.io), [jQuery](https://jquery.com) etc.
+## Technologies Used
+- PHP, MySQL, JavaScript, [Tabler](https://tabler.io), [jQuery](https://jquery.com), etc.
 
-**Nota**: Este é um projeto simples, sem Composer ou npm. Dependências estão incluídas nos arquivos. 
+**Note**: This is a simple project, with no Composer or npm. Dependencies are included in the files.
 
-**Nota 2**: Muitas partes do código foram feitas com ajuda de IA.
+**Note 2**: Many parts of the code were written with the help of AI.
 
-## Licença
-Este projeto é licenciado sob a [GNU GPLv3](LICENSE).
+## License
+This project is licensed under the [GNU GPLv3](LICENSE).
 
-**Kondisonair** é apenas um projeto de hobby, mas fique à vontade para testar!
+**Kondisonair** is just a hobby project, but feel free to try it out!

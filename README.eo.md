@@ -1,4 +1,4 @@
-🌐 **Esperanto** | [Português](README.md) | [English](README.en.md) | [日本語](README.ja.md)
+🌐 **Esperanto** | [Português](README.pt.md) | [English](README.md) | [日本語](README.ja.md)
 
 # Kondisonair
 
