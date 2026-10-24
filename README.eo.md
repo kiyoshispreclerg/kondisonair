@@ -30,6 +30,15 @@
 
 **Noto 2**: Multaj partoj de la kodo estis kreitaj helpe de artefarita inteligento.
 
+## Instalado
+1. Postuloj: retservilo kun **PHP** (kun la etendaĵo PDO MySQL) kaj **MySQL/MariaDB**.
+2. Malpakigu la dosierojn en dosierujon servatan de via retservilo (ekz. `htdocs/kondisonair`). La servilo devas povi skribi en la dosierujo, por ke la instalilo kreu `db.php`.
+3. Malfermu `install.php` en la retumilo (ekz. `http://localhost/kondisonair/install.php`).
+4. Plenigu la gastiganton, uzanton, pasvorton kaj nomon de la datumbazo (ĝi estas kreata, se ĝi ne ekzistas), kaj ankaŭ la nomon/pasvorton de la administranto kaj la defaŭltan lingvon.
+5. Fine la instalilo kreas `db.php` kun la datumbaza aliro kaj vi povas ensaluti. Se vi bezonas ŝanĝi la datumbazan aliron poste, redaktu `db.php`.
+
+Por rulumi la instalilon denove, unue forigu `db.php` (tio ne forigas la datumbazon).
+
 ## Licenco
 Ĉi tiu projekto estas licencita sub la [GNU GPLv3](LICENSE).
 

@@ -30,6 +30,15 @@
 
 **Nota 2**: Muitas partes do código foram feitas com ajuda de IA.
 
+## Instalação
+1. Requisitos: um servidor web com **PHP** (com a extensão PDO MySQL) e **MySQL/MariaDB**.
+2. Extraia os arquivos em uma pasta servida pelo seu servidor web (ex.: `htdocs/kondisonair`). A pasta precisa ter permissão de escrita para o servidor, para que o instalador possa criar o `db.php`.
+3. Abra `install.php` no navegador (ex.: `http://localhost/kondisonair/install.php`).
+4. Preencha host, usuário, senha e nome do banco de dados (o banco é criado se não existir), além do usuário/senha de administrador e do idioma padrão.
+5. Ao terminar, o instalador cria o `db.php` com os dados de acesso ao banco e você já pode entrar. Se precisar alterar o acesso ao banco depois, edite o `db.php`.
+
+Para rodar o instalador de novo, apague antes o `db.php` (isso não apaga o banco de dados).
+
 ## Licença
 Este projeto é licenciado sob a [GNU GPLv3](LICENSE).
 
